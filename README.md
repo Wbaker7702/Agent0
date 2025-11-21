@@ -1,4 +1,4 @@
-# Agent 0: Unleashing Self-Evolving Agents from Zero Data via Tool-Integrated Reasoning
+# Agent0: Unleashing Self-Evolving Agents from Zero Data via Tool-Integrated Reasoning
 
 [![arXiv](https://img.shields.io/badge/arXiv-2511.16043-b31b1b.svg)](https://arxiv.org/abs/2511.16043)
 
