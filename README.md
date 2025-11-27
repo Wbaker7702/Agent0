@@ -12,8 +12,9 @@
 [UNC-Chapel Hill](https://cs.unc.edu/) · [Salesforce Research](https://www.salesforceairesearch.com/) · [Stanford University](https://cs.stanford.edu/)
 
 </div>
-
----
+<p align="center">
+  <img src="figs/logo.png" width="20%">
+</p>
 
 ## 🔥 News
 
