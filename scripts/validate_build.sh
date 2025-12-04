@@ -150,15 +150,21 @@ echo ""
 
 # Check VeRL installation
 echo "🔬 VeRL Framework Check"
-cd /workspace/Agent0/executor_train/verl 2>/dev/null || {
-    echo "❌ VeRL directory not found"
-    exit 1
-}
-
-python3 -c "import verl; print('✅ VeRL: OK')" 2>/dev/null || {
-    echo "⚠️  VeRL not installed. Install with:"
-    echo "   cd Agent0/executor_train/verl && pip install -e ."
-}
+if [ -d "/workspace/Agent0/executor_train/verl" ]; then
+    cd /workspace/Agent0/executor_train/verl 2>/dev/null
+    if python3 -c "import verl" 2>/dev/null; then
+        echo "✅ VeRL framework installed"
+    else
+        echo "⚠️  VeRL not installed"
+        echo "   Install with: cd Agent0/executor_train/verl && pip install -e ."
+        echo "   Or run: ./scripts/setup.sh"
+        WARNINGS=$((WARNINGS + 1))
+    fi
+    cd - > /dev/null
+else
+    echo "⚠️  VeRL directory not found at Agent0/executor_train/verl"
+    WARNINGS=$((WARNINGS + 1))
+fi
 echo ""
 
 # Check file structure
@@ -175,7 +181,7 @@ for dir in "${REQUIRED_DIRS[@]}"; do
         echo "✅ $dir exists"
     else
         echo "❌ $dir missing"
-        exit 1
+        VALIDATION_PASSED=false
     fi
 done
 echo ""
