@@ -3,6 +3,7 @@
 # Usage: ./scripts/audit_code.sh [audit_type]
 
 set -e
+set -o pipefail
 
 AUDIT_TYPE=${1:-"all"}
 BASE_DIR="/workspace/Agent0"
