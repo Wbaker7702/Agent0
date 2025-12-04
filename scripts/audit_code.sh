@@ -6,7 +6,7 @@ set -e
 set -o pipefail
 
 AUDIT_TYPE=${1:-"all"}
-BASE_DIR="/workspace/Agent0"
+BASE_DIR=$(cd "$(dirname "$0")/.." && pwd)/Agent0
 
 echo "🔒 Agent0 Code Audit"
 echo "===================="
