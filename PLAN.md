@@ -109,32 +109,11 @@ grep -r "FastAPI\|Flask" --include="*.py"
 
 #### Installation Steps
 
-**Step 1: Base Environment**
+**Step 1: Install Dependencies**
+It is recommended to use the provided `Makefile` to install all dependencies. This ensures a consistent and correct setup.
+
 ```bash
-cd /workspace/Agent0/Agent0
-
-# Install base requirements
-pip install -r requirements.txt
-
-# Install VeRL framework
-pip install -e verl
-
-# Install Flash Attention (requires CUDA)
-pip install "flash-attn==2.8.3" --no-build-isolation
-```
-
-**Step 2: Curriculum Training Setup**
-```bash
-cd curriculum_train/
-pip install -r requirements.txt
-```
-
-**Step 3: Executor Training Setup**
-```bash
-cd executor_train/
-pip install -e verl
-pip install -e verl_tool
-```
+make install
 
 ### 3.2 External Service Setup
 
