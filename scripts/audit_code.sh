@@ -107,9 +107,12 @@ case $AUDIT_TYPE in
     # Check for version conflicts in requirements files
     if [ -f "$BASE_DIR/requirements.txt" ]; then
         echo "Main requirements:"
-        grep -E "^[a-zA-Z]" "$BASE_DIR/requirements.txt" | cut -d'=' -f1 | sort | uniq -d || {
+        duplicates=$(grep -E "^[a-zA-Z]" "$BASE_DIR/requirements.txt" | cut -d'=' -f1 | sort | uniq -d)
+        if [ -z "$duplicates" ]; then
             echo "  ✅ No duplicates found"
-        }
+        else
+            echo "  ⚠️  Duplicates found: $duplicates"
+        fi
     fi
     echo ""
     
