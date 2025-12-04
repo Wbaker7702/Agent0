@@ -13,6 +13,7 @@ help:
 	@echo "Build & Setup:"
 	@echo "  make build            - Validate build environment"
 	@echo "  make install          - Install dependencies"
+	@echo "  make setup            - Run comprehensive setup script"
 	@echo ""
 	@echo "Testing & Validation:"
 	@echo "  make test             - Run unit tests"
@@ -68,6 +69,9 @@ install:
 	@cd Agent0/executor_train/verl && pip install -e .
 	@echo "Installing Flash Attention..."
 	@pip install "flash-attn==2.8.3" --no-build-isolation || echo "Flash Attention installation may require CUDA"
+
+setup:
+	@bash scripts/setup.sh
 
 # Testing
 test:
