@@ -208,17 +208,110 @@ echo "🌐 External Services Check"
 if [ -f "/workspace/Agent0/curriculum_train/vllm_service_init/start_vllm_server_tool.py" ]; then
     echo "✅ vLLM service script found"
     # Check if sandbox URLs are configured
-    if grep -q "SANDBOX_API_URLS" /workspace/Agent0/curriculum_train/vllm_service_init/start_vllm_server_tool.py; then
-        echo "⚠️  Sandbox URLs may need configuration"
+    if grep -q "IP1:PORT1" /workspace/Agent0/curriculum_train/vllm_service_init/start_vllm_server_tool.py; then
+        echo "⚠️  Sandbox URLs need configuration (still using placeholder IP1:PORT1)"
+        echo "   Edit: Agent0/curriculum_train/vllm_service_init/start_vllm_server_tool.py"
+        WARNINGS=$((WARNINGS + 1))
+    else
+        echo "✅ Sandbox URLs appear to be configured"
     fi
 else
     echo "⚠️  vLLM service script not found"
+    WARNINGS=$((WARNINGS + 1))
 fi
 echo ""
 
-echo "✅ Build validation complete!"
+# Check environment variables
+echo "🔧 Environment Variables Check"
+ENV_VARS=(
+    "STORAGE_PATH:Storage path for models and data"
+    "HUGGINGFACENAME:HuggingFace model name"
+    "WANDB_API_KEY:Weights & Biases API key (optional)"
+)
+
+for env_info in "${ENV_VARS[@]}"; do
+    var=$(echo $env_info | cut -d: -f1)
+    desc=$(echo $env_info | cut -d: -f2)
+    if [ -n "${!var}" ]; then
+        if [ "$var" = "WANDB_API_KEY" ]; then
+            echo "✅ $var is set (${desc})"
+        else
+            echo "✅ $var is set: ${!var}"
+        fi
+    else
+        if [ "$var" = "WANDB_API_KEY" ]; then
+            echo "ℹ️  $var is not set (optional: ${desc})"
+        else
+            echo "⚠️  $var is not set (${desc})"
+            WARNINGS=$((WARNINGS + 1))
+        fi
+    fi
+done
 echo ""
-echo "Next steps:"
-echo "1. Configure SandboxFusion URLs if needed"
-echo "2. Set environment variables (STORAGE_PATH, WANDB_API_KEY, etc.)"
-echo "3. Run tests: ./scripts/run_tests.sh"
+
+# Summary and recommendations
+echo "📊 Validation Summary"
+echo "===================="
+if [ "$VALIDATION_PASSED" = true ] && [ "$CRITICAL_MISSING" = false ]; then
+    echo "✅ Build validation PASSED"
+    if [ "$WARNINGS" -gt 0 ]; then
+        echo "⚠️  $WARNINGS warning(s) found (see above)"
+    fi
+else
+    echo "❌ Build validation FAILED"
+    if [ "$CRITICAL_MISSING" = true ]; then
+        echo ""
+        echo "🔴 Critical Issues:"
+        echo "   Missing critical packages: ${MISSING_CRITICAL[*]}"
+        echo ""
+        echo "   To fix, run:"
+        echo "   ./scripts/setup.sh"
+        echo ""
+        echo "   Or manually:"
+        echo "   cd Agent0 && pip install -r requirements.txt"
+    fi
+    if [ "$WARNINGS" -gt 0 ]; then
+        echo "⚠️  $WARNINGS warning(s) found (see above)"
+    fi
+fi
+echo ""
+
+# Provide detailed recommendations
+if [ ${#MISSING_CRITICAL[@]} -gt 0 ] || [ ${#MISSING_IMPORTANT[@]} -gt 0 ]; then
+    echo "💡 Recommendations:"
+    echo "-------------------"
+    if [ ${#MISSING_CRITICAL[@]} -gt 0 ]; then
+        echo "1. Install missing critical packages:"
+        echo "   ./scripts/setup.sh"
+        echo ""
+    fi
+    if [ ${#MISSING_IMPORTANT[@]} -gt 0 ]; then
+        echo "2. Install missing important packages:"
+        echo "   pip install ${MISSING_IMPORTANT[*]}"
+        echo ""
+    fi
+    if [ ${#MISSING_OPTIONAL[@]} -gt 0 ] && [ "$CUDA_AVAILABLE" = true ]; then
+        echo "3. Install optional packages (for better performance):"
+        if [[ " ${MISSING_OPTIONAL[@]} " =~ " flash_attn " ]]; then
+            echo "   pip install flash-attn==2.8.3 --no-build-isolation"
+        fi
+        echo ""
+    fi
+fi
+
+echo "📚 Next Steps:"
+echo "1. If packages are missing, run: ./scripts/setup.sh"
+echo "2. Configure SandboxFusion URLs if needed"
+echo "3. Set environment variables (STORAGE_PATH, HUGGINGFACENAME, etc.)"
+echo "4. Run tests: make test-quick"
+echo "5. Read PLAN.md for detailed documentation"
+echo ""
+
+# Exit with appropriate code
+if [ "$CRITICAL_MISSING" = true ]; then
+    exit 1
+elif [ "$VALIDATION_PASSED" = false ]; then
+    exit 1
+else
+    exit 0
+fi
