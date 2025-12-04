@@ -60,7 +60,7 @@ except Exception as e:
     for dir in "${LOG_DIRS[@]}"; do
         if [ -d "$dir" ]; then
             echo "Logs in $dir:"
-            find "$dir" -name "*.log" -type f -mtime -1 2>/dev/null | head -5 || echo "  No recent logs"
+            find "$dir" -name "*.log" -type f -mtime -1 2>/dev/null | head -5 | grep . || echo "  No recent logs"
         fi
     done
     ;;
