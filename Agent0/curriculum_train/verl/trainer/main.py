@@ -65,20 +65,28 @@ class Runner:
             Role.Critic: global_pool_id,
             Role.RefPolicy: global_pool_id,
         }
-        resource_pool_manager = ResourcePoolManager(resource_pool_spec=resource_pool_spec, mapping=mapping)
+        resource_pool_manager = ResourcePoolManager(
+            resource_pool_spec=resource_pool_spec, mapping=mapping
+        )
 
         if config.worker.reward.reward_type == "sequential":
             RewardManager = SequentialFunctionRewardManager
         elif config.worker.reward.reward_type == "batch":
             RewardManager = BatchFunctionRewardManager
         else:
-            raise NotImplementedError(f"Unknown reward type {config.worker.reward.reward_type}.")
+            raise NotImplementedError(
+                f"Unknown reward type {config.worker.reward.reward_type}."
+            )
 
-        RemoteRewardManager = ray.remote(RewardManager).options(num_cpus=config.worker.reward.num_cpus)
+        RemoteRewardManager = ray.remote(RewardManager).options(
+            num_cpus=config.worker.reward.num_cpus
+        )
         reward_fn = RemoteRewardManager.remote(config.worker.reward, tokenizer)
         val_reward_fn = RemoteRewardManager.remote(config.worker.reward, tokenizer)
 
-        train_dataloader, val_dataloader = create_dataloader(config.data, tokenizer, processor)
+        train_dataloader, val_dataloader = create_dataloader(
+            config.data, tokenizer, processor
+        )
 
         trainer = RayPPOTrainer(
             config=config,
@@ -99,10 +107,10 @@ class Runner:
 def main():
     cli_args = OmegaConf.from_cli()
     default_config = OmegaConf.structured(PPOConfig())
-    with open('tokens.json', 'r') as f:
+    with open("tokens.json", "r") as f:
         tokens = json.load(f)
-    os.environ['HF_TOKEN'] = tokens['huggingface']
-    os.environ['WANDB_API_KEY'] = tokens['wandb']
+    os.environ["HF_TOKEN"] = tokens["huggingface"]
+    os.environ["WANDB_API_KEY"] = tokens["wandb"]
     if hasattr(cli_args, "config"):
         config_path = cli_args.pop("config", None)
         file_config = OmegaConf.load(config_path)
@@ -123,7 +131,7 @@ def main():
                 "PYTHONUNBUFFERED": "1",
             }
         }
-        ray.init(runtime_env=runtime_env,num_cpus=16)
+        ray.init(runtime_env=runtime_env, num_cpus=16)
 
     runner = Runner.remote()
     ray.get(runner.run.remote(ppo_config))

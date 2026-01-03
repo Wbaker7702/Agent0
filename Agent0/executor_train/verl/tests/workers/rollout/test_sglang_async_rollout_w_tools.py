@@ -61,16 +61,26 @@ def test_async_sglang_rollout_w_tool():
         ]
     ]
     prompts = [
-        tokenizer.apply_chat_template(message, tokenize=False, add_generation_prompt=True)
+        tokenizer.apply_chat_template(
+            message, tokenize=False, add_generation_prompt=True
+        )
         for message in preencode_prompts
     ]
-    input_ids, attention_mask, position_ids = prepare_inputs(tokenizer, prompts, max_prompt_length)
+    input_ids, attention_mask, position_ids = prepare_inputs(
+        tokenizer, prompts, max_prompt_length
+    )
 
-    hf_response_tokens = generate_hf_output(actor_model, input_ids, attention_mask, tokenizer, max_response_length)
+    hf_response_tokens = generate_hf_output(
+        actor_model, input_ids, attention_mask, tokenizer, max_response_length
+    )
 
-    fsdp_device_mesh = init_device_mesh("cuda", mesh_shape=(tensor_parallel_size,), mesh_dim_names=("fsdp",))
+    fsdp_device_mesh = init_device_mesh(
+        "cuda", mesh_shape=(tensor_parallel_size,), mesh_dim_names=("fsdp",)
+    )
     inference_device_mesh_cpu = init_device_mesh(
-        "cpu", mesh_shape=(1, tensor_parallel_size, 1), mesh_dim_names=("dp", "infer_tp", "pp")
+        "cpu",
+        mesh_shape=(1, tensor_parallel_size, 1),
+        mesh_dim_names=("dp", "infer_tp", "pp"),
     )
 
     fsdp_model = FSDP(

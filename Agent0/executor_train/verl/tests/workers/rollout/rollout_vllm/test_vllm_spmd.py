@@ -18,7 +18,11 @@ import pytest
 import torch
 from torch.distributed.fsdp import CPUOffload, MixedPrecision
 from torch.distributed.fsdp import FullyShardedDataParallel as FSDP
-from torch.distributed.fsdp.api import ShardedStateDictConfig, ShardingStrategy, StateDictType
+from torch.distributed.fsdp.api import (
+    ShardedStateDictConfig,
+    ShardingStrategy,
+    StateDictType,
+)
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from vllm import LLM, SamplingParams
 
@@ -70,7 +74,9 @@ def are_lists_similar(a, b):
 
 @pytest.mark.skip("https://github.com/vllm-project/vllm/issues/16993")
 def test_vllm_spmd():
-    assert torch.cuda.device_count() >= 2, "At least 2 GPUs is required to run tp+dp tests."
+    assert (
+        torch.cuda.device_count() >= 2
+    ), "At least 2 GPUs is required to run tp+dp tests."
     local_rank, rank, world_size = initialize_global_process_group()
 
     # Initialize model and token
@@ -80,9 +86,13 @@ def test_vllm_spmd():
     from verl.utils.fs import copy_to_local
 
     local_model_path = copy_to_local(src=hdfs_path, cache_dir=local_cache_path)
-    tokenizer = AutoTokenizer.from_pretrained(local_model_path, padding_side="left", trust_remote_code=True)
+    tokenizer = AutoTokenizer.from_pretrained(
+        local_model_path, padding_side="left", trust_remote_code=True
+    )
 
-    actor_model = AutoModelForCausalLM.from_pretrained(local_model_path, trust_remote_code=True)
+    actor_model = AutoModelForCausalLM.from_pretrained(
+        local_model_path, trust_remote_code=True
+    )
     actor_model.to(torch.bfloat16)
 
     # fill rollout config
@@ -98,8 +108,12 @@ def test_vllm_spmd():
     input_ids = prompts["input_ids"]
     attention_mask = prompts["attention_mask"]
 
-    input_ids = pad_sequence_to_length(input_ids, max_prompt_length, tokenizer.pad_token_id, left_pad=True)
-    attention_mask = pad_sequence_to_length(attention_mask, max_prompt_length, 0, left_pad=True)
+    input_ids = pad_sequence_to_length(
+        input_ids, max_prompt_length, tokenizer.pad_token_id, left_pad=True
+    )
+    attention_mask = pad_sequence_to_length(
+        attention_mask, max_prompt_length, 0, left_pad=True
+    )
 
     print("start generation")
     input_ids = input_ids.cuda()
@@ -108,16 +122,27 @@ def test_vllm_spmd():
     temperature = 0
     top_p = 1
     kwargs = dict(
-        n=1, temperature=temperature, top_p=top_p, max_tokens=max_response_length, logprobs=1, ignore_eos=True
+        n=1,
+        temperature=temperature,
+        top_p=top_p,
+        max_tokens=max_response_length,
+        logprobs=1,
+        ignore_eos=True,
     )
 
     tensor_parallel_size = 4
 
     from torch.distributed.device_mesh import init_device_mesh
 
-    device_mesh = init_device_mesh("cuda", mesh_shape=(world_size,), mesh_dim_names=["fsdp"])
+    device_mesh = init_device_mesh(
+        "cuda", mesh_shape=(world_size,), mesh_dim_names=["fsdp"]
+    )
 
-    mixed_precision = MixedPrecision(param_dtype=torch.bfloat16, reduce_dtype=torch.float32, buffer_dtype=torch.float32)
+    mixed_precision = MixedPrecision(
+        param_dtype=torch.bfloat16,
+        reduce_dtype=torch.float32,
+        buffer_dtype=torch.float32,
+    )
 
     fsdp_model = FSDP(
         actor_model,
@@ -132,7 +157,9 @@ def test_vllm_spmd():
     )
 
     FSDP.set_state_dict_type(
-        fsdp_model, state_dict_type=StateDictType.SHARDED_STATE_DICT, state_dict_config=ShardedStateDictConfig()
+        fsdp_model,
+        state_dict_type=StateDictType.SHARDED_STATE_DICT,
+        state_dict_config=ShardedStateDictConfig(),
     )
 
     state_dict = fsdp_model.state_dict()
@@ -153,7 +180,9 @@ def test_vllm_spmd():
         seed=1,
     )
 
-    outputs = llm.generate(preencode_prompts, sampling_params=sampling_params, use_tqdm=False)
+    outputs = llm.generate(
+        preencode_prompts, sampling_params=sampling_params, use_tqdm=False
+    )
     vllm_response_tokens = []
     for output in outputs:
         generated_text = output.outputs[0].text
@@ -162,10 +191,15 @@ def test_vllm_spmd():
     world_size = torch.distributed.get_world_size()
     model = llm.llm_engine.model_executor.driver_worker.worker.model_runner.model
     model.load_weights(
-        ((name, param.full_tensor() if world_size != 1 else param) for name, param in state_dict.items())
+        (
+            (name, param.full_tensor() if world_size != 1 else param)
+            for name, param in state_dict.items()
+        )
     )
 
-    outputs = llm.generate(preencode_prompts, sampling_params=sampling_params, use_tqdm=False)
+    outputs = llm.generate(
+        preencode_prompts, sampling_params=sampling_params, use_tqdm=False
+    )
     verl_vllm_response_tokens = []
     for output in outputs:
         generated_text = output.outputs[0].text
@@ -174,7 +208,9 @@ def test_vllm_spmd():
     if torch.distributed.get_rank() == 0:
         print(f"vllm response: {vllm_response_tokens}")
         print(f"verl-vllm response: {verl_vllm_response_tokens}")
-    assert are_lists_similar(vllm_response_tokens, verl_vllm_response_tokens), "Strings differ more than 10%:\n"
+    assert are_lists_similar(
+        vllm_response_tokens, verl_vllm_response_tokens
+    ), "Strings differ more than 10%:\n"
     print("Check Pass")
     torch.distributed.destroy_process_group()
 

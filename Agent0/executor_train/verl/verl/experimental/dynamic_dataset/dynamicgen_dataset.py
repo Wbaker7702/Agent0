@@ -80,9 +80,9 @@ class DynamicGenDataset(RLHFDataset):
     ):
         super().__init__(data_files, tokenizer, config, processor)
         self.datagen: AbstractDataGenerator = config.datagen
-        assert "datagen" in config and config.datagen.get("path", None) is not None, (
-            f"datagen path is not set in config: {config}"
-        )
+        assert (
+            "datagen" in config and config.datagen.get("path", None) is not None
+        ), f"datagen path is not set in config: {config}"
         # Dynamically load the custom datagen class
         datagen_cls = load_extern_type(config.datagen.path, config.datagen.name)
 

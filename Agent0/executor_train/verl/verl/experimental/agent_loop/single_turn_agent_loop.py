@@ -31,16 +31,23 @@ class SingleTurnAgentLoop(AgentLoopBase):
         self.prompt_length = config.actor_rollout_ref.rollout.prompt_length
         self.response_length = config.actor_rollout_ref.rollout.response_length
 
-    async def run(self, messages: list[dict[str, Any]], sampling_params: dict[str, Any]) -> AgentLoopOutput:
+    async def run(
+        self, messages: list[dict[str, Any]], sampling_params: dict[str, Any]
+    ) -> AgentLoopOutput:
         metrics = {}
         request_id = uuid4().hex
         prompt_ids = await self.loop.run_in_executor(
-            None, lambda: self.tokenizer.apply_chat_template(messages, add_generation_prompt=True, tokenize=True)
+            None,
+            lambda: self.tokenizer.apply_chat_template(
+                messages, add_generation_prompt=True, tokenize=True
+            ),
         )
 
         with simple_timer("generate_sequences", metrics):
             response_ids = await self.server_manager.generate(
-                request_id=request_id, prompt_ids=prompt_ids, sampling_params=sampling_params
+                request_id=request_id,
+                prompt_ids=prompt_ids,
+                sampling_params=sampling_params,
             )
         response_mask = [1] * len(response_ids)
 

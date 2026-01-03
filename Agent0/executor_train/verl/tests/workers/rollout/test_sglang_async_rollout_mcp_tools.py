@@ -29,7 +29,11 @@ from utils_sglang import get_rollout_config, prepare_inputs
 from verl.protocol import DataProto
 from verl.tools.mcp_search_tool import MCPSearchTool
 from verl.tools.utils.mcp_clients.McpClientManager import MCPClientManager
-from verl.workers.rollout.schemas import AsyncRolloutRequest, AsyncRolloutRequestStateEnum, Message
+from verl.workers.rollout.schemas import (
+    AsyncRolloutRequest,
+    AsyncRolloutRequestStateEnum,
+    Message,
+)
 from verl.workers.rollout.sglang_rollout.sglang_rollout import SGLangRollout
 
 DEFAULT_USER_CONTENT_PREFIX = (
@@ -100,10 +104,15 @@ def get_search_messages():
     }
 
     # Mock search tool responses
-    tool_return_0_msg = {"role": "tool", "content": [{"type": "text", "text": "Today's weather in Beijing is sunny."}]}
+    tool_return_0_msg = {
+        "role": "tool",
+        "content": [{"type": "text", "text": "Today's weather in Beijing is sunny."}],
+    }
     tool_return_1_msg = {
         "role": "tool",
-        "content": [{"type": "text", "text": "Tomorrow's weather in Beijing is cloudy."}],
+        "content": [
+            {"type": "text", "text": "Tomorrow's weather in Beijing is cloudy."}
+        ],
     }
 
     user_prompts = [user_prompt]
@@ -133,11 +142,15 @@ class TestRolloutWithMCPSearchTools:
         user_prompt, expect_turn_array, tool_return_array = get_search_messages()
         prompts = [[message] for message in user_prompt]
         preencode_turn_array = [
-            qwen_tokenizer.apply_chat_template([turn], tokenize=False, add_generation_prompt=False)
+            qwen_tokenizer.apply_chat_template(
+                [turn], tokenize=False, add_generation_prompt=False
+            )
             for turn in expect_turn_array
         ]
         preencode_tool_return_array = [
-            qwen_tokenizer.apply_chat_template([turn], tokenize=False, add_generation_prompt=True)
+            qwen_tokenizer.apply_chat_template(
+                [turn], tokenize=False, add_generation_prompt=True
+            )
             for turn in tool_return_array
         ]
         return prompts, preencode_turn_array, preencode_tool_return_array
@@ -150,7 +163,11 @@ class TestRolloutWithMCPSearchTools:
         tensor_parallel_size = 1
         tool_path = "./resource/tool_configs/mcp_tool_config"
         rollout_config = get_rollout_config(
-            max_response_length, max_prompt_length, dtype, tensor_parallel_size, tool_path
+            max_response_length,
+            max_prompt_length,
+            dtype,
+            tensor_parallel_size,
+            tool_path,
         )
         return rollout_config
 
@@ -158,10 +175,14 @@ class TestRolloutWithMCPSearchTools:
     def search_data_proto(self, search_data, qwen_tokenizer):
         preencode_prompts, _, _ = search_data
         prompts = [
-            qwen_tokenizer.apply_chat_template(message, tokenize=False, add_generation_prompt=True)
+            qwen_tokenizer.apply_chat_template(
+                message, tokenize=False, add_generation_prompt=True
+            )
             for message in preencode_prompts
         ]
-        input_ids, attention_mask, position_ids = prepare_inputs(qwen_tokenizer, prompts, 1000)
+        input_ids, attention_mask, position_ids = prepare_inputs(
+            qwen_tokenizer, prompts, 1000
+        )
         prompt_dict = TensorDict(
             {
                 "input_ids": input_ids,
@@ -176,7 +197,9 @@ class TestRolloutWithMCPSearchTools:
             [
                 {
                     "tavily_search_tool": {
-                        "create_kwargs": {"ground_truth": "Today is sunny and tomorrow will be cloudy in Beijing."},
+                        "create_kwargs": {
+                            "ground_truth": "Today is sunny and tomorrow will be cloudy in Beijing."
+                        },
                     },
                 }
             ],
@@ -184,7 +207,12 @@ class TestRolloutWithMCPSearchTools:
         )
         index = np.array([0], dtype=object)
         prompts = DataProto(
-            batch=prompt_dict, non_tensor_batch={"raw_prompt": messages, "tools_kwargs": tools_kwargs, "index": index}
+            batch=prompt_dict,
+            non_tensor_batch={
+                "raw_prompt": messages,
+                "tools_kwargs": tools_kwargs,
+                "index": index,
+            },
         )
         return prompts
 
@@ -263,7 +291,9 @@ class TestRolloutWithMCPSearchTools:
             }
         ]
         with (
-            patch.object(MCPClientManager, "fetch_tool_schemas", return_value=tool_schema),
+            patch.object(
+                MCPClientManager, "fetch_tool_schemas", return_value=tool_schema
+            ),
             patch.object(SGLangRollout, "_init_distributed_env", return_value=None),
             patch.object(SGLangRollout, "_init_inference_engine", return_value=None),
             patch.object(SGLangRollout, "_init_sampling_params", return_value=None),
@@ -293,14 +323,18 @@ class TestRolloutWithMCPSearchTools:
         assert mock_rollout._tool_call_parser_type == "qwen25"
 
     def test_rollout_req_creation(self, mock_rollout, search_data_proto):
-        req_list = mock_rollout._preprocess_prompt_to_async_rollout_requests(search_data_proto, n=1)
+        req_list = mock_rollout._preprocess_prompt_to_async_rollout_requests(
+            search_data_proto, n=1
+        )
         assert len(req_list) == 1
         assert req_list[0].state == AsyncRolloutRequestStateEnum.PENDING
         assert len(req_list[0].tool_schemas) == 1
 
     def test_over_size_case(self, mock_rollout, search_data_proto, search_data):
         mock_rollout.config.multi_turn.max_assistant_turns = 1
-        req = mock_rollout._preprocess_prompt_to_async_rollout_requests(search_data_proto, n=1)[0]
+        req = mock_rollout._preprocess_prompt_to_async_rollout_requests(
+            search_data_proto, n=1
+        )[0]
         req = MagicMock(wraps=req, spec=AsyncRolloutRequest)
         req.finalize = MagicMock()
         req_list = [req]
@@ -327,7 +361,10 @@ class TestRolloutWithMCPSearchTools:
         loop = asyncio.get_event_loop()
         output_req_list = loop.run_until_complete(
             asyncio.gather(
-                *[mock_rollout._async_rollout_a_request(req, True, False) for req in req_list],
+                *[
+                    mock_rollout._async_rollout_a_request(req, True, False)
+                    for req in req_list
+                ],
             )
         )
         assert len(output_req_list) == 1
@@ -343,13 +380,19 @@ class TestRolloutWithMCPSearchTools:
         )
 
     @patch.object(MCPSearchTool, "execute", new_callable=AsyncMock)
-    def test_tool_call_basic_case(self, mock_execute, mock_rollout, search_data_proto, search_data):
+    def test_tool_call_basic_case(
+        self, mock_execute, mock_rollout, search_data_proto, search_data
+    ):
         _, expect_turn_array, tool_return_array = search_data
         # Mock search tool execution to return predefined responses
-        mock_execute.side_effect = [(msg, 0.0, {"status": "success"}) for msg in tool_return_array]
+        mock_execute.side_effect = [
+            (msg, 0.0, {"status": "success"}) for msg in tool_return_array
+        ]
 
         mock_rollout.config.multi_turn.max_assistant_turns = 10
-        req = mock_rollout._preprocess_prompt_to_async_rollout_requests(search_data_proto, n=1)[0]
+        req = mock_rollout._preprocess_prompt_to_async_rollout_requests(
+            search_data_proto, n=1
+        )[0]
         req = MagicMock(wraps=req, spec=AsyncRolloutRequest)
         req.finalize = MagicMock()
         req_list = [req]
@@ -362,7 +405,13 @@ class TestRolloutWithMCPSearchTools:
                     "text": turn,
                     "meta_info": {
                         "id": "d1188d81cba840359df5b352b344bc8e",
-                        "finish_reason": {"type": "tool_calls" if idx < len(expect_turn_array) - 1 else "stop"},
+                        "finish_reason": {
+                            "type": (
+                                "tool_calls"
+                                if idx < len(expect_turn_array) - 1
+                                else "stop"
+                            )
+                        },
                         "prompt_tokens": len(turn),
                         "completion_tokens": 100,
                         "cached_tokens": 0,
@@ -379,7 +428,12 @@ class TestRolloutWithMCPSearchTools:
 
         loop = asyncio.get_event_loop()
         output_req_list = loop.run_until_complete(
-            asyncio.gather(*[mock_rollout._async_rollout_a_request(req, True, False) for req in req_list])
+            asyncio.gather(
+                *[
+                    mock_rollout._async_rollout_a_request(req, True, False)
+                    for req in req_list
+                ]
+            )
         )
 
         # Verify conversation completed successfully with proper tool usage
@@ -398,7 +452,9 @@ class TestRolloutWithMCPSearchTools:
         assert search_counter == 2
 
     @patch.object(MCPSearchTool, "execute", new_callable=AsyncMock)
-    def test_tool_call_batch_case(self, mock_execute, mock_rollout, search_data_proto, search_data):
+    def test_tool_call_batch_case(
+        self, mock_execute, mock_rollout, search_data_proto, search_data
+    ):
         _, expect_turn_array, tool_return_array = search_data
         # Mock tool execution for large batch (100 requests * 2 calls each)
         mock_execute.side_effect = [
@@ -407,7 +463,9 @@ class TestRolloutWithMCPSearchTools:
         ] * 100
 
         mock_rollout.config.multi_turn.max_assistant_turns = 10
-        base_req = mock_rollout._preprocess_prompt_to_async_rollout_requests(search_data_proto, n=1)[0]
+        base_req = mock_rollout._preprocess_prompt_to_async_rollout_requests(
+            search_data_proto, n=1
+        )[0]
 
         req_nums = 100
         req_list = []
@@ -421,13 +479,21 @@ class TestRolloutWithMCPSearchTools:
             req_list.append(MagicMock(wraps=tmp_req, spec=AsyncRolloutRequest))
 
             futures = [asyncio.Future() for _ in expect_turn_array]
-            for idx, (fut, turn) in enumerate(zip(futures, expect_turn_array, strict=True)):
+            for idx, (fut, turn) in enumerate(
+                zip(futures, expect_turn_array, strict=True)
+            ):
                 fut.set_result(
                     {
                         "text": turn,
                         "meta_info": {
                             "id": "dummy",
-                            "finish_reason": {"type": "tool_calls" if idx < len(expect_turn_array) - 1 else "stop"},
+                            "finish_reason": {
+                                "type": (
+                                    "tool_calls"
+                                    if idx < len(expect_turn_array) - 1
+                                    else "stop"
+                                )
+                            },
                             "prompt_tokens": len(turn),
                             "completion_tokens": 100,
                         },
@@ -436,16 +502,27 @@ class TestRolloutWithMCPSearchTools:
             req_turns_map[i] = futures
             req_turns_counter[i] = 0
 
-        async def hacked_handle_engine_call(self, _req: AsyncRolloutRequest, *_args, **_kwargs):
-            fut = req_turns_map[_req.batch_data_id][req_turns_counter[_req.batch_data_id]]
+        async def hacked_handle_engine_call(
+            self, _req: AsyncRolloutRequest, *_args, **_kwargs
+        ):
+            fut = req_turns_map[_req.batch_data_id][
+                req_turns_counter[_req.batch_data_id]
+            ]
             req_turns_counter[_req.batch_data_id] += 1
             return await fut
 
-        with patch.object(SGLangRollout, "_handle_engine_call", new=hacked_handle_engine_call):
+        with patch.object(
+            SGLangRollout, "_handle_engine_call", new=hacked_handle_engine_call
+        ):
             mock_rollout._tp_rank = 0
             loop = asyncio.get_event_loop()
             output_req_list = loop.run_until_complete(
-                asyncio.gather(*[mock_rollout._async_rollout_a_request(r, True, False) for r in req_list])
+                asyncio.gather(
+                    *[
+                        mock_rollout._async_rollout_a_request(r, True, False)
+                        for r in req_list
+                    ]
+                )
             )
 
         # Verify all requests completed successfully

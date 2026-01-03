@@ -44,9 +44,13 @@ def apply_patch():
         """
         # s = sequence length, b = batch size, h = hidden size, n = num attention heads
         # Attention heads [s, b, n*h]
-        assert hidden_states.ndim == 3, f"hidden_states should be 3D, [s, b, n*h], got {hidden_states.ndim}D"
+        assert (
+            hidden_states.ndim == 3
+        ), f"hidden_states should be 3D, [s, b, n*h], got {hidden_states.ndim}D"
 
-        inference_context = deprecate_inference_params(inference_context, inference_params)
+        inference_context = deprecate_inference_params(
+            inference_context, inference_params
+        )
 
         # =========================================
         # Prepare RoPE and seqlen related params
@@ -58,7 +62,9 @@ def apply_patch():
         # rotary_pos_emb:[s, b, 1, 64]
         mscale = 1.0
         if self.config.rope_type == "rope":
-            packed_seq = packed_seq_params is not None and packed_seq_params.qkv_format == "thd"
+            packed_seq = (
+                packed_seq_params is not None and packed_seq_params.qkv_format == "thd"
+            )
             rotary_pos_emb = self.rotary_pos_emb(rotary_seq_len, packed_seq=packed_seq)
         else:
             rotary_pos_emb, mscale = self.rotary_pos_emb(rotary_seq_len)
@@ -92,12 +98,17 @@ def apply_patch():
         # elif linear_kv_down_proj is Linear:
         #     kv_combined: [s / TP, b, (kv_lora_rank + qk_pos_emb_head_dim)]
         kv_combined, _ = self.linear_kv_down_proj(hidden_states)
-        if kv_combined.size(-1) != self.config.kv_lora_rank + self.config.qk_pos_emb_head_dim:
+        if (
+            kv_combined.size(-1)
+            != self.config.kv_lora_rank + self.config.qk_pos_emb_head_dim
+        ):
             # kv_combined: [s, b, (kv_lora_rank + qk_pos_emb_head_dim)]
             kv_combined = gather_from_tensor_model_parallel_region(kv_combined)
             # kv_compressed:[s, b, kv_lora_rank], k_pos_emb: [s, b, qk_pos_emb_head_dim]
             kv_compressed, k_pos_emb = torch.split(
-                kv_combined, [self.config.kv_lora_rank, self.config.qk_pos_emb_head_dim], dim=-1
+                kv_combined,
+                [self.config.kv_lora_rank, self.config.qk_pos_emb_head_dim],
+                dim=-1,
             )
             if self.config.sequence_parallel:
                 # kv_compressed:[s / TP, b, kv_lora_rank]
@@ -105,7 +116,9 @@ def apply_patch():
         else:
             # kv_compressed:[s / TP, b, kv_lora_rank], k_pos_emb: [s / TP, b, qk_pos_emb_head_dim]
             kv_compressed, k_pos_emb = torch.split(
-                kv_combined, [self.config.kv_lora_rank, self.config.qk_pos_emb_head_dim], dim=-1
+                kv_combined,
+                [self.config.kv_lora_rank, self.config.qk_pos_emb_head_dim],
+                dim=-1,
             )
             if parallel_state.get_tensor_model_parallel_world_size() > 1:
                 # k_pos_emb: [s, b, qk_pos_emb_head_dim]
@@ -116,7 +129,9 @@ def apply_patch():
         # =========================================
         # QKV up projection and RoPE apply
         # =========================================
-        def qkv_up_proj_and_rope_apply(q_compressed, kv_compressed, k_pos_emb, rotary_pos_emb):
+        def qkv_up_proj_and_rope_apply(
+            q_compressed, kv_compressed, k_pos_emb, rotary_pos_emb
+        ):
             if self.config.q_lora_rank is not None:
                 q, _ = self.linear_q_up_proj(q_compressed)
             else:
@@ -126,7 +141,9 @@ def apply_patch():
             q_len, bsz, _ = q.size()
 
             # q: [s, b, n, 192]
-            q = q.view(q_len, bsz, self.num_attention_heads_per_partition, self.q_head_dim)
+            q = q.view(
+                q_len, bsz, self.num_attention_heads_per_partition, self.q_head_dim
+            )
 
             # kv: [s, b, 2048]
             kv, _ = self.linear_kv_up_proj(kv_compressed)
@@ -155,10 +172,14 @@ def apply_patch():
             k_pos_emb = torch.unsqueeze(k_pos_emb, 2)
 
             # q: [s, b, n, 128], q_pos_emb: [s, b, n, 64]
-            q_no_pe, q_pos_emb = torch.split(q, [self.config.qk_head_dim, self.config.qk_pos_emb_head_dim], dim=-1)
+            q_no_pe, q_pos_emb = torch.split(
+                q, [self.config.qk_head_dim, self.config.qk_pos_emb_head_dim], dim=-1
+            )
 
             # k_no_pe: [s, b, n, 128], value: [s, b, n, 128]
-            k_no_pe, value = torch.split(kv, [self.config.qk_head_dim, self.config.v_head_dim], dim=-1)
+            k_no_pe, value = torch.split(
+                kv, [self.config.qk_head_dim, self.config.v_head_dim], dim=-1
+            )
 
             if packed_seq_params is not None:
                 cu_seqlens_q = packed_seq_params.cu_seqlens_q
@@ -190,11 +211,15 @@ def apply_patch():
             # query: [s, b, n, 192]
             query = torch.cat([q_no_pe, q_pos_emb], dim=-1)
             if packed_seq_params is not None:
-                k_pos_emb = k_pos_emb.expand(-1, self.num_attention_heads_per_partition, -1)
+                k_pos_emb = k_pos_emb.expand(
+                    -1, self.num_attention_heads_per_partition, -1
+                )
                 key = torch.cat([k_no_pe, k_pos_emb], dim=-1)
             else:
                 # key: [s, b, n, 192]
-                k_pos_emb = k_pos_emb.expand(-1, -1, self.num_attention_heads_per_partition, -1)
+                k_pos_emb = k_pos_emb.expand(
+                    -1, -1, self.num_attention_heads_per_partition, -1
+                )
                 key = torch.cat([k_no_pe, k_pos_emb], dim=-1)
 
             query = query.contiguous()
@@ -205,10 +230,16 @@ def apply_patch():
         if self.recompute_up_proj:
             self.qkv_up_checkpoint = tensor_parallel.CheckpointWithoutOutput()
             query, key, value = self.qkv_up_checkpoint.checkpoint(
-                qkv_up_proj_and_rope_apply, q_compressed, kv_compressed, k_pos_emb, rotary_pos_emb
+                qkv_up_proj_and_rope_apply,
+                q_compressed,
+                kv_compressed,
+                k_pos_emb,
+                rotary_pos_emb,
             )
         else:
-            query, key, value = qkv_up_proj_and_rope_apply(q_compressed, kv_compressed, k_pos_emb, rotary_pos_emb)
+            query, key, value = qkv_up_proj_and_rope_apply(
+                q_compressed, kv_compressed, k_pos_emb, rotary_pos_emb
+            )
 
         return query, key, value
 

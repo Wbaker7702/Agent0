@@ -26,7 +26,11 @@ import torch
 
 from verl.single_controller.base import Worker
 from verl.single_controller.base.decorator import Dispatch, register
-from verl.single_controller.ray import RayClassWithInitArgs, RayResourcePool, RayWorkerGroup
+from verl.single_controller.ray import (
+    RayClassWithInitArgs,
+    RayResourcePool,
+    RayWorkerGroup,
+)
 
 
 @ray.remote
@@ -35,7 +39,9 @@ class Actor(Worker):
     def init(self):
         remote_rank = self.rank // 2
         self.group_name = f"A{self.rank}_R{remote_rank}"
-        collective.init_collective_group(world_size=2, rank=0, backend="nccl", group_name=self.group_name)
+        collective.init_collective_group(
+            world_size=2, rank=0, backend="nccl", group_name=self.group_name
+        )
 
     @register(Dispatch.ONE_TO_ALL, blocking=False)
     def send_tensors(self):
@@ -52,8 +58,12 @@ class Rollout(Worker):
         self.first_group_name = f"A{self.remote_first_rank}_R{self.rank}"
         self.second_group_name = f"A{self.remote_second_rank}_R{self.rank}"
 
-        collective.init_collective_group(world_size=2, rank=1, backend="nccl", group_name=self.first_group_name)
-        collective.init_collective_group(world_size=2, rank=1, backend="nccl", group_name=self.second_group_name)
+        collective.init_collective_group(
+            world_size=2, rank=1, backend="nccl", group_name=self.first_group_name
+        )
+        collective.init_collective_group(
+            world_size=2, rank=1, backend="nccl", group_name=self.second_group_name
+        )
 
     @register(Dispatch.ONE_TO_ALL, blocking=False)
     def receive_tensors(self):
@@ -65,7 +75,10 @@ class Rollout(Worker):
 
     @register(Dispatch.ONE_TO_ALL)
     def get_tensors(self):
-        return {f"src_{self.remote_first_rank}": self.tensor1, f"src_{self.remote_second_rank}": self.tensor2}
+        return {
+            f"src_{self.remote_first_rank}": self.tensor1,
+            f"src_{self.remote_second_rank}": self.tensor2,
+        }
 
 
 def test_ray_collective_group():
@@ -78,10 +91,14 @@ def test_ray_collective_group():
     rollout_cls = RayClassWithInitArgs(cls=Rollout)
 
     actor_wg = RayWorkerGroup(
-        resource_pool=actor_resource_pool, ray_cls_with_init=actor_cls, name_prefix="collective_group_actor"
+        resource_pool=actor_resource_pool,
+        ray_cls_with_init=actor_cls,
+        name_prefix="collective_group_actor",
     )
     rollout_wg = RayWorkerGroup(
-        resource_pool=rollout_resource_pool, ray_cls_with_init=rollout_cls, name_prefix="collective_group_rollout"
+        resource_pool=rollout_resource_pool,
+        ray_cls_with_init=rollout_cls,
+        name_prefix="collective_group_rollout",
     )
 
     actor_wg.init()

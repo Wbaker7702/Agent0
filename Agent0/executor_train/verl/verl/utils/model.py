@@ -64,13 +64,17 @@ def update_model_config(module_config, override_config_kwargs):
             setattr(module_config, key, val)
 
 
-def get_huggingface_actor_config(model_name: str, override_config_kwargs=None, trust_remote_code=False) -> dict:
+def get_huggingface_actor_config(
+    model_name: str, override_config_kwargs=None, trust_remote_code=False
+) -> dict:
     if override_config_kwargs is None:
         override_config_kwargs = {}
-    assert isinstance(override_config_kwargs, dict), (
-        f"override_config_kwargs must be a dict, got {type(override_config_kwargs)}"
+    assert isinstance(
+        override_config_kwargs, dict
+    ), f"override_config_kwargs must be a dict, got {type(override_config_kwargs)}"
+    module_config = AutoConfig.from_pretrained(
+        model_name, trust_remote_code=trust_remote_code
     )
-    module_config = AutoConfig.from_pretrained(model_name, trust_remote_code=trust_remote_code)
     update_model_config(module_config, override_config_kwargs)
 
     return module_config
@@ -93,7 +97,9 @@ def get_generation_config(
             return None
 
 
-def create_huggingface_actor(model_name: str, override_config_kwargs=None, automodel_kwargs=None) -> nn.Module:
+def create_huggingface_actor(
+    model_name: str, override_config_kwargs=None, automodel_kwargs=None
+) -> nn.Module:
     """
 
     Args:
@@ -107,17 +113,23 @@ def create_huggingface_actor(model_name: str, override_config_kwargs=None, autom
         override_config_kwargs = {}
     if automodel_kwargs is None:
         automodel_kwargs = {}
-    assert isinstance(override_config_kwargs, dict), (
-        f"override_config_kwargs must be a dict, got {type(override_config_kwargs)}"
-    )
+    assert isinstance(
+        override_config_kwargs, dict
+    ), f"override_config_kwargs must be a dict, got {type(override_config_kwargs)}"
     module_config = get_huggingface_actor_config(
-        model_name, override_config_kwargs, trust_remote_code=automodel_kwargs.get("trust_remote_code", False)
+        model_name,
+        override_config_kwargs,
+        trust_remote_code=automodel_kwargs.get("trust_remote_code", False),
     )
-    module: nn.Module = AutoModelForCausalLM.from_config(module_config, **automodel_kwargs)
+    module: nn.Module = AutoModelForCausalLM.from_config(
+        module_config, **automodel_kwargs
+    )
     return module
 
 
-def create_huggingface_critic(model_name: str, override_config_kwargs=None, automodel_kwargs=None) -> nn.Module:
+def create_huggingface_critic(
+    model_name: str, override_config_kwargs=None, automodel_kwargs=None
+) -> nn.Module:
     """
 
     Args:
@@ -128,13 +140,16 @@ def create_huggingface_critic(model_name: str, override_config_kwargs=None, auto
 
     """
     critic_module: nn.Module = create_huggingface_actor(
-        model_name, override_config_kwargs=override_config_kwargs, automodel_kwargs=automodel_kwargs
+        model_name,
+        override_config_kwargs=override_config_kwargs,
+        automodel_kwargs=automodel_kwargs,
     )
     if automodel_kwargs is None:
         automodel_kwargs = {}
     torch_dtype = automodel_kwargs.get("torch_dtype", torch.float32)
     critic_module.lm_head = nn.Sequential(
-        nn.Linear(critic_module.config.hidden_size, 1, dtype=torch_dtype), LambdaLayer(fn=squeeze)
+        nn.Linear(critic_module.config.hidden_size, 1, dtype=torch_dtype),
+        LambdaLayer(fn=squeeze),
     )
     return critic_module
 
@@ -205,8 +220,12 @@ def create_random_mask(
     masks = torch.ones_like(input_ids, dtype=torch.int64)
     # TODO: we can make this faster
     for i in range(batch_size):
-        num_left_padding = np.random.randint(low=0, high=max_left_padding + 1, dtype=np.int64)
-        num_valid = np.random.randint(low=min_num_valid_tokens, high=max_num_valid_tokens + 1, dtype=np.int64)
+        num_left_padding = np.random.randint(
+            low=0, high=max_left_padding + 1, dtype=np.int64
+        )
+        num_valid = np.random.randint(
+            low=min_num_valid_tokens, high=max_num_valid_tokens + 1, dtype=np.int64
+        )
 
         for index in range(num_left_padding):
             masks[i, index] = 0
@@ -225,11 +244,15 @@ def convert_weight_keys(state_dict: dict[str, torch.Tensor], model: PreTrainedMo
     if not hasattr(model, "_checkpoint_conversion_mapping"):
         return state_dict
 
-    reverse_key_mapping = {v: k for k, v in model._checkpoint_conversion_mapping.items()}
+    reverse_key_mapping = {
+        v: k for k, v in model._checkpoint_conversion_mapping.items()
+    }
     original_weights = {}
     for key, value in state_dict.items():
         for pattern, replacement in reverse_key_mapping.items():
-            replacement = replacement.lstrip("^")  # strip off un-needed chars and patterns
+            replacement = replacement.lstrip(
+                "^"
+            )  # strip off un-needed chars and patterns
             replacement = re.sub(r"\(.*\)", "", replacement)
             key, n_replace = re.subn(pattern, replacement, key)
             # Early exit of the loop
@@ -259,7 +282,9 @@ def check_exclude_modules(config, key: str) -> bool:
                 return True
         elif key in config.exclude_modules:
             return True
-        elif any(key.endswith(f".{exclude_key}") for exclude_key in config.exclude_modules):
+        elif any(
+            key.endswith(f".{exclude_key}") for exclude_key in config.exclude_modules
+        ):
             return True
     return False
 
@@ -282,7 +307,9 @@ def check_target_modules(config, key: str) -> bool:
         # this module is specified directly in target_modules
         target_module_found = True
     else:
-        target_module_found = any(key.endswith(f".{target_key}") for target_key in config.target_modules)
+        target_module_found = any(
+            key.endswith(f".{target_key}") for target_key in config.target_modules
+        )
 
         layer_indexes = getattr(config, "layers_to_transform", None)
         layers_pattern = getattr(config, "layers_pattern", None)
@@ -297,7 +324,11 @@ def check_target_modules(config, key: str) -> bool:
             if layers_pattern is None or len(layers_pattern) == 0:
                 layer_index = re.match(r".*\.[^.]*\.(\d+)\.", key)
             else:
-                layers_pattern = [layers_pattern] if isinstance(layers_pattern, str) else layers_pattern
+                layers_pattern = (
+                    [layers_pattern]
+                    if isinstance(layers_pattern, str)
+                    else layers_pattern
+                )
                 for pattern in layers_pattern:
                     layer_index = re.match(rf".*\.{pattern}\.(\d+)\.", key)
                     if layer_index is not None:
@@ -315,7 +346,9 @@ def check_target_modules(config, key: str) -> bool:
     return target_module_found
 
 
-def normalize_model_name(name, pp_rank, vpp_rank, transformer_config, layer_name="layers"):
+def normalize_model_name(
+    name, pp_rank, vpp_rank, transformer_config, layer_name="layers"
+):
     """
     Transform the model name in each model_chunk in each pp stage into the name in inference engine
     """
@@ -355,13 +388,24 @@ def normalize_pp_vpp_params(params, num_hidden_layers, layer_name="layers"):
         for vpp_rank in range(vpp_size):
             for name, param in params[pp_rank][vpp_rank].items():
                 normalized_name = normalize_model_name(
-                    name, pp_rank, vpp_rank, pp_size, vpp_size, num_hidden_layers, layer_name=layer_name
+                    name,
+                    pp_rank,
+                    vpp_rank,
+                    pp_size,
+                    vpp_size,
+                    num_hidden_layers,
+                    layer_name=layer_name,
                 )
                 yield normalized_name, param
 
 
 def get_parallel_model_from_config(
-    config, megatron_config, pre_process=None, post_process=None, share_embeddings_and_output_weights=False, value=False
+    config,
+    megatron_config,
+    pre_process=None,
+    post_process=None,
+    share_embeddings_and_output_weights=False,
+    value=False,
 ):
     from megatron.core import ModelParallelConfig
 
@@ -378,7 +422,9 @@ def get_parallel_model_from_config(
     return model
 
 
-def _get_parallel_model_architecture_from_config(config: PretrainedConfig, value=False) -> type[nn.Module]:
+def _get_parallel_model_architecture_from_config(
+    config: PretrainedConfig, value=False
+) -> type[nn.Module]:
     architectures = getattr(config, "architectures", [])
     for arch in architectures:
         model_cls = ModelRegistry.load_model_cls(arch, value)
@@ -398,7 +444,9 @@ def _load_hf_model(config, model_config, is_value_model, local_cache_path):
 
     from verl.models.mcore.saver import _megatron_calc_global_rank
 
-    assert hasattr(model_config, "architectures"), "architectures cannot be empty when load weight!"
+    assert hasattr(
+        model_config, "architectures"
+    ), "architectures cannot be empty when load weight!"
     architectures = getattr(model_config, "architectures", [])
     local_cache_path = os.path.expanduser(local_cache_path)
 
@@ -407,16 +455,24 @@ def _load_hf_model(config, model_config, is_value_model, local_cache_path):
 
         print(f"start download from {config.model.path}")
         local_model_path = copy_to_local(
-            src=config.model.path, cache_dir=local_cache_path, use_shm=config.model.get("use_shm", False)
+            src=config.model.path,
+            cache_dir=local_cache_path,
+            use_shm=config.model.get("use_shm", False),
         )
         print("finish download")
     else:
         local_model_path = config.model.path
         print(f"load from local dir {local_model_path}")
 
-    src_rank = _megatron_calc_global_rank(tp_rank=0, dp_rank=0, pp_rank=0, cp_rank=mpu.get_context_parallel_rank())
+    src_rank = _megatron_calc_global_rank(
+        tp_rank=0, dp_rank=0, pp_rank=0, cp_rank=mpu.get_context_parallel_rank()
+    )
     cpu_init_weights = lambda: torch.device("cpu")
-    init_context = init_empty_weights if torch.distributed.get_rank() != src_rank else cpu_init_weights
+    init_context = (
+        init_empty_weights
+        if torch.distributed.get_rank() != src_rank
+        else cpu_init_weights
+    )
     with init_context(), warnings.catch_warnings():
         warnings.simplefilter("ignore")
         # TODO: to find a better way to load mistral7b-rm lm_head
@@ -429,7 +485,9 @@ def _load_hf_model(config, model_config, is_value_model, local_cache_path):
             )  # use score head instead of lm_head
             state_dict = model.state_dict()
             state_dict["lm_head.weight"] = state_dict["score.weight"]
-            state_dict["model.embed_tokens.weight"] = state_dict["model.embed_tokens.weight"][
+            state_dict["model.embed_tokens.weight"] = state_dict[
+                "model.embed_tokens.weight"
+            ][
                 :32000
             ]  # workaround, 32001 -> 32000
             is_value_model = True
@@ -451,7 +509,9 @@ def get_hf_model_path(config, local_cache_path="~/.cache/verl/rlhf"):
         from verl.utils.fs import copy_to_local
 
         local_model_path = copy_to_local(
-            src=config.model.path, cache_dir=local_cache_path, use_shm=config.model.get("use_shm", False)
+            src=config.model.path,
+            cache_dir=local_cache_path,
+            use_shm=config.model.get("use_shm", False),
         )
     else:
         local_model_path = config.model.path
@@ -459,7 +519,12 @@ def get_hf_model_path(config, local_cache_path="~/.cache/verl/rlhf"):
 
 
 def load_megatron_model_weights(
-    config, model_config, parallel_model, params_dtype, is_value_model=False, local_cache_path="~/.cache/verl/rlhf"
+    config,
+    model_config,
+    parallel_model,
+    params_dtype,
+    is_value_model=False,
+    local_cache_path="~/.cache/verl/rlhf",
 ):
     """Load weights for verl customized model."""
     architectures, model, state_dict, is_value_model = _load_hf_model(
@@ -484,10 +549,17 @@ def load_megatron_model_weights(
 
 
 def load_megatron_gptmodel_weights(
-    config, model_config, parallel_model, params_dtype, is_value_model=False, local_cache_path="~/.cache/verl/rlhf"
+    config,
+    model_config,
+    parallel_model,
+    params_dtype,
+    is_value_model=False,
+    local_cache_path="~/.cache/verl/rlhf",
 ):
     """Load weights for mcore GPT model."""
-    _, model, state_dict, is_value_model = _load_hf_model(config, model_config, is_value_model, local_cache_path)
+    _, model, state_dict, is_value_model = _load_hf_model(
+        config, model_config, is_value_model, local_cache_path
+    )
 
     from verl.models.mcore.loader import load_state_dict_to_megatron_gptmodel
 
@@ -502,7 +574,9 @@ def load_megatron_gptmodel_weights(
 
 
 # pad input_ids_rmpad, cu_seqlens and max_seqlen_in_batch to be divisible by tp
-def pad_packed_inputs(unpad_tokens: torch.Tensor, cu_seqlens, max_seqlen_in_batch, size):
+def pad_packed_inputs(
+    unpad_tokens: torch.Tensor, cu_seqlens, max_seqlen_in_batch, size
+):
     """pad the tokens such that the total length is a multiple of size.
     This function is useful when applying sequence parallel and context parallel
 
@@ -527,7 +601,9 @@ def pad_packed_inputs(unpad_tokens: torch.Tensor, cu_seqlens, max_seqlen_in_batc
         elif unpad_tokens.ndim == 2:
             unpad_tokens = F.pad(unpad_tokens, (0, 0, 0, pad_size))
         else:
-            raise NotImplementedError(f"Padding dim {unpad_tokens.ndim()} is not supported")
+            raise NotImplementedError(
+                f"Padding dim {unpad_tokens.ndim()} is not supported"
+            )
 
         cu_seqlens = F.pad(cu_seqlens, (0, 1), value=pad_size + cu_seqlens[-1])
         max_seqlen_in_batch = max(max_seqlen_in_batch, pad_size)
@@ -555,18 +631,29 @@ def load_mcore_dist_weights(parallel_model, dist_weight_path, is_value_model=Fal
 
 
 def get_parallel_gptmodel_from_config(
-    tfconfig, hf_config, pre_process=None, post_process=None, share_embeddings_and_output_weights=False, value=False
+    tfconfig,
+    hf_config,
+    pre_process=None,
+    post_process=None,
+    share_embeddings_and_output_weights=False,
+    value=False,
 ):
     from megatron.core.models.gpt.gpt_layer_specs import get_gpt_decoder_block_spec
     from megatron.core.models.gpt.gpt_model import GPTModel
 
     use_te = True
     assert tfconfig.normalization == "RMSNorm", "only RMSNorm is supported for now"
-    transformer_layer_spec = get_gpt_decoder_block_spec(tfconfig, use_transformer_engine=use_te)
+    transformer_layer_spec = get_gpt_decoder_block_spec(
+        tfconfig, use_transformer_engine=use_te
+    )
     rope_scaling_args = {}
     if hf_config.rope_scaling is not None:
-        assert hf_config.rope_scaling["type"] == "linear", "only linear scaling is supported for now"
-        rope_scaling_args["seq_len_interpolation_factor"] = hf_config.rope_scaling["factor"]
+        assert (
+            hf_config.rope_scaling["type"] == "linear"
+        ), "only linear scaling is supported for now"
+        rope_scaling_args["seq_len_interpolation_factor"] = hf_config.rope_scaling[
+            "factor"
+        ]
     parallel_model = GPTModel(
         config=tfconfig,
         transformer_layer_spec=transformer_layer_spec,
@@ -600,18 +687,24 @@ def patch_valuehead_model(model) -> None:
         if isinstance(self.pretrained_model, PreTrainedModel):
             self.pretrained_model.tie_weights()
 
-    def get_input_embeddings(self: "AutoModelForCausalLMWithValueHead") -> torch.nn.Module:
+    def get_input_embeddings(
+        self: "AutoModelForCausalLMWithValueHead",
+    ) -> torch.nn.Module:
         if isinstance(self.pretrained_model, PreTrainedModel):
             return self.pretrained_model.get_input_embeddings()
 
-    def get_output_embeddings(self: "AutoModelForCausalLMWithValueHead") -> torch.nn.Module:
+    def get_output_embeddings(
+        self: "AutoModelForCausalLMWithValueHead",
+    ) -> torch.nn.Module:
         if isinstance(self.pretrained_model, PreTrainedModel):
             return self.pretrained_model.get_output_embeddings()
 
     def can_generate(self):
         return False
 
-    ignore_modules = [name for name, _ in model.named_parameters() if "pretrained_model" in name]
+    ignore_modules = [
+        name for name, _ in model.named_parameters() if "pretrained_model" in name
+    ]
     model._keys_to_ignore_on_save = ignore_modules
     model.tie_weights = MethodType(tie_weights, model)
     model.get_input_embeddings = MethodType(get_input_embeddings, model)
@@ -621,7 +714,11 @@ def patch_valuehead_model(model) -> None:
 
 
 def load_valuehead_model(local_path, torch_dtype, model_config, trust_remote_code):
-    from transformers import AutoModelForCausalLM, AutoModelForTokenClassification, AutoModelForVision2Seq
+    from transformers import (
+        AutoModelForCausalLM,
+        AutoModelForTokenClassification,
+        AutoModelForVision2Seq,
+    )
 
     try:
         model = AutoModelForTokenClassification.from_pretrained(

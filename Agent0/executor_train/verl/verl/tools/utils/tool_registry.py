@@ -37,8 +37,14 @@ async def initialize_mcp_tool(tool_cls, tool_config) -> list:
 
     tool_list = []
     mcp_servers_config_path = tool_config.mcp.mcp_servers_config_path
-    tool_selected_list = tool_config.mcp.tool_selected_list if "tool_selected_list" in tool_config.mcp else None
-    await ClientManager.initialize(mcp_servers_config_path, tool_config.config.rate_limit)
+    tool_selected_list = (
+        tool_config.mcp.tool_selected_list
+        if "tool_selected_list" in tool_config.mcp
+        else None
+    )
+    await ClientManager.initialize(
+        mcp_servers_config_path, tool_config.config.rate_limit
+    )
     # Wait for MCP client to be ready
     max_retries = 10
     retry_interval = 2  # seconds
@@ -47,7 +53,9 @@ async def initialize_mcp_tool(tool_cls, tool_config) -> list:
         if tool_schemas:
             break
         if i < max_retries - 1:
-            logger.debug(f"Waiting for MCP client to be ready, attempt {i + 1}/{max_retries}")
+            logger.debug(
+                f"Waiting for MCP client to be ready, attempt {i + 1}/{max_retries}"
+            )
             await asyncio.sleep(retry_interval)
     else:
         raise RuntimeError("Failed to initialize MCP tools after maximum retries")
@@ -91,8 +99,12 @@ def initialize_tools_from_config(tools_config_file):
                 if tool_config.get("tool_schema", None) is None:
                     tool_schema = None
                 else:
-                    tool_schema_dict = OmegaConf.to_container(tool_config.tool_schema, resolve=True)
-                    tool_schema = OpenAIFunctionToolSchema.model_validate(tool_schema_dict)
+                    tool_schema_dict = OmegaConf.to_container(
+                        tool_config.tool_schema, resolve=True
+                    )
+                    tool_schema = OpenAIFunctionToolSchema.model_validate(
+                        tool_schema_dict
+                    )
                 tool = tool_cls(
                     config=OmegaConf.to_container(tool_config.config, resolve=True),
                     tool_schema=tool_schema,
@@ -100,7 +112,9 @@ def initialize_tools_from_config(tools_config_file):
                 tool_list.append(tool)
             case ToolType.MCP:
                 loop = asyncio.get_event_loop()
-                mcp_tools = loop.run_until_complete(initialize_mcp_tool(tool_cls, tool_config))
+                mcp_tools = loop.run_until_complete(
+                    initialize_mcp_tool(tool_cls, tool_config)
+                )
                 tool_list.extend(mcp_tools)
             case _:
                 raise NotImplementedError

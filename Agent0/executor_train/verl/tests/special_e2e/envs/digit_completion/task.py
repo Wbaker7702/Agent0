@@ -32,7 +32,9 @@ class DigitCompletion:
     Note that the tokenizer is char-level to increase the difficulty.
     """
 
-    def __init__(self, max_number: int, max_diff: int, max_num_in_response: int, seed=0):
+    def __init__(
+        self, max_number: int, max_diff: int, max_num_in_response: int, seed=0
+    ):
         """
 
         Args:
@@ -49,7 +51,9 @@ class DigitCompletion:
         assert self.max_diff > 0
         self.max_number_length = len(str(max_number))
         # {num1},{num2}:{max_num_in_response},{max_number}
-        self._prompt_length = self.max_number_length * 2 + 4 + self.max_number_length  # no negative is allowed
+        self._prompt_length = (
+            self.max_number_length * 2 + 4 + self.max_number_length
+        )  # no negative is allowed
 
         self.np_rng = np.random.default_rng(seed=seed)
 
@@ -75,7 +79,11 @@ class DigitCompletion:
     def response_length(self):
         # number length + comma length + [EOS]
         # The actual number times 1.5 to allow 'U'
-        return (self.max_num_in_response * self.max_number_length + (self.max_num_in_response - 1) + 1) * 2
+        return (
+            self.max_num_in_response * self.max_number_length
+            + (self.max_num_in_response - 1)
+            + 1
+        ) * 2
 
     def add(self, a, b):
         return (a + b) % self.max_number
@@ -86,7 +94,12 @@ class DigitCompletion:
             for diff in range(0, self.max_diff + 1):
                 second_num = self.add(first_num, diff)
                 for num_to_complete in range(self.max_num_in_response + 1):
-                    prompt = str(first_num) + "," + str(second_num) + f":{self.max_number},{num_to_complete}"
+                    prompt = (
+                        str(first_num)
+                        + ","
+                        + str(second_num)
+                        + f":{self.max_number},{num_to_complete}"
+                    )
                     all_prompts.append(prompt)
         return all_prompts
 
@@ -96,7 +109,12 @@ class DigitCompletion:
         diff = self.np_rng.integers(self.max_diff + 1)
         second_num = self.add(first_num, diff)
         num_to_complete = self.np_rng.integers(self.max_num_in_response + 1)
-        prompt = str(first_num) + "," + str(second_num) + f":{self.max_number},{num_to_complete}"
+        prompt = (
+            str(first_num)
+            + ","
+            + str(second_num)
+            + f":{self.max_number},{num_to_complete}"
+        )
         return prompt
 
     def sample_batch_str_prompts(self, batch_size):
@@ -140,10 +158,14 @@ def compute_reward(prompt: str, response: str, sequence_reward=1.0):
     """We compute dense reward here so that we can directly train RL without SFT"""
     response_length = len(response)
     ground_truth_response = generate_ground_truth_response(prompt)
-    per_token_reward = sequence_reward / (len(ground_truth_response) + 1)  # including [EOS]
+    per_token_reward = sequence_reward / (
+        len(ground_truth_response) + 1
+    )  # including [EOS]
 
     # pad
-    reward = np.zeros(response_length, dtype=np.float32)  # this assumes that each char is a token
+    reward = np.zeros(
+        response_length, dtype=np.float32
+    )  # this assumes that each char is a token
     # assign reward until mismatches
     ground_truth_idx = 0
     for i in range(response_length):

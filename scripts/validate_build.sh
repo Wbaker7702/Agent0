@@ -41,6 +41,12 @@ PACKAGES=(
 
 for pkg in "${PACKAGES[@]}"; do
     python3 -c "import $pkg; print(f'✅ $pkg: OK')" 2>/dev/null || {
+        if [ "$pkg" == "flash_attn" ]; then
+            if ! python3 -c "import torch; exit(0 if torch.cuda.is_available() else 1)"; then
+                echo "⚠️  $pkg: SKIPPED (No CUDA)"
+                continue
+            fi
+        fi
         echo "❌ $pkg: MISSING"
         MISSING=1
     }

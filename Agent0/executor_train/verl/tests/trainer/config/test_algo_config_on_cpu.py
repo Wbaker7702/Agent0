@@ -49,7 +49,11 @@ class TestAlgoConfig(unittest.TestCase):
                 "target_kl": 0.05,
             },
             "use_pf_ppo": True,
-            "pf_ppo": {"_target_": "verl.trainer.config.PFPPOConfig", "reweight_method": "max_min", "weight_pow": 3.0},
+            "pf_ppo": {
+                "_target_": "verl.trainer.config.PFPPOConfig",
+                "reweight_method": "max_min",
+                "weight_pow": 3.0,
+            },
         }
         self.omega_config = OmegaConf.create(self.config_dict)
 
@@ -151,7 +155,9 @@ class TestAlgoCompute(unittest.TestCase):
             norm_adv_by_std_in_grpo=True,
             use_kl_in_reward=True,
             kl_penalty="kl",
-            kl_ctrl=KLControlConfig(type="adaptive", kl_coef=0.002, horizon=5000, target_kl=0.05),
+            kl_ctrl=KLControlConfig(
+                type="adaptive", kl_coef=0.002, horizon=5000, target_kl=0.05
+            ),
             use_pf_ppo=True,
             pf_ppo=PFPPOConfig(reweight_method="max_min", weight_pow=3.0),
         )
@@ -187,7 +193,9 @@ class TestAlgoCompute(unittest.TestCase):
 
         # Test GRPO advantage computation
         batch_size, seq_len = 4, 3
-        token_level_rewards = torch.tensor([[1.0, 0.5, 0.0], [2.0, 1.0, 0.0], [0.5, 0.2, 0.0], [1.5, 0.8, 0.0]])
+        token_level_rewards = torch.tensor(
+            [[1.0, 0.5, 0.0], [2.0, 1.0, 0.0], [0.5, 0.2, 0.0], [1.5, 0.8, 0.0]]
+        )
         response_mask = torch.ones(batch_size, seq_len)
         index = np.array([0, 0, 1, 1])  # Two groups
 

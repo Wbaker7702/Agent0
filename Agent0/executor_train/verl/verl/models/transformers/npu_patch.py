@@ -33,10 +33,14 @@ def apply_rotary_pos_emb_flashatt_npu(
     cos = cos.repeat(1, 2)
     sin = sin.repeat(1, 2)
     q_embed = apply_rotary_emb(
-        q.float(), cos.unsqueeze(0).unsqueeze(2).float(), sin.unsqueeze(0).unsqueeze(2).float()
+        q.float(),
+        cos.unsqueeze(0).unsqueeze(2).float(),
+        sin.unsqueeze(0).unsqueeze(2).float(),
     ).type_as(q)
     k_embed = apply_rotary_emb(
-        k.float(), cos.unsqueeze(0).unsqueeze(2).float(), sin.unsqueeze(0).unsqueeze(2).float()
+        k.float(),
+        cos.unsqueeze(0).unsqueeze(2).float(),
+        sin.unsqueeze(0).unsqueeze(2).float(),
     ).type_as(k)
     return q_embed, k_embed
 

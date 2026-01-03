@@ -49,8 +49,12 @@ class BaseCheckpointManager:
         checkpoint_config: DictConfig = None,
     ):
         self.checkpoint_config = checkpoint_config
-        checkpoint_load_contents = checkpoint_config.get("load_contents", None) if checkpoint_config else None
-        checkpoint_save_contents = checkpoint_config.get("save_contents", None) if checkpoint_config else None
+        checkpoint_load_contents = (
+            checkpoint_config.get("load_contents", None) if checkpoint_config else None
+        )
+        checkpoint_save_contents = (
+            checkpoint_config.get("save_contents", None) if checkpoint_config else None
+        )
         if checkpoint_load_contents is None:
             checkpoint_load_contents = ["model", "optimizer", "extra"]
         if checkpoint_save_contents is None:
@@ -118,18 +122,28 @@ class BaseCheckpointManager:
         """
         return "extra" in self.checkpoint_load_contents
 
-    def load_checkpoint(self, local_path: str, hdfs_path: str = None, del_local_after_load: bool = False):
+    def load_checkpoint(
+        self, local_path: str, hdfs_path: str = None, del_local_after_load: bool = False
+    ):
         raise NotImplementedError
 
     def save_checkpoint(
-        self, local_path: str, hdfs_path: str = None, global_step: int = 0, max_ckpt_to_keep: int = None
+        self,
+        local_path: str,
+        hdfs_path: str = None,
+        global_step: int = 0,
+        max_ckpt_to_keep: int = None,
     ):
         raise NotImplementedError
 
     @staticmethod
     def checkpath(local_path: str, hdfs_path: str):
-        assert local_path is not None or hdfs_path is not None, "local_path and hdfs_path cannot be both None"
-        return local_path is not None, local_path if local_path is not None else hdfs_path
+        assert (
+            local_path is not None or hdfs_path is not None
+        ), "local_path and hdfs_path cannot be both None"
+        return local_path is not None, (
+            local_path if local_path is not None else hdfs_path
+        )
 
     def remove_previous_save_local_path(self, path):
         if isinstance(path, str):
@@ -203,7 +217,9 @@ def get_checkpoint_tracker_filename(root_path: str):
     return os.path.join(root_path, "latest_checkpointed_iteration.txt")
 
 
-def should_save_ckpt_esi(max_steps_duration: float, save_ckpt_duration: float = 60, redundant_time: float = 0) -> bool:
+def should_save_ckpt_esi(
+    max_steps_duration: float, save_ckpt_duration: float = 60, redundant_time: float = 0
+) -> bool:
     """
     Determine if checkpoint should be saved based on capacity esi expiration.
 
@@ -213,7 +229,9 @@ def should_save_ckpt_esi(max_steps_duration: float, save_ckpt_duration: float = 
         redundant_time: Additional buffer time (seconds) for unexpected delays (default: 0)
     """
     exp_ts_mlp = os.getenv("MLP_CURRENT_CAPACITY_BLOCK_EXPIRATION_TIMESTAMP")  # vemlp
-    exp_ts_aws = os.getenv("SAGEMAKER_CURRENT_CAPACITY_BLOCK_EXPIRATION_TIMESTAMP")  # aws
+    exp_ts_aws = os.getenv(
+        "SAGEMAKER_CURRENT_CAPACITY_BLOCK_EXPIRATION_TIMESTAMP"
+    )  # aws
     if exp_ts_mlp:
         try:
             import time
@@ -231,7 +249,9 @@ def should_save_ckpt_esi(max_steps_duration: float, save_ckpt_duration: float = 
 
         expiration_time = datetime.fromtimestamp(int(exp_ts_aws))
         time_difference = expiration_time - datetime.now()
-        threshold_minutes = (save_ckpt_duration + max_steps_duration + redundant_time) / 60
+        threshold_minutes = (
+            save_ckpt_duration + max_steps_duration + redundant_time
+        ) / 60
         return time_difference < timedelta(minutes=threshold_minutes)
     else:
         return False

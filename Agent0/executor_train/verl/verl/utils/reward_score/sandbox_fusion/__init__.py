@@ -26,7 +26,13 @@ logger = logging.getLogger(__name__)
 
 
 def compute_score(
-    sandbox_fusion_url, concurrent_semaphore, memory_limit_mb, completion, test_cases, continuous=False, timeout=10
+    sandbox_fusion_url,
+    concurrent_semaphore,
+    memory_limit_mb,
+    completion,
+    test_cases,
+    continuous=False,
+    timeout=10,
 ):
     """
     Computes the code score using the remote sandbox API.
@@ -70,7 +76,9 @@ def compute_score(
 
         if not test_cases or "inputs" not in test_cases or "outputs" not in test_cases:
             logger.error("Invalid test_cases structure.")
-            return 0.0, [{"error": "Invalid test_cases structure (missing inputs/outputs)"}]
+            return 0.0, [
+                {"error": "Invalid test_cases structure (missing inputs/outputs)"}
+            ]
 
         # Check all test cases
         # Note: The return value of check_correctness might need adaptation here
@@ -111,7 +119,13 @@ def compute_score(
         traceback.print_exc()
         score = 0.0
         # Try to return partial metadata if available, otherwise return error info
-        final_metadata = metadata_list if "metadata_list" in locals() else [{"error": f"Unhandled exception: {e}"}]
+        final_metadata = (
+            metadata_list
+            if "metadata_list" in locals()
+            else [{"error": f"Unhandled exception: {e}"}]
+        )
 
     # Ensure float and list are returned
-    return float(score), final_metadata if isinstance(final_metadata, list) else [final_metadata]
+    return float(score), (
+        final_metadata if isinstance(final_metadata, list) else [final_metadata]
+    )

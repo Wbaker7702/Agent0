@@ -27,7 +27,12 @@ from typing import Any, Callable, Iterator, Optional
 
 # --- Top-level helper for multiprocessing timeout ---
 # This function MUST be defined at the top level to be pickleable
-def _mp_target_wrapper(target_func: Callable, mp_queue: multiprocessing.Queue, args: tuple, kwargs: dict[str, Any]):
+def _mp_target_wrapper(
+    target_func: Callable,
+    mp_queue: multiprocessing.Queue,
+    args: tuple,
+    kwargs: dict[str, Any],
+):
     """
     Internal wrapper function executed in the child process.
     Calls the original target function and puts the result or exception into the queue.
@@ -44,7 +49,14 @@ def _mp_target_wrapper(target_func: Callable, mp_queue: multiprocessing.Queue, a
             mp_queue.put((False, e))  # Indicate failure and put exception
         except (pickle.PicklingError, TypeError):
             # Fallback if the original exception cannot be pickled
-            mp_queue.put((False, RuntimeError(f"Original exception type {type(e).__name__} not pickleable: {e}")))
+            mp_queue.put(
+                (
+                    False,
+                    RuntimeError(
+                        f"Original exception type {type(e).__name__} not pickleable: {e}"
+                    ),
+                )
+            )
 
 
 # Renamed the function from timeout to timeout_limit
@@ -82,7 +94,9 @@ def timeout_limit(seconds: float, use_signals: bool = False):
             def wrapper_signal(*args, **kwargs):
                 def handler(signum, frame):
                     # Update function name in error message if needed (optional but good practice)
-                    raise TimeoutError(f"Function {func.__name__} timed out after {seconds} seconds (signal)!")
+                    raise TimeoutError(
+                        f"Function {func.__name__} timed out after {seconds} seconds (signal)!"
+                    )
 
                 old_handler = signal.getsignal(signal.SIGALRM)
                 signal.signal(signal.SIGALRM, handler)
@@ -103,7 +117,9 @@ def timeout_limit(seconds: float, use_signals: bool = False):
             @wraps(func)
             def wrapper_mp(*args, **kwargs):
                 q = multiprocessing.Queue(maxsize=1)
-                process = multiprocessing.Process(target=_mp_target_wrapper, args=(func, q, args, kwargs))
+                process = multiprocessing.Process(
+                    target=_mp_target_wrapper, args=(func, q, args, kwargs)
+                )
                 process.start()
                 process.join(timeout=seconds)
 
@@ -111,12 +127,18 @@ def timeout_limit(seconds: float, use_signals: bool = False):
                     process.terminate()
                     process.join(timeout=0.5)  # Give it a moment to terminate
                     if process.is_alive():
-                        print(f"Warning: Process {process.pid} did not terminate gracefully after timeout.")
+                        print(
+                            f"Warning: Process {process.pid} did not terminate gracefully after timeout."
+                        )
                     # Update function name in error message if needed (optional but good practice)
-                    raise TimeoutError(f"Function {func.__name__} timed out after {seconds} seconds (multiprocessing)!")
+                    raise TimeoutError(
+                        f"Function {func.__name__} timed out after {seconds} seconds (multiprocessing)!"
+                    )
 
                 try:
-                    success, result_or_exc = q.get(timeout=0.1)  # Small timeout for queue read
+                    success, result_or_exc = q.get(
+                        timeout=0.1
+                    )  # Small timeout for queue read
                     if success:
                         return result_or_exc
                     else:
@@ -155,7 +177,9 @@ def union_two_dict(dict1: dict, dict2: dict):
     """
     for key, val in dict2.items():
         if key in dict1:
-            assert dict2[key] == dict1[key], f"{key} in meta_dict1 and meta_dict2 are not the same object"
+            assert (
+                dict2[key] == dict1[key]
+            ), f"{key} in meta_dict1 and meta_dict2 are not the same object"
         dict1[key] = val
 
     return dict1
@@ -277,7 +301,11 @@ def convert_to_regular_types(obj):
     from omegaconf import DictConfig, ListConfig
 
     if isinstance(obj, ListConfig | DictConfig):
-        return {k: convert_to_regular_types(v) for k, v in obj.items()} if isinstance(obj, DictConfig) else list(obj)
+        return (
+            {k: convert_to_regular_types(v) for k, v in obj.items()}
+            if isinstance(obj, DictConfig)
+            else list(obj)
+        )
     elif isinstance(obj, list | tuple):
         return [convert_to_regular_types(x) for x in obj]
     elif isinstance(obj, dict):

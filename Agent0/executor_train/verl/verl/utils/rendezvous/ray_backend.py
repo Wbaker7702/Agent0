@@ -43,7 +43,11 @@ def get_nccl_id_store_by_name(name):
 
 
 def create_nccl_communicator_in_ray(
-    rank: int, world_size: int, group_name: str, max_retries: int = 100, interval_s: int = 5
+    rank: int,
+    world_size: int,
+    group_name: str,
+    max_retries: int = 100,
+    interval_s: int = 5,
 ):
     if rank == 0:
         nccl_id = get_unique_id()
@@ -69,5 +73,9 @@ def create_nccl_communicator_in_ray(
                     rank=rank,
                 )
                 return communicator
-            logging.info("failed to get nccl_id for %d time, sleep for %d seconds", i + 1, interval_s)
+            logging.info(
+                "failed to get nccl_id for %d time, sleep for %d seconds",
+                i + 1,
+                interval_s,
+            )
             time.sleep(interval_s)

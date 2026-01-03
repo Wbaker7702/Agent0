@@ -94,7 +94,12 @@ def process(row: dict, *, tools: str):
     start = "*user question:*"
     i = content.find(start)
     assert i != -1
-    prompt = content[i + len(start) :].replace("<answer>", "").replace("</answer>", "").strip()
+    prompt = (
+        content[i + len(start) :]
+        .replace("<answer>", "")
+        .replace("</answer>", "")
+        .strip()
+    )
     messages.append(
         {
             "role": "user",

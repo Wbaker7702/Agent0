@@ -138,9 +138,21 @@ if __name__ == "__main__":
     sft_test_dataset.to_parquet(os.path.join(folder, "test.parquet"))
 
     # build RL dataset
-    rl_train_dataset = {"prompt": [], "data_source": [], "ability": [], "reward_model": [], "extra_info": []}
+    rl_train_dataset = {
+        "prompt": [],
+        "data_source": [],
+        "ability": [],
+        "reward_model": [],
+        "extra_info": [],
+    }
 
-    rl_test_dataset = {"prompt": [], "data_source": [], "ability": [], "reward_model": [], "extra_info": []}
+    rl_test_dataset = {
+        "prompt": [],
+        "data_source": [],
+        "ability": [],
+        "reward_model": [],
+        "extra_info": [],
+    }
 
     from verl.utils.reward_score.math import last_boxed_only_string, remove_boxed
 
@@ -158,7 +170,10 @@ if __name__ == "__main__":
         rl_train_dataset["data_source"].append("char_count")
         rl_train_dataset["ability"].append("other")
         rl_train_dataset["reward_model"].append(
-            {"style": "rule", "ground_truth": remove_boxed(last_boxed_only_string(response))}
+            {
+                "style": "rule",
+                "ground_truth": remove_boxed(last_boxed_only_string(response)),
+            }
         )
         rl_train_dataset["extra_info"].append({"response": response})
 
@@ -176,7 +191,10 @@ if __name__ == "__main__":
         rl_test_dataset["data_source"].append("char_count")
         rl_test_dataset["ability"].append("other")
         rl_test_dataset["reward_model"].append(
-            {"style": "rule", "ground_truth": remove_boxed(last_boxed_only_string(response))}
+            {
+                "style": "rule",
+                "ground_truth": remove_boxed(last_boxed_only_string(response)),
+            }
         )
         rl_test_dataset["extra_info"].append({"response": response})
 

@@ -42,7 +42,13 @@ def test_rl_dataset():
     )
     dataset = RLHFDataset(data_files=local_path, tokenizer=tokenizer, config=config)
 
-    dataloader = DataLoader(dataset=dataset, batch_size=16, shuffle=True, drop_last=True, collate_fn=collate_fn)
+    dataloader = DataLoader(
+        dataset=dataset,
+        batch_size=16,
+        shuffle=True,
+        drop_last=True,
+        collate_fn=collate_fn,
+    )
 
     a = next(iter(dataloader))
 
@@ -87,7 +93,13 @@ def test_image_rl_data():
         processor=processor,
     )
 
-    dataloader = DataLoader(dataset=dataset, batch_size=16, shuffle=True, drop_last=True, collate_fn=collate_fn)
+    dataloader = DataLoader(
+        dataset=dataset,
+        batch_size=16,
+        shuffle=True,
+        drop_last=True,
+        collate_fn=collate_fn,
+    )
 
     a = next(iter(dataloader))
 

@@ -61,28 +61,43 @@ class PRIMERewardModelWorker(Worker):
         world_size = torch.distributed.get_world_size()
 
         fsdp_size = self.config.model.fsdp_config.fsdp_size
-        self.device_mesh = create_device_mesh(world_size=world_size, fsdp_size=fsdp_size)
+        self.device_mesh = create_device_mesh(
+            world_size=world_size, fsdp_size=fsdp_size
+        )
 
         self.ulysses_device_mesh = None
-        self.ulysses_sequence_parallel_size = self.config.get("ulysses_sequence_parallel_size", 1)
+        self.ulysses_sequence_parallel_size = self.config.get(
+            "ulysses_sequence_parallel_size", 1
+        )
         dp = world_size // self.ulysses_sequence_parallel_size
         if self.ulysses_sequence_parallel_size > 1:
             self.ulysses_device_mesh = init_device_mesh(
-                get_device_name(), mesh_shape=(dp, self.ulysses_sequence_parallel_size), mesh_dim_names=["dp", "sp"]
+                get_device_name(),
+                mesh_shape=(dp, self.ulysses_sequence_parallel_size),
+                mesh_dim_names=["dp", "sp"],
             )
 
-        self.ulysses_sharding_manager = FSDPUlyssesShardingManager(self.ulysses_device_mesh)
+        self.ulysses_sharding_manager = FSDPUlyssesShardingManager(
+            self.ulysses_device_mesh
+        )
 
         # set FSDP offload params
         self._is_offload_param = self.config.model.fsdp_config.param_offload
         self._is_offload_optimizer = self.config.model.fsdp_config.optimizer_offload
 
         # normalize config
-        self.config.mini_batch_size //= torch.distributed.get_world_size() // self.ulysses_sequence_parallel_size
+        self.config.mini_batch_size //= (
+            torch.distributed.get_world_size() // self.ulysses_sequence_parallel_size
+        )
         if self.config.micro_batch_size is not None:
-            self.config.micro_batch_size //= torch.distributed.get_world_size() // self.ulysses_sequence_parallel_size
+            self.config.micro_batch_size //= (
+                torch.distributed.get_world_size()
+                // self.ulysses_sequence_parallel_size
+            )
             self.config.micro_batch_size_per_gpu = self.config.micro_batch_size
-            assert self.config.mini_batch_size % self.config.micro_batch_size_per_gpu == 0
+            assert (
+                self.config.mini_batch_size % self.config.micro_batch_size_per_gpu == 0
+            )
 
     def _build_reward_ref_model_optimizer(self, config):
         # the following line is necessary
@@ -96,11 +111,16 @@ class PRIMERewardModelWorker(Worker):
         local_path = copy_local_path_from_hdfs(config.model.path)
 
         tokenizer_path = copy_local_path_from_hdfs(config.model.tokenizer_path)
-        self.tokenizer = hf_tokenizer(tokenizer_path, trust_remote_code=config.model.get("trust_remote_code", False))
+        self.tokenizer = hf_tokenizer(
+            tokenizer_path,
+            trust_remote_code=config.model.get("trust_remote_code", False),
+        )
 
         from omegaconf import OmegaConf
 
-        override_config = OmegaConf.to_container(self.config.model.get("override_config", OmegaConf.create()))
+        override_config = OmegaConf.to_container(
+            self.config.model.get("override_config", OmegaConf.create())
+        )
         override_config_kwargs = {
             "bos_token_id": self.tokenizer.bos_token_id,
             "eos_token_id": self.tokenizer.eos_token_id,
@@ -116,10 +136,14 @@ class PRIMERewardModelWorker(Worker):
         from transformers import AutoConfig, AutoModelForCausalLM
 
         trust_remote_code = False
-        reward_model_config = AutoConfig.from_pretrained(local_path, trust_remote_code=trust_remote_code)
+        reward_model_config = AutoConfig.from_pretrained(
+            local_path, trust_remote_code=trust_remote_code
+        )
         reward_model_config.num_labels = 1
 
-        init_context = get_init_weight_context_manager(use_meta_tensor=not reward_model_config.tie_word_embeddings)
+        init_context = get_init_weight_context_manager(
+            use_meta_tensor=not reward_model_config.tie_word_embeddings
+        )
         with init_context(), warnings.catch_warnings():
             warnings.simplefilter("ignore")
             reward_model_config.classifier_dropout = 0.0
@@ -134,7 +158,9 @@ class PRIMERewardModelWorker(Worker):
 
             fused_kernel_options = config.model.get("fused_kernel_options", None)
             fused_kernels_backend = (
-                fused_kernel_options.get("impl_backend", None) if fused_kernel_options is not None else None
+                fused_kernel_options.get("impl_backend", None)
+                if fused_kernel_options is not None
+                else None
             )
 
             apply_monkey_patch(
@@ -149,7 +175,9 @@ class PRIMERewardModelWorker(Worker):
             reward_module.to(torch_dtype)
 
             if config.model.get("enable_gradient_checkpointing", False):
-                reward_module.gradient_checkpointing_enable(gradient_checkpointing_kwargs={"use_reentrant": False})
+                reward_module.gradient_checkpointing_enable(
+                    gradient_checkpointing_kwargs={"use_reentrant": False}
+                )
         if self.rank == 0:
             print_model_size(reward_module)
 
@@ -158,17 +186,29 @@ class PRIMERewardModelWorker(Worker):
         fsdp_config = self.config.model.fsdp_config
         mixed_precision_config = fsdp_config.get("mixed_precision", None)
         if mixed_precision_config is not None:
-            param_dtype = PrecisionType.to_dtype(mixed_precision_config.get("param_dtype", "bf16"))
-            reduce_dtype = PrecisionType.to_dtype(mixed_precision_config.get("reduce_dtype", "fp32"))
-            buffer_dtype = PrecisionType.to_dtype(mixed_precision_config.get("buffer_dtype", "fp32"))
+            param_dtype = PrecisionType.to_dtype(
+                mixed_precision_config.get("param_dtype", "bf16")
+            )
+            reduce_dtype = PrecisionType.to_dtype(
+                mixed_precision_config.get("reduce_dtype", "fp32")
+            )
+            buffer_dtype = PrecisionType.to_dtype(
+                mixed_precision_config.get("buffer_dtype", "fp32")
+            )
         else:
             param_dtype = torch.bfloat16
             reduce_dtype = torch.float32
             buffer_dtype = torch.float32
 
-        mixed_precision = MixedPrecision(param_dtype=param_dtype, reduce_dtype=reduce_dtype, buffer_dtype=buffer_dtype)
+        mixed_precision = MixedPrecision(
+            param_dtype=param_dtype,
+            reduce_dtype=reduce_dtype,
+            buffer_dtype=buffer_dtype,
+        )
 
-        auto_wrap_policy = get_fsdp_wrap_policy(module=reward_module, config=self.config.model.fsdp_config.wrap_policy)
+        auto_wrap_policy = get_fsdp_wrap_policy(
+            module=reward_module, config=self.config.model.fsdp_config.wrap_policy
+        )
 
         log_gpu_memory_usage("Before reward model FSDP", logger=None)
 
@@ -180,7 +220,9 @@ class PRIMERewardModelWorker(Worker):
             reward_model_config.classifier_dropout = 0.0
             reward_model_config.hidden_dropout = "0"
             ref_module = AutoModelForCausalLM.from_pretrained(
-                pretrained_model_name_or_path=copy_local_path_from_hdfs(config.model.ref_path),
+                pretrained_model_name_or_path=copy_local_path_from_hdfs(
+                    config.model.ref_path
+                ),
                 torch_dtype=torch_dtype,
                 config=reward_model_config,
                 attn_implementation="flash_attention_2",
@@ -230,7 +272,9 @@ class PRIMERewardModelWorker(Worker):
         total_steps = config.model.optim.get("total_training_steps", 0)
         num_warmup_steps = int(config.model.optim.get("lr_warmup_steps", -1))
         if num_warmup_steps < 0:
-            num_warmup_steps_ratio = config.model.optim.get("lr_warmup_steps_ratio", 0.0)
+            num_warmup_steps_ratio = config.model.optim.get(
+                "lr_warmup_steps_ratio", 0.0
+            )
             num_warmup_steps = int(num_warmup_steps_ratio * total_steps)
 
         print(f"Total steps: {total_steps}, num_warmup_steps: {num_warmup_steps}")
@@ -250,9 +294,12 @@ class PRIMERewardModelWorker(Worker):
 
         from .prime_dp_rm import DataParallelPRIMERewardModel
 
-        self.reward_module, self.ref_module, self.reward_optimizer, self.reward_lr_scheduler = (
-            self._build_reward_ref_model_optimizer(config=self.config)
-        )
+        (
+            self.reward_module,
+            self.ref_module,
+            self.reward_optimizer,
+            self.reward_lr_scheduler,
+        ) = self._build_reward_ref_model_optimizer(config=self.config)
 
         if self._is_offload_param:
             offload_fsdp_model_to_cpu(self.reward_module)
@@ -295,13 +342,22 @@ class PRIMERewardModelWorker(Worker):
             response_mask = data.batch["attention_mask"][:, prompt_length:]
             acc = data.batch["acc"]
 
-            dpo_acc = compute_dpo_accuracy(rm_scores, acc, response_mask=response_mask, n_samples=data.meta_info["n"])
-            dpo_acc_abs = compute_dpo_abs_accuracy(rm_scores, acc, response_mask, n_samples=data.meta_info["n"])
+            dpo_acc = compute_dpo_accuracy(
+                rm_scores,
+                acc,
+                response_mask=response_mask,
+                n_samples=data.meta_info["n"],
+            )
+            dpo_acc_abs = compute_dpo_abs_accuracy(
+                rm_scores, acc, response_mask, n_samples=data.meta_info["n"]
+            )
 
             metrics["reward_model/dpo_acc"] = dpo_acc.detach().item()
             metrics["reward_model/dpo_acc_abs"] = dpo_acc_abs.detach().item()
 
-            output = DataProto.from_dict(tensors={"rm_scores": rm_scores, "q": q}, meta_info={"metrics": metrics})
+            output = DataProto.from_dict(
+                tensors={"rm_scores": rm_scores, "q": q}, meta_info={"metrics": metrics}
+            )
             output = self.ulysses_sharding_manager.postprocess_data(data=output)
 
         output = output.to("cpu")
@@ -317,7 +373,9 @@ class PRIMERewardModelWorker(Worker):
             load_fsdp_model_to_gpu(self.ref_module)
             load_fsdp_model_to_gpu(self.reward_module)
         if self._is_offload_optimizer:
-            load_fsdp_optimizer(optimizer=self.reward_optimizer, device_id=get_device_id())
+            load_fsdp_optimizer(
+                optimizer=self.reward_optimizer, device_id=get_device_id()
+            )
 
         # perform forward computation
         with self.ulysses_sharding_manager:
@@ -334,14 +392,21 @@ class PRIMERewardModelWorker(Worker):
             acc = data.batch["acc"]
 
             dpo_acc_before = compute_dpo_accuracy(
-                rm_scores, acc, response_mask=response_mask, n_samples=data.meta_info["n"]
+                rm_scores,
+                acc,
+                response_mask=response_mask,
+                n_samples=data.meta_info["n"],
             )
-            dpo_acc_abs = compute_dpo_abs_accuracy(rm_scores, acc, response_mask, n_samples=data.meta_info["n"])
+            dpo_acc_abs = compute_dpo_abs_accuracy(
+                rm_scores, acc, response_mask, n_samples=data.meta_info["n"]
+            )
 
             metrics["reward_model/dpo_acc_before"] = dpo_acc_before.detach().item()
             metrics["reward_model/dpo_acc_abs_before"] = dpo_acc_abs.detach().item()
 
-            output = DataProto.from_dict(tensors={"rm_scores": rm_scores}, meta_info={"metrics": metrics})
+            output = DataProto.from_dict(
+                tensors={"rm_scores": rm_scores}, meta_info={"metrics": metrics}
+            )
             output = self.ulysses_sharding_manager.postprocess_data(data=output)
 
         if self._is_offload_param:
@@ -353,14 +418,19 @@ class PRIMERewardModelWorker(Worker):
         return output
 
     @register(dispatch_mode=Dispatch.ONE_TO_ALL)
-    def save_checkpoint(self, local_path, hdfs_path=None, global_step=0, max_ckpt_to_keep=None):
+    def save_checkpoint(
+        self, local_path, hdfs_path=None, global_step=0, max_ckpt_to_keep=None
+    ):
         import torch
 
         if self._is_offload_param:
             load_fsdp_model_to_gpu(self.reward_module)
 
         self.checkpoint_manager.save_checkpoint(
-            local_path=local_path, hdfs_path=hdfs_path, global_step=global_step, max_ckpt_to_keep=max_ckpt_to_keep
+            local_path=local_path,
+            hdfs_path=hdfs_path,
+            global_step=global_step,
+            max_ckpt_to_keep=max_ckpt_to_keep,
         )
 
         torch.distributed.barrier()
@@ -374,7 +444,9 @@ class PRIMERewardModelWorker(Worker):
         if self._is_offload_param:
             load_fsdp_model_to_gpu(self.reward_module)
 
-        self.checkpoint_manager.load_checkpoint(local_path=local_path, del_local_after_load=del_local_after_load)
+        self.checkpoint_manager.load_checkpoint(
+            local_path=local_path, del_local_after_load=del_local_after_load
+        )
 
         torch.distributed.barrier()
         if self._is_offload_param:

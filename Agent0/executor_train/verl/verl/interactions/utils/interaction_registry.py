@@ -65,13 +65,17 @@ def initialize_interactions_from_config(interaction_config_file):
             class_simple_name = cls_name.split(".")[-1]
             # Remove "Interaction" suffix if present, otherwise use full class name
             if class_simple_name.endswith("Interaction"):
-                name = class_simple_name[:-11].lower()  # Remove "Interaction" (11 chars)
+                name = class_simple_name[
+                    :-11
+                ].lower()  # Remove "Interaction" (11 chars)
             else:
                 name = class_simple_name.lower()
 
         # Check for duplicate names
         if name in interaction_map:
-            raise ValueError(f"Duplicate interaction name '{name}' found. Each interaction must have a unique name.")
+            raise ValueError(
+                f"Duplicate interaction name '{name}' found. Each interaction must have a unique name."
+            )
 
         # Inject the name into the config
         config["name"] = name

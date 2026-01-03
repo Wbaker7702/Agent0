@@ -32,7 +32,9 @@ from transformers import AutoModel, AutoTokenizer
 
 
 def load_corpus(corpus_path: str):
-    corpus = datasets.load_dataset("json", data_files=corpus_path, split="train", num_proc=4)
+    corpus = datasets.load_dataset(
+        "json", data_files=corpus_path, split="train", num_proc=4
+    )
     return corpus
 
 
@@ -47,13 +49,19 @@ def load_model(model_path: str, use_fp16: bool = False):
     model.cuda()
     if use_fp16:
         model = model.half()
-    tokenizer = AutoTokenizer.from_pretrained(model_path, use_fast=True, trust_remote_code=True)
+    tokenizer = AutoTokenizer.from_pretrained(
+        model_path, use_fast=True, trust_remote_code=True
+    )
     return model, tokenizer
 
 
-def pooling(pooler_output, last_hidden_state, attention_mask=None, pooling_method="mean"):
+def pooling(
+    pooler_output, last_hidden_state, attention_mask=None, pooling_method="mean"
+):
     if pooling_method == "mean":
-        last_hidden = last_hidden_state.masked_fill(~attention_mask[..., None].bool(), 0.0)
+        last_hidden = last_hidden_state.masked_fill(
+            ~attention_mask[..., None].bool(), 0.0
+        )
         return last_hidden.sum(dim=1) / attention_mask.sum(dim=1)[..., None]
     elif pooling_method == "cls":
         return last_hidden_state[:, 0]
@@ -71,7 +79,9 @@ class Encoder:
         self.max_length = max_length
         self.use_fp16 = use_fp16
 
-        self.model, self.tokenizer = load_model(model_path=model_path, use_fp16=use_fp16)
+        self.model, self.tokenizer = load_model(
+            model_path=model_path, use_fp16=use_fp16
+        )
         self.model.eval()
 
     @torch.no_grad()
@@ -89,25 +99,35 @@ class Encoder:
         if "bge" in self.model_name.lower():
             if is_query:
                 query_list = [
-                    f"Represent this sentence for searching relevant passages: {query}" for query in query_list
+                    f"Represent this sentence for searching relevant passages: {query}"
+                    for query in query_list
                 ]
 
         inputs = self.tokenizer(
-            query_list, max_length=self.max_length, padding=True, truncation=True, return_tensors="pt"
+            query_list,
+            max_length=self.max_length,
+            padding=True,
+            truncation=True,
+            return_tensors="pt",
         )
         inputs = {k: v.cuda() for k, v in inputs.items()}
 
         if "T5" in type(self.model).__name__:
             # T5-based retrieval model
-            decoder_input_ids = torch.zeros((inputs["input_ids"].shape[0], 1), dtype=torch.long).to(
-                inputs["input_ids"].device
+            decoder_input_ids = torch.zeros(
+                (inputs["input_ids"].shape[0], 1), dtype=torch.long
+            ).to(inputs["input_ids"].device)
+            output = self.model(
+                **inputs, decoder_input_ids=decoder_input_ids, return_dict=True
             )
-            output = self.model(**inputs, decoder_input_ids=decoder_input_ids, return_dict=True)
             query_emb = output.last_hidden_state[:, 0, :]
         else:
             output = self.model(**inputs, return_dict=True)
             query_emb = pooling(
-                output.pooler_output, output.last_hidden_state, inputs["attention_mask"], self.pooling_method
+                output.pooler_output,
+                output.last_hidden_state,
+                inputs["attention_mask"],
+                self.pooling_method,
             )
             if "dpr" not in self.model_name.lower():
                 query_emb = torch.nn.functional.normalize(query_emb, dim=-1)
@@ -139,7 +159,9 @@ class BaseRetriever:
     def search(self, query: str, num: int = None, return_score: bool = False):
         return self._search(query, num, return_score)
 
-    def batch_search(self, query_list: list[str], num: int = None, return_score: bool = False):
+    def batch_search(
+        self, query_list: list[str], num: int = None, return_score: bool = False
+    ):
         return self._batch_search(query_list, num, return_score)
 
 
@@ -173,7 +195,10 @@ class BM25Retriever(BaseRetriever):
             hits = hits[:num]
 
         if self.contain_doc:
-            all_contents = [json.loads(self.searcher.doc(hit.docid).raw())["contents"] for hit in hits]
+            all_contents = [
+                json.loads(self.searcher.doc(hit.docid).raw())["contents"]
+                for hit in hits
+            ]
             results = [
                 {
                     "title": content.split("\n")[0].strip('"'),
@@ -190,7 +215,9 @@ class BM25Retriever(BaseRetriever):
         else:
             return results
 
-    def _batch_search(self, query_list: list[str], num: int = None, return_score: bool = False):
+    def _batch_search(
+        self, query_list: list[str], num: int = None, return_score: bool = False
+    ):
         results = []
         scores = []
         for query in query_list:
@@ -237,7 +264,9 @@ class DenseRetriever(BaseRetriever):
         else:
             return results
 
-    def _batch_search(self, query_list: list[str], num: int = None, return_score: bool = False):
+    def _batch_search(
+        self, query_list: list[str], num: int = None, return_score: bool = False
+    ):
         if isinstance(query_list, str):
             query_list = [query_list]
         if num is None:
@@ -245,7 +274,11 @@ class DenseRetriever(BaseRetriever):
 
         results = []
         scores = []
-        for start_idx in tqdm(range(0, len(query_list), self.batch_size), desc="Retrieval process: ", disable=len(query_list) < 20):
+        for start_idx in tqdm(
+            range(0, len(query_list), self.batch_size),
+            desc="Retrieval process: ",
+            disable=len(query_list) < 20,
+        ):
             query_batch = query_list[start_idx : start_idx + self.batch_size]
             batch_emb = self.encoder.encode(query_batch)
             batch_scores, batch_idxs = self.index.search(batch_emb, k=num)
@@ -256,12 +289,21 @@ class DenseRetriever(BaseRetriever):
             flat_idxs = sum(batch_idxs, [])
             batch_results = load_docs(self.corpus, flat_idxs)
             # chunk them back
-            batch_results = [batch_results[i * num : (i + 1) * num] for i in range(len(batch_idxs))]
+            batch_results = [
+                batch_results[i * num : (i + 1) * num] for i in range(len(batch_idxs))
+            ]
 
             results.extend(batch_results)
             scores.extend(batch_scores)
 
-            del batch_emb, batch_scores, batch_idxs, query_batch, flat_idxs, batch_results
+            del (
+                batch_emb,
+                batch_scores,
+                batch_idxs,
+                query_batch,
+                flat_idxs,
+                batch_results,
+            )
             torch.cuda.empty_cache()
 
         if return_score:
@@ -376,7 +418,10 @@ def retrieve_endpoint(request: QueryRequest):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Launch the local faiss retriever.")
     parser.add_argument(
-        "--index_path", type=str, default="/home/peterjin/mnt/index/wiki-18/e5_Flat.index", help="Corpus indexing file."
+        "--index_path",
+        type=str,
+        default="/home/peterjin/mnt/index/wiki-18/e5_Flat.index",
+        help="Corpus indexing file.",
     )
     parser.add_argument(
         "--corpus_path",
@@ -384,12 +429,24 @@ if __name__ == "__main__":
         default="/home/peterjin/mnt/data/retrieval-corpus/wiki-18.jsonl",
         help="Local corpus file.",
     )
-    parser.add_argument("--topk", type=int, default=3, help="Number of retrieved passages for one query.")
-    parser.add_argument("--retriever_name", type=str, default="e5", help="Name of the retriever model.")
     parser.add_argument(
-        "--retriever_model", type=str, default="intfloat/e5-base-v2", help="Path of the retriever model."
+        "--topk",
+        type=int,
+        default=3,
+        help="Number of retrieved passages for one query.",
     )
-    parser.add_argument("--faiss_gpu", action="store_true", help="Use GPU for computation")
+    parser.add_argument(
+        "--retriever_name", type=str, default="e5", help="Name of the retriever model."
+    )
+    parser.add_argument(
+        "--retriever_model",
+        type=str,
+        default="intfloat/e5-base-v2",
+        help="Path of the retriever model.",
+    )
+    parser.add_argument(
+        "--faiss_gpu", action="store_true", help="Use GPU for computation"
+    )
 
     args = parser.parse_args()
 

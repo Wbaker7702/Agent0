@@ -31,11 +31,15 @@ class RewardConfig:
     reward_function_name: Optional[str] = field(default=None, init=False)
 
     def post_init(self):
-        if self.reward_function is not None:  # support custom reward function, e.g., ./math.py:main
+        if (
+            self.reward_function is not None
+        ):  # support custom reward function, e.g., ./math.py:main
             if ":" not in self.reward_function:
                 self.reward_function_name = "main"
             else:
-                self.reward_function, self.reward_function_name = self.reward_function.rsplit(":", maxsplit=1)
+                self.reward_function, self.reward_function_name = (
+                    self.reward_function.rsplit(":", maxsplit=1)
+                )
 
             if os.path.exists(self.reward_function):  # ray job uses absolute path
                 self.reward_function = os.path.abspath(self.reward_function)

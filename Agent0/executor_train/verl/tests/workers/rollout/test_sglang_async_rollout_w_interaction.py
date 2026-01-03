@@ -61,21 +61,43 @@ def test_async_sglang_rollout_w_interaction():
         ]
     ]
     interaction_kwargs = [
-        {"name": "gsm8k", "query": "Who won the Champions League in 2019?", "ground_truth": "Real Madrid"},
-        {"name": "gsm8k", "query": "The founder of Apple is", "ground_truth": "Steve Jobs"},
-        {"name": "gsm8k", "query": "What's the best way to learn python?", "ground_truth": "Learn python from scratch"},
+        {
+            "name": "gsm8k",
+            "query": "Who won the Champions League in 2019?",
+            "ground_truth": "Real Madrid",
+        },
+        {
+            "name": "gsm8k",
+            "query": "The founder of Apple is",
+            "ground_truth": "Steve Jobs",
+        },
+        {
+            "name": "gsm8k",
+            "query": "What's the best way to learn python?",
+            "ground_truth": "Learn python from scratch",
+        },
     ]
     prompts = [
-        tokenizer.apply_chat_template(message, tokenize=False, add_generation_prompt=True)
+        tokenizer.apply_chat_template(
+            message, tokenize=False, add_generation_prompt=True
+        )
         for message in preencode_prompts
     ]
-    input_ids, attention_mask, position_ids = prepare_inputs(tokenizer, prompts, max_prompt_length)
+    input_ids, attention_mask, position_ids = prepare_inputs(
+        tokenizer, prompts, max_prompt_length
+    )
 
-    hf_response_tokens = generate_hf_output(actor_model, input_ids, attention_mask, tokenizer, max_response_length)
+    hf_response_tokens = generate_hf_output(
+        actor_model, input_ids, attention_mask, tokenizer, max_response_length
+    )
 
-    fsdp_device_mesh = init_device_mesh("cuda", mesh_shape=(tensor_parallel_size,), mesh_dim_names=("fsdp",))
+    fsdp_device_mesh = init_device_mesh(
+        "cuda", mesh_shape=(tensor_parallel_size,), mesh_dim_names=("fsdp",)
+    )
     inference_device_mesh_cpu = init_device_mesh(
-        "cpu", mesh_shape=(1, tensor_parallel_size, 1), mesh_dim_names=("dp", "infer_tp", "pp")
+        "cpu",
+        mesh_shape=(1, tensor_parallel_size, 1),
+        mesh_dim_names=("dp", "infer_tp", "pp"),
     )
 
     fsdp_model = FSDP(
@@ -94,7 +116,11 @@ def test_async_sglang_rollout_w_interaction():
 
     interaction_config = {
         "interaction": [
-            {"name": "gsm8k", "class_name": "verl.interactions.gsm8k_interaction.Gsm8kInteraction", "config": {}}
+            {
+                "name": "gsm8k",
+                "class_name": "verl.interactions.gsm8k_interaction.Gsm8kInteraction",
+                "config": {},
+            }
         ]
     }
 
@@ -103,7 +129,12 @@ def test_async_sglang_rollout_w_interaction():
         interaction_config_path = f.name
 
     rollout_config = get_rollout_config(
-        max_response_length, max_prompt_length, dtype, tensor_parallel_size, None, interaction_config_path
+        max_response_length,
+        max_prompt_length,
+        dtype,
+        tensor_parallel_size,
+        None,
+        interaction_config_path,
     )
     rollout = SGLangRollout(
         actor_module=local_model_path,
@@ -135,7 +166,10 @@ def test_async_sglang_rollout_w_interaction():
         messages = np.asarray(preencode_prompts)
         prompts = DataProto(
             batch=prompt_dict,
-            non_tensor_batch={"raw_prompt": messages, "interaction_kwargs": np.asarray(interaction_kwargs)},
+            non_tensor_batch={
+                "raw_prompt": messages,
+                "interaction_kwargs": np.asarray(interaction_kwargs),
+            },
         )
 
         prompts.meta_info.update(

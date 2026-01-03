@@ -3,45 +3,58 @@ import json
 import re
 import copy
 
-PATTERNS=[
+PATTERNS = [
     r"(?i)Answer\s*:\s*([^\n]+)",
     r"\\boxed\{((?:[^{}]|\\{|\\}|(?:\{(?:[^{}]|\\{|\\}|(?:\{(?:[^{}]|\\{|\\}|(?:\{[^{}]*\}))*\}))*\}))*\})",
 ]
+
+
 def extract_pattern(pred: str, pattern: str):
     match = re.findall(pattern, pred)
     # 从pred中extract出一个answerlist，代表所有可能的answer
     if match:
         extracted_answer = match[-1]
-        if pattern==r"\\boxed\{((?:[^{}]|\\{|\\}|(?:\{(?:[^{}]|\\{|\\}|(?:\{(?:[^{}]|\\{|\\}|(?:\{[^{}]*\}))*\}))*\}))*\})": extracted_answer=extracted_answer[:-1]
+        if (
+            pattern
+            == r"\\boxed\{((?:[^{}]|\\{|\\}|(?:\{(?:[^{}]|\\{|\\}|(?:\{(?:[^{}]|\\{|\\}|(?:\{[^{}]*\}))*\}))*\}))*\})"
+        ):
+            extracted_answer = extracted_answer[:-1]
         return extracted_answer.strip("*").strip().strip("*")
     else:
         return ""
 
-SPLIT=[
-    "####"
-    "\n",
+
+SPLIT = [
+    "####" "\n",
     "Answer:",
 ]
+
+
 def extract_split(pred: str, split: str):
-    '''
+    """
     最后一个换行符之后的部分
-    '''
-    pred=pred.split(split)[-1]
+    """
+    pred = pred.split(split)[-1]
     return pred.strip("*").strip().strip("*")
 
 
 def expansion(answer_list: str):
-    org_answer_list=copy.deepcopy(answer_list)
+    org_answer_list = copy.deepcopy(answer_list)
     for answer in org_answer_list:
         if "=" in answer:
             answer_list.append(answer.split("=")[-1])
         for choice in ["A", "B", "C", "D", "E", "F"]:
-            if f"({choice.upper()})" in answer.upper() or f"{choice.upper()}:" in answer.upper() or f"{choice.upper()}. " in answer.upper(): 
+            if (
+                f"({choice.upper()})" in answer.upper()
+                or f"{choice.upper()}:" in answer.upper()
+                or f"{choice.upper()}. " in answer.upper()
+            ):
                 answer_list.append(f"{choice.upper()}")
                 break
     for answer in org_answer_list:
-        pattern = r'^(\d+(\.\d+)?)\s+[a-zA-Z]+(?:\s+[a-zA-Z]+)*$'
-        if bool(re.match(pattern, answer)): answer_list.append(answer.split(" ")[0])
+        pattern = r"^(\d+(\.\d+)?)\s+[a-zA-Z]+(?:\s+[a-zA-Z]+)*$"
+        if bool(re.match(pattern, answer)):
+            answer_list.append(answer.split(" ")[0])
     for answer in org_answer_list:
         if "\\in" in answer:
             answer_list.append(answer.split("\\in")[-1].strip())
@@ -49,17 +62,17 @@ def expansion(answer_list: str):
             answer_list.append(answer.split("\u2208")[-1].strip())
     return answer_list
 
+
 def extract(pred: str):
-    answer_list=[]
+    answer_list = []
     answer_list.append(pred.split("####")[-1].strip())
 
     for split in SPLIT:
         answer_list.append(extract_split(copy.deepcopy(pred), split=split))
     for pattern in PATTERNS:
         answer_list.append(extract_pattern(copy.deepcopy(pred), pattern=pattern))
-    answer_list=expansion(answer_list)
+    answer_list = expansion(answer_list)
     return answer_list
-
 
 
 import re
@@ -80,7 +93,7 @@ SUBSTITUTIONS = [
     ("\\right", ""),
     ("∶", ":"),
     ("，", ","),
-    ("$",  ""),
+    ("$", ""),
     ("\\approx", "="),
     ("\\simeq", "="),
     ("\\sim", "="),
@@ -141,19 +154,18 @@ REMOVED_EXPRESSIONS = [
 ]
 
 
-
 def normalize_final_answer(final_answer: str) -> str:
     """
     Normalize a final answer to a quantitative reasoning question.
     Copied character for character from appendix D of Lewkowycz et al. (2022)
     """
     # final_answer = final_answer.split("=")[-1]
-    final_answer=final_answer.strip()
-    if final_answer[:2]=="\\(" or final_answer[:2]=='\\[':
-        final_answer=final_answer[2:]
-    if final_answer[-2:]=='\\)' or final_answer[-2:]=='\\]':
-        final_answer=final_answer[:-2]
-    
+    final_answer = final_answer.strip()
+    if final_answer[:2] == "\\(" or final_answer[:2] == "\\[":
+        final_answer = final_answer[2:]
+    if final_answer[-2:] == "\\)" or final_answer[-2:] == "\\]":
+        final_answer = final_answer[:-2]
+
     for before, after in SUBSTITUTIONS:
         final_answer = final_answer.replace(before, after)
     for expr in REMOVED_EXPRESSIONS:
@@ -177,11 +189,12 @@ def normalize_final_answer(final_answer: str) -> str:
     # Normalize 100,000 -> 100000
     if final_answer.replace(",", "").isdigit():
         final_answer = final_answer.replace(",", "")
-    if final_answer[:2]=="\\(" or final_answer[:2]=='\\[':
-        final_answer=final_answer[2:]
-    if final_answer[-2:]=='\\)' or final_answer[-2:]=='\\]':
-        final_answer=final_answer[:-2]
+    if final_answer[:2] == "\\(" or final_answer[:2] == "\\[":
+        final_answer = final_answer[2:]
+    if final_answer[-2:] == "\\)" or final_answer[-2:] == "\\]":
+        final_answer = final_answer[:-2]
     return final_answer.strip()
+
 
 """
 This logic is largely copied from the Hendrycks' MATH release (math_equivalence), and borrowed from:
@@ -201,6 +214,7 @@ from collections import defaultdict
 from sympy import simplify, N
 from sympy.parsing.sympy_parser import parse_expr
 from sympy.parsing.latex import parse_latex
+
 # from latex2sympy2 import latex2sympy
 
 # from .parser import choice_answer_clean, strip_string
@@ -303,7 +317,7 @@ def math_equal(
 
     if not prediction and prediction not in [0, False]:
         return False
-    
+
     # 2. symbolic equal
     reference = str(reference).strip()
     prediction = str(prediction).strip()
@@ -442,13 +456,15 @@ def math_equal(
             return True
     # symbolic == numeric
     try:
-        prediction=float(N(parse_latex(prediction)))
-        if abs(prediction-float(reference))<=1e-8: True
+        prediction = float(N(parse_latex(prediction)))
+        if abs(prediction - float(reference)) <= 1e-8:
+            True
     except:
         pass
     try:
-        reference=float(N(parse_latex(reference)))
-        if abs(prediction-reference)<=1e-8: return True
+        reference = float(N(parse_latex(reference)))
+        if abs(prediction - reference) <= 1e-8:
+            return True
     except:
         pass
     return False
@@ -537,37 +553,40 @@ def call_with_timeout(func, *args, timeout=1, **kwargs):
 
     return output_queue.get()
 
+
 def process_answer_list(answer_list):
     answer_list = list(set(answer_list))
-    if "" in answer_list: answer_list.remove("")
+    if "" in answer_list:
+        answer_list.remove("")
     return answer_list
 
 
 import os
 import json
 import copy
-from tqdm import tqdm 
+from tqdm import tqdm
 import pandas as pd
 from multiprocessing import Pool
 from functools import partial
 from datetime import datetime
+
 # api
 
 
 def is_equal(pred, gt):
-    pred=normalize_final_answer(pred)
-    gt=normalize_final_answer(gt)
+    pred = normalize_final_answer(pred)
+    gt = normalize_final_answer(gt)
     return math_equal(pred, gt)
 
 
 def exact_match_eval(pred, gt):
-    gt=normalize_final_answer(gt)
+    gt = normalize_final_answer(gt)
 
-    answer_list=extract(pred)
-    normalized_answer_list=[]
+    answer_list = extract(pred)
+    normalized_answer_list = []
     for answer in copy.deepcopy(answer_list):
         normalized_answer_list.append(normalize_final_answer(answer))
-    normalized_answer_list=process_answer_list(normalized_answer_list)
+    normalized_answer_list = process_answer_list(normalized_answer_list)
 
     for answer in normalized_answer_list:
         if math_equal(gt, answer):

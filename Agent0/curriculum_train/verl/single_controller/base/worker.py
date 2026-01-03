@@ -78,7 +78,10 @@ class WorkerMeta:
         self._store = store
 
     def to_dict(self):
-        return {f"_{key.lower()}": self._store.get(f"_{key.lower()}", None) for key in WorkerMeta.keys}
+        return {
+            f"_{key.lower()}": self._store.get(f"_{key.lower()}", None)
+            for key in WorkerMeta.keys
+        }
 
 
 # we assume that in each WorkerGroup, there is a Master Worker
@@ -105,8 +108,13 @@ class Worker(WorkerHelper):
         worker_group_prefix = os.getenv("WG_PREFIX", None)
 
         # when decorator @ray.remote applies, __new__ will be called while we don't want to apply _configure_before_init
-        if None not in [rank, worker_group_prefix] and "ActorClass(" not in cls.__name__:
-            instance._configure_before_init(f"{worker_group_prefix}_register_center", int(rank))
+        if (
+            None not in [rank, worker_group_prefix]
+            and "ActorClass(" not in cls.__name__
+        ):
+            instance._configure_before_init(
+                f"{worker_group_prefix}_register_center", int(rank)
+            )
 
         return instance
 
@@ -119,7 +127,9 @@ class Worker(WorkerHelper):
                 "MASTER_ADDR": master_addr,
                 "MASTER_PORT": master_port,
             }
-            self.register_center = create_worker_group_register_center(name=register_center_name, info=rank_zero_info)
+            self.register_center = create_worker_group_register_center(
+                name=register_center_name, info=rank_zero_info
+            )
             os.environ.update(rank_zero_info)
 
     def __init__(self, cuda_visible_devices=None) -> None:
@@ -169,7 +179,9 @@ class Worker(WorkerHelper):
                 os.environ[key] = str(val)
 
         os.environ["REDIS_STORE_SERVER_HOST"] = (
-            str(self._master_addr).replace("[", "").replace("]", "") if self._master_addr else ""
+            str(self._master_addr).replace("[", "").replace("]", "")
+            if self._master_addr
+            else ""
         )
 
     def get_master_addr_port(self):

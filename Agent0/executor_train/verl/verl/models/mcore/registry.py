@@ -73,7 +73,9 @@ class SupportedModel(Enum):
 
 
 # Registry for model configuration converters
-MODEL_CONFIG_CONVERTER_REGISTRY: dict[SupportedModel, Callable[[PretrainedConfig, torch.dtype], TransformerConfig]] = {
+MODEL_CONFIG_CONVERTER_REGISTRY: dict[
+    SupportedModel, Callable[[PretrainedConfig, torch.dtype], TransformerConfig]
+] = {
     SupportedModel.LLAMA: hf_to_mcore_config_dense,
     SupportedModel.QWEN2: hf_to_mcore_config_dense,
     SupportedModel.QWEN2_MOE: hf_to_mcore_config_qwen2moe,
@@ -154,7 +156,9 @@ def get_supported_model(model_type: str) -> SupportedModel:
 
 
 def hf_to_mcore_config(
-    hf_config: PretrainedConfig, dtype: torch.dtype, **override_transformer_config_kwargs
+    hf_config: PretrainedConfig,
+    dtype: torch.dtype,
+    **override_transformer_config_kwargs,
 ) -> TransformerConfig:
     """Convert huggingface PretrainedConfig to mcore TransformerConfig.
 
@@ -166,9 +170,13 @@ def hf_to_mcore_config(
     Returns:
         The mcore TransformerConfig.
     """
-    assert len(hf_config.architectures) == 1, "Only one architecture is supported for now"
+    assert (
+        len(hf_config.architectures) == 1
+    ), "Only one architecture is supported for now"
     model = get_supported_model(hf_config.architectures[0])
-    return MODEL_CONFIG_CONVERTER_REGISTRY[model](hf_config, dtype, **override_transformer_config_kwargs)
+    return MODEL_CONFIG_CONVERTER_REGISTRY[model](
+        hf_config, dtype, **override_transformer_config_kwargs
+    )
 
 
 def init_mcore_model(
@@ -196,7 +204,9 @@ def init_mcore_model(
     Returns:
         The initialized model.
     """
-    assert len(hf_config.architectures) == 1, "Only one architecture is supported for now"
+    assert (
+        len(hf_config.architectures) == 1
+    ), "Only one architecture is supported for now"
     model = get_supported_model(hf_config.architectures[0])
     initializer_cls = MODEL_INITIALIZER_REGISTRY[model]
     initializer = initializer_cls(tfconfig, hf_config)
@@ -213,7 +223,9 @@ def get_mcore_forward_fn(hf_config: PretrainedConfig) -> Callable:
     """
     Get the forward function for given model architecture.
     """
-    assert len(hf_config.architectures) == 1, "Only one architecture is supported for now"
+    assert (
+        len(hf_config.architectures) == 1
+    ), "Only one architecture is supported for now"
     model = get_supported_model(hf_config.architectures[0])
     return MODEL_FORWARD_REGISTRY[model]
 
@@ -222,16 +234,22 @@ def get_mcore_forward_fused_fn(hf_config: PretrainedConfig) -> Callable:
     """
     Get the forward function for given model architecture.
     """
-    assert len(hf_config.architectures) == 1, "Only one architecture is supported for now"
+    assert (
+        len(hf_config.architectures) == 1
+    ), "Only one architecture is supported for now"
     model = get_supported_model(hf_config.architectures[0])
     return MODEL_FORWARD_FUSED_REGISTRY[model]
 
 
-def get_mcore_weight_converter(hf_config: PretrainedConfig, dtype: torch.dtype) -> Callable:
+def get_mcore_weight_converter(
+    hf_config: PretrainedConfig, dtype: torch.dtype
+) -> Callable:
     """
     Get the weight converter for given model architecture.
     """
-    assert len(hf_config.architectures) == 1, "Only one architecture is supported for now"
+    assert (
+        len(hf_config.architectures) == 1
+    ), "Only one architecture is supported for now"
     model = get_supported_model(hf_config.architectures[0])
     tfconfig = hf_to_mcore_config(hf_config, dtype)
     return MODEL_WEIGHT_CONVERTER_REGISTRY[model](hf_config, tfconfig)

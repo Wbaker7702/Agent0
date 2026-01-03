@@ -80,7 +80,9 @@ def repeat_kv(hidden_states: torch.Tensor, n_rep: int) -> torch.Tensor:
     batch, num_key_value_heads, slen, head_dim = hidden_states.shape
     if n_rep == 1:
         return hidden_states
-    hidden_states = hidden_states[:, :, None, :, :].expand(batch, num_key_value_heads, n_rep, slen, head_dim)
+    hidden_states = hidden_states[:, :, None, :, :].expand(
+        batch, num_key_value_heads, n_rep, slen, head_dim
+    )
     return hidden_states.reshape(batch, num_key_value_heads * n_rep, slen, head_dim)
 
 
@@ -106,7 +108,9 @@ def _ulysses_flash_attn_forward(
     # batch_size x seq_length x head_dim x hidden_dim
     # therefore we just need to keep the original shape
     compressed_kv = self.kv_a_proj_with_mqa(hidden_states)
-    compressed_kv, k_pe = torch.split(compressed_kv, [self.kv_lora_rank, self.qk_rope_head_dim], dim=-1)
+    compressed_kv, k_pe = torch.split(
+        compressed_kv, [self.kv_lora_rank, self.qk_rope_head_dim], dim=-1
+    )
     k_pe = k_pe.view(bsz, q_len, 1, self.qk_rope_head_dim).transpose(1, 2)
     kv = (
         self.kv_b_proj(self.kv_a_layernorm(compressed_kv))
@@ -114,14 +118,18 @@ def _ulysses_flash_attn_forward(
         .transpose(1, 2)
     )
 
-    k_nope, value_states = torch.split(kv, [self.qk_nope_head_dim, self.v_head_dim], dim=-1)
+    k_nope, value_states = torch.split(
+        kv, [self.qk_nope_head_dim, self.v_head_dim], dim=-1
+    )
 
     # patch
     ulysses_sp_size = get_ulysses_sequence_parallel_world_size()
     if ulysses_sp_size > 1:
         validate_ulysses_config(self.num_heads, ulysses_sp_size)
 
-        num_key_value_groups = self.config.num_attention_heads // self.config.num_key_value_heads
+        num_key_value_groups = (
+            self.config.num_attention_heads // self.config.num_key_value_heads
+        )
         k_pe = repeat_kv(k_pe, ulysses_sp_size)  # to keep heads=1 after a2a
         k_nope = repeat_kv(k_nope, num_key_value_groups)
         value_states = repeat_kv(value_states, num_key_value_groups)
@@ -135,15 +143,21 @@ def _ulysses_flash_attn_forward(
     else:
         full_q_len = q_len
 
-    q_nope, q_pe = torch.split(q, [self.qk_nope_head_dim, self.qk_rope_head_dim], dim=-1)
+    q_nope, q_pe = torch.split(
+        q, [self.qk_nope_head_dim, self.qk_rope_head_dim], dim=-1
+    )
     cos, sin = self.rotary_emb(value_states, seq_len=full_q_len)
     q_pe, k_pe = apply_rotary_pos_emb(q_pe, k_pe, cos, sin, position_ids)
 
-    query_states = k_pe.new_empty(bsz, self.num_heads // ulysses_sp_size, full_q_len, self.q_head_dim)
+    query_states = k_pe.new_empty(
+        bsz, self.num_heads // ulysses_sp_size, full_q_len, self.q_head_dim
+    )
     query_states[:, :, :, : self.qk_nope_head_dim] = q_nope
     query_states[:, :, :, self.qk_nope_head_dim :] = q_pe
 
-    key_states = k_pe.new_empty(bsz, self.num_heads // ulysses_sp_size, full_q_len, self.q_head_dim)
+    key_states = k_pe.new_empty(
+        bsz, self.num_heads // ulysses_sp_size, full_q_len, self.q_head_dim
+    )
     key_states[:, :, :, : self.qk_nope_head_dim] = k_nope
     key_states[:, :, :, self.qk_nope_head_dim :] = k_pe
 
@@ -179,7 +193,9 @@ def _ulysses_flash_attn_forward(
     if self.q_head_dim != self.v_head_dim:
         attn_output = attn_output[:, :, :, : self.v_head_dim]
 
-    attn_output = attn_output.reshape(bsz, q_len, self.num_heads * self.v_head_dim).contiguous()
+    attn_output = attn_output.reshape(
+        bsz, q_len, self.num_heads * self.v_head_dim
+    ).contiguous()
     attn_output = self.o_proj(attn_output)
 
     return attn_output, None, None

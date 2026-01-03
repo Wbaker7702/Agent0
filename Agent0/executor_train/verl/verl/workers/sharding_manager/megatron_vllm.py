@@ -31,7 +31,11 @@ from verl.protocol import all_gather_data_proto
 from verl.third_party.vllm import LLM
 from verl.third_party.vllm import parallel_state as vllm_ps
 from verl.utils.device import get_torch_device
-from verl.utils.megatron_utils import load_megatron_model_to_gpu, offload_megatron_model_to_cpu, per_tensor_generator
+from verl.utils.megatron_utils import (
+    load_megatron_model_to_gpu,
+    offload_megatron_model_to_cpu,
+    per_tensor_generator,
+)
 from verl.utils.profiler import GPUMemoryLogger, log_gpu_memory_usage
 from verl.utils.profiler.performance import simple_timer
 from verl.utils.torch_functional import check_device_is_available
@@ -133,7 +137,9 @@ class MegatronVLLMShardingManager(BaseShardingManager):
         self.torch_random_states = get_torch_device().get_rng_state()
         if self.device_mesh is not None:
             gen_dp_rank = self.device_mesh["dp"].get_local_rank()
-            get_torch_device().manual_seed(gen_dp_rank + 1000)  # make sure all tp ranks have the same random states
+            get_torch_device().manual_seed(
+                gen_dp_rank + 1000
+            )  # make sure all tp ranks have the same random states
             self.gen_random_states = get_torch_device().get_rng_state()
             get_torch_device().set_rng_state(self.torch_random_states)
         else:
@@ -145,12 +151,17 @@ class MegatronVLLMShardingManager(BaseShardingManager):
         with simple_timer("reshard", self.timing):
             get_torch_device().empty_cache()
 
-            log_gpu_memory_usage("Before state_dict() in sharding manager memory", logger=logger)
+            log_gpu_memory_usage(
+                "Before state_dict() in sharding manager memory", logger=logger
+            )
             if self.offload_param:
                 load_megatron_model_to_gpu(self.actor_module)
 
             if self.rollout_config.free_cache_engine:
-                if "tags" in inspect.signature(self.inference_engine.wake_up).parameters:
+                if (
+                    "tags"
+                    in inspect.signature(self.inference_engine.wake_up).parameters
+                ):
                     self.inference_engine.wake_up(tags=["weights"])
                 else:
                     self.inference_engine.wake_up()
@@ -176,7 +187,8 @@ class MegatronVLLMShardingManager(BaseShardingManager):
 
             if (
                 self.rollout_config.free_cache_engine
-                and "tags" in inspect.signature(self.inference_engine.wake_up).parameters
+                and "tags"
+                in inspect.signature(self.inference_engine.wake_up).parameters
             ):
                 self.inference_engine.wake_up(tags=["kv_cache"])
 

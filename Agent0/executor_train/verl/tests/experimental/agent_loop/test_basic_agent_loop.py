@@ -71,7 +71,12 @@ def test_single_turn(init_config):
                 "content": "Let's play a role playing game. Your name is Alice, your favorite color is blue.",
             }
         ],
-        [{"role": "user", "content": "Let's play a role playing game. Your name is Bob, your favorite color is red."}],
+        [
+            {
+                "role": "user",
+                "content": "Let's play a role playing game. Your name is Bob, your favorite color is red.",
+            }
+        ],
     ]
     batch = DataProto(
         non_tensor_batch={
@@ -119,7 +124,9 @@ class WeatherTool(BaseTool):
         schema = get_json_schema(self.get_current_temperature)
         return OpenAIFunctionToolSchema(**schema)
 
-    async def execute(self, instance_id: str, parameters: dict[str, Any], **kwargs) -> tuple[str, float, dict]:
+    async def execute(
+        self, instance_id: str, parameters: dict[str, Any], **kwargs
+    ) -> tuple[str, float, dict]:
         try:
             result = self.get_current_temperature(**parameters)
             return json.dumps(result), 0, {}
@@ -150,7 +157,9 @@ class WeatherToolWithData(BaseTool):
             "unit": unit,
         }
 
-    async def execute(self, instance_id: str, parameters: dict[str, Any], **kwargs) -> tuple[str, float, dict]:
+    async def execute(
+        self, instance_id: str, parameters: dict[str, Any], **kwargs
+    ) -> tuple[str, float, dict]:
         try:
             result = self.get_temperature_date(**parameters)
             return json.dumps(result), 0, {}
@@ -210,12 +219,17 @@ def test_tool_agent(init_config):
                 "content": "You are Qwen, created by Alibaba Cloud. You are a helpful assistant.\n\n"
                 "Current Date: 2024-09-30",
             },
-            {"role": "user", "content": "What's the temperature in San Francisco now? How about tomorrow?"},
+            {
+                "role": "user",
+                "content": "What's the temperature in San Francisco now? How about tomorrow?",
+            },
         ],
     ]
     batch = DataProto(
         non_tensor_batch={
-            "raw_prompt": np.array([np.array(prompt) for prompt in raw_prompts], dtype=object),
+            "raw_prompt": np.array(
+                [np.array(prompt) for prompt in raw_prompts], dtype=object
+            ),
             "agent_name": np.array(["tool_agent"] * len(raw_prompts)),
         },
     )
@@ -238,14 +252,20 @@ def test_tool_agent(init_config):
     tokenizer = hf_tokenizer(init_config.actor_rollout_ref.model.path)
     responses = result.batch["responses"]
     response_mask = result.batch["response_mask"]
-    assert responses.size() == response_mask.size(), f"{responses.size()} != {response_mask.size()}"
+    assert (
+        responses.size() == response_mask.size()
+    ), f"{responses.size()} != {response_mask.size()}"
 
     # Decode responses with response_mask
     for i in range(len(responses)):
         valid_tokens = responses[i][response_mask[i].bool()]
         response_str = tokenizer.decode(valid_tokens)
-        assert "<tool_response>" not in response_str, f"found <tool_response> in response: {response_str}"
-        assert "</tool_response>" not in response_str, f"found </tool_response> in response: {response_str}"
+        assert (
+            "<tool_response>" not in response_str
+        ), f"found <tool_response> in response: {response_str}"
+        assert (
+            "</tool_response>" not in response_str
+        ), f"found </tool_response> in response: {response_str}"
         print(f"response: {response_str}")
 
     print("Test passed!")

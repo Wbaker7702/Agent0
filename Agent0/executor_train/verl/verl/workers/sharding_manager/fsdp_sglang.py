@@ -24,14 +24,24 @@ from sglang.srt.entrypoints.engine import Engine
 from sglang.srt.model_executor.model_runner import LocalSerializedTensor
 from sglang.srt.utils import MultiprocessingSerializer
 from torch.distributed.device_mesh import DeviceMesh
-from torch.distributed.fsdp.api import FullStateDictConfig, ShardedStateDictConfig, StateDictType
-from torch.distributed.fsdp.fully_sharded_data_parallel import FullyShardedDataParallel as FSDP
+from torch.distributed.fsdp.api import (
+    FullStateDictConfig,
+    ShardedStateDictConfig,
+    StateDictType,
+)
+from torch.distributed.fsdp.fully_sharded_data_parallel import (
+    FullyShardedDataParallel as FSDP,
+)
 from torch.distributed.tensor import DTensor
 
 from verl import DataProto
 from verl.protocol import all_gather_data_proto
 from verl.utils.device import get_device_id, get_torch_device
-from verl.utils.fsdp_utils import fsdp_version, load_fsdp_model_to_gpu, offload_fsdp_model_to_cpu
+from verl.utils.fsdp_utils import (
+    fsdp_version,
+    load_fsdp_model_to_gpu,
+    offload_fsdp_model_to_cpu,
+)
 from verl.utils.model import convert_weight_keys
 from verl.utils.profiler import GPUMemoryLogger, log_gpu_memory_usage, simple_timer
 from verl.utils.torch_functional import check_device_is_available
@@ -74,7 +84,9 @@ class FSDPSGLangShardingManager(BaseShardingManager):
         self.full_params = full_params
         if full_params and fsdp_version(self.module) == 1:
             FSDP.set_state_dict_type(
-                self.module, state_dict_type=StateDictType.FULL_STATE_DICT, state_dict_config=FullStateDictConfig()
+                self.module,
+                state_dict_type=StateDictType.FULL_STATE_DICT,
+                state_dict_config=FullStateDictConfig(),
             )
         elif fsdp_version(self.module) == 1:
             FSDP.set_state_dict_type(
@@ -91,7 +103,9 @@ class FSDPSGLangShardingManager(BaseShardingManager):
         # get a random rng states
         if self.device_mesh is not None:
             gen_dp_rank = self.device_mesh["dp"].get_local_rank()
-            get_torch_device().manual_seed(gen_dp_rank + 1000)  # make sure all tp ranks have the same random states
+            get_torch_device().manual_seed(
+                gen_dp_rank + 1000
+            )  # make sure all tp ranks have the same random states
             self.gen_random_states = get_torch_device().get_rng_state()
             get_torch_device().set_rng_state(self.torch_random_states)
         else:
@@ -114,10 +128,14 @@ class FSDPSGLangShardingManager(BaseShardingManager):
         named_tensors = [(k, v) for k, v in params.items()]
         load_format = None
         for tensor_index, (name, tensor) in enumerate(named_tensors):
-            serialized_tensor = MultiprocessingSerializer.serialize(_preprocess_tensor_for_update_weights(tensor))
+            serialized_tensor = MultiprocessingSerializer.serialize(
+                _preprocess_tensor_for_update_weights(tensor)
+            )
 
             if self.device_mesh["infer_tp"].get_local_rank() == 0:
-                gathered_serialized_tensors = [None for _ in range(self.device_mesh["infer_tp"].mesh.size()[0])]
+                gathered_serialized_tensors = [
+                    None for _ in range(self.device_mesh["infer_tp"].mesh.size()[0])
+                ]
             else:
                 gathered_serialized_tensors = None
             dist.gather_object(
@@ -140,43 +158,65 @@ class FSDPSGLangShardingManager(BaseShardingManager):
                 )
 
     async def release_memory(self):
-        if self.device_mesh["infer_tp"].get_local_rank() == 0 and self.rollout_config.free_cache_engine:
+        if (
+            self.device_mesh["infer_tp"].get_local_rank() == 0
+            and self.rollout_config.free_cache_engine
+        ):
             await self.inference_engine.release_memory_occupation()
 
     @GPUMemoryLogger(role="FSDPSGLangShardingManager enter", logger=logger)
     async def wake_up(self):
         get_torch_device().empty_cache()
 
-        if self.device_mesh["infer_tp"].get_local_rank() == 0 and self.rollout_config.free_cache_engine:
+        if (
+            self.device_mesh["infer_tp"].get_local_rank() == 0
+            and self.rollout_config.free_cache_engine
+        ):
             if self.multi_stage_wake_up:
                 await self.inference_engine.resume_memory_occupation(tags=["weights"])
-                log_gpu_memory_usage("Before resume SGLang weights in sharding manager", logger=logger)
+                log_gpu_memory_usage(
+                    "Before resume SGLang weights in sharding manager", logger=logger
+                )
             else:
                 await self.inference_engine.resume_memory_occupation()
-                log_gpu_memory_usage("Before resume SGLang weights + kv_cache in sharding manager", logger=logger)
+                log_gpu_memory_usage(
+                    "Before resume SGLang weights + kv_cache in sharding manager",
+                    logger=logger,
+                )
 
-        log_gpu_memory_usage("Before state_dict() in sharding manager memory", logger=logger)
+        log_gpu_memory_usage(
+            "Before state_dict() in sharding manager memory", logger=logger
+        )
         if self.offload_param:
             load_fsdp_model_to_gpu(self.module)
         params = self.module.state_dict()
-        log_gpu_memory_usage("After state_dict() in sharding manager memory", logger=logger)
+        log_gpu_memory_usage(
+            "After state_dict() in sharding manager memory", logger=logger
+        )
         device = get_device_id()  # used when fsdp2 set cpu_offload_policy
         params = {
-            k: v.to(device, non_blocking=True) if fsdp_version(self.module) == 2 else v for k, v in params.items()
+            k: v.to(device, non_blocking=True) if fsdp_version(self.module) == 2 else v
+            for k, v in params.items()
         }
 
         # convert weight keys to match the model config
-        params = convert_weight_keys(params, getattr(self.module, "_fsdp_wrapped_module", self.module))
+        params = convert_weight_keys(
+            params, getattr(self.module, "_fsdp_wrapped_module", self.module)
+        )
 
         # Copy, not share memory
         await self.update_weights(params)
-        log_gpu_memory_usage("After sync model weights in sharding manager", logger=logger)
+        log_gpu_memory_usage(
+            "After sync model weights in sharding manager", logger=logger
+        )
 
         del params
         if self.offload_param:
             offload_fsdp_model_to_cpu(self.module)
         get_torch_device().empty_cache()
-        log_gpu_memory_usage("After del state_dict and empty_cache in sharding manager", logger=logger)
+        log_gpu_memory_usage(
+            "After del state_dict and empty_cache in sharding manager", logger=logger
+        )
 
         if (
             self.multi_stage_wake_up
@@ -184,7 +224,9 @@ class FSDPSGLangShardingManager(BaseShardingManager):
             and self.device_mesh["infer_tp"].get_local_rank() == 0
         ):
             await self.inference_engine.resume_memory_occupation(tags=["kv_cache"])
-            log_gpu_memory_usage("After resume SGLang kv_cache in sharding manager", logger=logger)
+            log_gpu_memory_usage(
+                "After resume SGLang kv_cache in sharding manager", logger=logger
+            )
 
         # important: need to manually set the random states of each tp to be identical.
         if self.device_mesh is not None:
@@ -194,9 +236,13 @@ class FSDPSGLangShardingManager(BaseShardingManager):
     @GPUMemoryLogger(role="FSDPSGLangShardingManager exit", logger=logger)
     async def sleep(self):
         if self.rollout_config.free_cache_engine:
-            log_gpu_memory_usage("Before SGLang offload in sharding manager", logger=logger)
+            log_gpu_memory_usage(
+                "Before SGLang offload in sharding manager", logger=logger
+            )
             await self.release_memory()
-            log_gpu_memory_usage("After SGLang offload in sharding manager", logger=logger)
+            log_gpu_memory_usage(
+                "After SGLang offload in sharding manager", logger=logger
+            )
 
         self.module.train()
 

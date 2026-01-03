@@ -38,7 +38,12 @@ class BaseTool:
         self.tool_schema = tool_schema or self.get_openai_tool_schema()
         assert self.tool_schema is not None, "Tool schema is not set!"
         self.name = self.tool_schema.function.name
-        print(json.dumps(self.tool_schema.model_dump(exclude_unset=True, exclude_none=True), indent=2))
+        print(
+            json.dumps(
+                self.tool_schema.model_dump(exclude_unset=True, exclude_none=True),
+                indent=2,
+            )
+        )
 
     def get_openai_tool_schema(self) -> OpenAIFunctionToolSchema:
         return self.tool_schema
@@ -58,7 +63,9 @@ class BaseTool:
             return instance_id
 
     @rollout_trace_op
-    async def execute(self, instance_id: str, parameters: dict[str, Any], **kwargs) -> tuple[str, float, dict]:
+    async def execute(
+        self, instance_id: str, parameters: dict[str, Any], **kwargs
+    ) -> tuple[str, float, dict]:
         """Execute the tool.
 
         Args:

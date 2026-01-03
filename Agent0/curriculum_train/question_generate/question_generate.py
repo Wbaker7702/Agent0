@@ -8,24 +8,26 @@ from evaluation.datasets_loader import get_dataset_handler
 import json
 import regex as re
 import os
+
 STORAGE_PATH = os.getenv("STORAGE_PATH")
+
 
 def extract_boxed(text):
     results, i = [], 0
-    prefix = r'\boxed{'
+    prefix = r"\boxed{"
     plen = len(prefix)
 
     while True:
         start = text.find(prefix, i)
         if start == -1:
-            break   # no more \boxed{…}
+            break  # no more \boxed{…}
 
         j = start + plen
         depth = 1
         while j < len(text) and depth:
-            if text[j] == '{':
+            if text[j] == "{":
                 depth += 1
-            elif text[j] == '}':
+            elif text[j] == "}":
                 depth -= 1
             j += 1
 
@@ -33,6 +35,7 @@ def extract_boxed(text):
         i = j
 
     return results
+
 
 def get_response_mask(response_ids, eos_token_id, dtype):
     batch_size, seq_len = response_ids.shape
@@ -43,6 +46,7 @@ def get_response_mask(response_ids, eos_token_id, dtype):
                 mask[i][j:] = 0
                 break
     return mask
+
 
 def main(args):
     tokenizer = AutoTokenizer.from_pretrained(args.model)
@@ -76,26 +80,23 @@ def main(args):
                 r"\boxed{final_answer}"
                 "\n\n"
                 "Do NOT output anything else—no explanations, no extra markup."
-            )
+            ),
         },
         {
             "role": "user",
             "content": (
                 "Generate one new, challenging reasoning question now. "
                 "Remember to format the output exactly as instructed."
-            )
-        }
+            ),
+        },
     ]
 
     if tokenizer.chat_template:
         prompt = tokenizer.apply_chat_template(
-            chat, 
-            tokenize=False,
-            add_generation_prompt=True, 
-            add_special_tokens=True
+            chat, tokenize=False, add_generation_prompt=True, add_special_tokens=True
         )
     else:
-        prompt = "system: " + chat[0]["content"] + '\n' + "user: " + chat[1]["content"]
+        prompt = "system: " + chat[0]["content"] + "\n" + "user: " + chat[1]["content"]
     sample_params = vllm.SamplingParams(
         max_tokens=4096,
         temperature=1.0,
@@ -104,8 +105,10 @@ def main(args):
         stop_token_ids=[tokenizer.eos_token_id],
     )
 
-    completions: List[RequestOutput] = model.generate([prompt]*args.num_samples, sampling_params=sample_params)
-    results=[]
+    completions: List[RequestOutput] = model.generate(
+        [prompt] * args.num_samples, sampling_params=sample_params
+    )
+    results = []
     for completion in completions:
         response = completion.outputs[0].text
         try:
@@ -118,17 +121,24 @@ def main(args):
                 results.append({"question": question, "answer": answer, "score": 0})
             else:
                 results.append({"question": response, "answer": "", "score": -1})
-        except:
+        except Exception:
             results.append({"question": response, "answer": "", "score": -1})
-    with open(f"{STORAGE_PATH}/generated_question/{args.save_name}_{args.suffix}.json", "w") as f:
+    with open(
+        f"{STORAGE_PATH}/generated_question/{args.save_name}_{args.suffix}.json", "w"
+    ) as f:
         json.dump(results, f, indent=4)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", type=str, default="Qwen/Qwen3-4B")
-    parser.add_argument("--num_samples", type=int, default=1250, help="Number of samples to generate")
-    parser.add_argument("--suffix", type=str, default="", help="Suffix to add to the output file")
+    parser.add_argument(
+        "--num_samples", type=int, default=1250, help="Number of samples to generate"
+    )
+    parser.add_argument(
+        "--suffix", type=str, default="", help="Suffix to add to the output file"
+    )
     parser.add_argument("--save_name", type=str, default="", help="")
     args = parser.parse_args()
 
-    main(args) 
+    main(args)

@@ -15,10 +15,17 @@
 
 from typing import Optional
 
-from transformers import AutoProcessor, AutoTokenizer, PreTrainedTokenizer, ProcessorMixin
+from transformers import (
+    AutoProcessor,
+    AutoTokenizer,
+    PreTrainedTokenizer,
+    ProcessorMixin,
+)
 
 
-def get_tokenizer(model_path: str, override_chat_template: Optional[str] = None, **kwargs) -> PreTrainedTokenizer:
+def get_tokenizer(
+    model_path: str, override_chat_template: Optional[str] = None, **kwargs
+) -> PreTrainedTokenizer:
     """Create a huggingface pretrained tokenizer."""
     tokenizer = AutoTokenizer.from_pretrained(model_path, **kwargs)
     if override_chat_template is not None:
@@ -27,7 +34,9 @@ def get_tokenizer(model_path: str, override_chat_template: Optional[str] = None,
     if tokenizer.bos_token == "<bos>" and tokenizer.eos_token == "<eos>":
         # the EOS token in gemma2 & gemma3 is ambiguious, which may worsen RL performance.
         # https://huggingface.co/google/gemma-2-2b-it/commit/17a01657f5c87135bcdd0ec7abb4b2dece04408a
-        print("Found gemma model. Set eos_token and eos_token_id to <end_of_turn> and 107.")
+        print(
+            "Found gemma model. Set eos_token and eos_token_id to <end_of_turn> and 107."
+        )
         tokenizer.eos_token = "<end_of_turn>"
 
     if tokenizer.pad_token_id is None:
@@ -37,7 +46,9 @@ def get_tokenizer(model_path: str, override_chat_template: Optional[str] = None,
     return tokenizer
 
 
-def get_processor(model_path: str, override_chat_template: Optional[str] = None, **kwargs) -> Optional[ProcessorMixin]:
+def get_processor(
+    model_path: str, override_chat_template: Optional[str] = None, **kwargs
+) -> Optional[ProcessorMixin]:
     """Create a huggingface pretrained processor."""
     processor = AutoProcessor.from_pretrained(model_path, **kwargs)
     if override_chat_template is not None:

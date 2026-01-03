@@ -41,12 +41,16 @@ class TestGsm8kInteraction:
         instance_id = "test_instance"
         ground_truth = "42"
 
-        result_id = await self.interaction.start_interaction(instance_id=instance_id, ground_truth=ground_truth)
+        result_id = await self.interaction.start_interaction(
+            instance_id=instance_id, ground_truth=ground_truth
+        )
 
         assert result_id == instance_id
         assert instance_id in self.interaction._instance_dict
         assert self.interaction._instance_dict[instance_id]["response"] == ""
-        assert self.interaction._instance_dict[instance_id]["ground_truth"] == ground_truth
+        assert (
+            self.interaction._instance_dict[instance_id]["ground_truth"] == ground_truth
+        )
         assert self.interaction._instance_dict[instance_id]["reward"] == 0.0
 
     @pytest.mark.asyncio
@@ -59,7 +63,9 @@ class TestGsm8kInteraction:
         assert result_id is not None
         assert len(result_id) == 36  # UUID4 length
         assert result_id in self.interaction._instance_dict
-        assert self.interaction._instance_dict[result_id]["ground_truth"] == ground_truth
+        assert (
+            self.interaction._instance_dict[result_id]["ground_truth"] == ground_truth
+        )
 
     @pytest.mark.asyncio
     async def test_start_interaction_without_ground_truth(self):
@@ -78,13 +84,15 @@ class TestGsm8kInteraction:
         ground_truth = "42"
 
         # Setup instance
-        await self.interaction.start_interaction(instance_id=instance_id, ground_truth=ground_truth)
+        await self.interaction.start_interaction(
+            instance_id=instance_id, ground_truth=ground_truth
+        )
 
         messages = [{"role": "user", "content": "#### 42"}]
 
         with patch("verl.utils.reward_score.gsm8k.compute_score", return_value=1.0):
-            should_terminate, response, reward, metadata = await self.interaction.generate_response(
-                instance_id, messages
+            should_terminate, response, reward, metadata = (
+                await self.interaction.generate_response(instance_id, messages)
             )
 
         assert should_terminate is True
@@ -100,13 +108,15 @@ class TestGsm8kInteraction:
         ground_truth = "42"
 
         # Setup instance
-        await self.interaction.start_interaction(instance_id=instance_id, ground_truth=ground_truth)
+        await self.interaction.start_interaction(
+            instance_id=instance_id, ground_truth=ground_truth
+        )
 
         messages = [{"role": "user", "content": "42"}]
 
         with patch("verl.utils.reward_score.gsm8k.compute_score", return_value=1.0):
-            should_terminate, response, reward, metadata = await self.interaction.generate_response(
-                instance_id, messages
+            should_terminate, response, reward, metadata = (
+                await self.interaction.generate_response(instance_id, messages)
             )
 
         assert should_terminate is True
@@ -121,17 +131,22 @@ class TestGsm8kInteraction:
         ground_truth = "42"
 
         # Setup instance
-        await self.interaction.start_interaction(instance_id=instance_id, ground_truth=ground_truth)
+        await self.interaction.start_interaction(
+            instance_id=instance_id, ground_truth=ground_truth
+        )
 
         messages = [{"role": "user", "content": "24"}]
 
         with patch("verl.utils.reward_score.gsm8k.compute_score", return_value=0.0):
-            should_terminate, response, reward, metadata = await self.interaction.generate_response(
-                instance_id, messages
+            should_terminate, response, reward, metadata = (
+                await self.interaction.generate_response(instance_id, messages)
             )
 
         assert should_terminate is False
-        assert response == "Your response is incorrect! You need to reflect on your answer and try again."
+        assert (
+            response
+            == "Your response is incorrect! You need to reflect on your answer and try again."
+        )
         assert reward == 0.0
         assert self.interaction._instance_dict[instance_id]["response"] == "#### 24"
 
@@ -142,7 +157,9 @@ class TestGsm8kInteraction:
         ground_truth = "42"
 
         # Setup instance
-        await self.interaction.start_interaction(instance_id=instance_id, ground_truth=ground_truth)
+        await self.interaction.start_interaction(
+            instance_id=instance_id, ground_truth=ground_truth
+        )
 
         messages = [
             {"role": "user", "content": "What is 2+2?"},
@@ -151,8 +168,8 @@ class TestGsm8kInteraction:
         ]
 
         with patch("verl.utils.reward_score.gsm8k.compute_score", return_value=1.0):
-            should_terminate, response, reward, metadata = await self.interaction.generate_response(
-                instance_id, messages
+            should_terminate, response, reward, metadata = (
+                await self.interaction.generate_response(instance_id, messages)
             )
 
         assert should_terminate is True
@@ -166,13 +183,15 @@ class TestGsm8kInteraction:
         ground_truth = "42"
 
         # Setup instance
-        await self.interaction.start_interaction(instance_id=instance_id, ground_truth=ground_truth)
+        await self.interaction.start_interaction(
+            instance_id=instance_id, ground_truth=ground_truth
+        )
 
         messages = [{"role": "assistant", "content": "Hello!"}]
 
         with patch("verl.utils.reward_score.gsm8k.compute_score", return_value=0.0):
-            should_terminate, response, reward, metadata = await self.interaction.generate_response(
-                instance_id, messages
+            should_terminate, response, reward, metadata = (
+                await self.interaction.generate_response(instance_id, messages)
             )
 
         assert should_terminate is False
@@ -185,16 +204,22 @@ class TestGsm8kInteraction:
         ground_truth = "42"
 
         # Setup instance
-        await self.interaction.start_interaction(instance_id=instance_id, ground_truth=ground_truth)
+        await self.interaction.start_interaction(
+            instance_id=instance_id, ground_truth=ground_truth
+        )
 
         # Set a response
         self.interaction._instance_dict[instance_id]["response"] = "#### 42"
 
-        with patch("verl.utils.reward_score.gsm8k.compute_score", return_value=1.0) as mock_compute:
+        with patch(
+            "verl.utils.reward_score.gsm8k.compute_score", return_value=1.0
+        ) as mock_compute:
             score = await self.interaction.calculate_score(instance_id)
 
             assert score == 1.0
-            mock_compute.assert_called_once_with("#### 42", "42", method="flexible", format_score=0.0, score=1.0)
+            mock_compute.assert_called_once_with(
+                "#### 42", "42", method="flexible", format_score=0.0, score=1.0
+            )
 
     @pytest.mark.asyncio
     async def test_calculate_score_with_kwargs(self):
@@ -203,16 +228,24 @@ class TestGsm8kInteraction:
         ground_truth = "42"
 
         # Setup instance
-        await self.interaction.start_interaction(instance_id=instance_id, ground_truth=ground_truth)
+        await self.interaction.start_interaction(
+            instance_id=instance_id, ground_truth=ground_truth
+        )
 
         # Set a response
         self.interaction._instance_dict[instance_id]["response"] = "#### 24"
 
-        with patch("verl.utils.reward_score.gsm8k.compute_score", return_value=0.0) as mock_compute:
-            score = await self.interaction.calculate_score(instance_id, extra_param="test")
+        with patch(
+            "verl.utils.reward_score.gsm8k.compute_score", return_value=0.0
+        ) as mock_compute:
+            score = await self.interaction.calculate_score(
+                instance_id, extra_param="test"
+            )
 
             assert score == 0.0
-            mock_compute.assert_called_once_with("#### 24", "42", method="flexible", format_score=0.0, score=1.0)
+            mock_compute.assert_called_once_with(
+                "#### 24", "42", method="flexible", format_score=0.0, score=1.0
+            )
 
     @pytest.mark.asyncio
     async def test_finalize_interaction(self):
@@ -221,7 +254,9 @@ class TestGsm8kInteraction:
         ground_truth = "42"
 
         # Setup instance
-        await self.interaction.start_interaction(instance_id=instance_id, ground_truth=ground_truth)
+        await self.interaction.start_interaction(
+            instance_id=instance_id, ground_truth=ground_truth
+        )
 
         assert instance_id in self.interaction._instance_dict
 
@@ -236,7 +271,9 @@ class TestGsm8kInteraction:
         ground_truth = "42"
 
         # Setup instance
-        await self.interaction.start_interaction(instance_id=instance_id, ground_truth=ground_truth)
+        await self.interaction.start_interaction(
+            instance_id=instance_id, ground_truth=ground_truth
+        )
 
         assert instance_id in self.interaction._instance_dict
 
@@ -259,14 +296,16 @@ class TestGsm8kInteraction:
         ground_truth = "42"
 
         # Start interaction
-        instance_id = await self.interaction.start_interaction(ground_truth=ground_truth)
+        instance_id = await self.interaction.start_interaction(
+            ground_truth=ground_truth
+        )
 
         # Generate response with correct answer
         messages = [{"role": "user", "content": "42"}]
 
         with patch("verl.utils.reward_score.gsm8k.compute_score", return_value=1.0):
-            should_terminate, response, reward, metadata = await self.interaction.generate_response(
-                instance_id, messages
+            should_terminate, response, reward, metadata = (
+                await self.interaction.generate_response(instance_id, messages)
             )
 
         assert should_terminate is True
@@ -282,14 +321,16 @@ class TestGsm8kInteraction:
         ground_truth = "42"
 
         # Start interaction
-        instance_id = await self.interaction.start_interaction(ground_truth=ground_truth)
+        instance_id = await self.interaction.start_interaction(
+            ground_truth=ground_truth
+        )
 
         # Generate response with incorrect answer
         messages = [{"role": "user", "content": "24"}]
 
         with patch("verl.utils.reward_score.gsm8k.compute_score", return_value=0.0):
-            should_terminate, response, reward, metadata = await self.interaction.generate_response(
-                instance_id, messages
+            should_terminate, response, reward, metadata = (
+                await self.interaction.generate_response(instance_id, messages)
             )
 
         assert should_terminate is False
@@ -300,8 +341,8 @@ class TestGsm8kInteraction:
         messages.append({"role": "user", "content": "42"})
 
         with patch("verl.utils.reward_score.gsm8k.compute_score", return_value=1.0):
-            should_terminate, response, reward, metadata = await self.interaction.generate_response(
-                instance_id, messages
+            should_terminate, response, reward, metadata = (
+                await self.interaction.generate_response(instance_id, messages)
             )
 
         assert should_terminate is True
@@ -318,8 +359,12 @@ class TestGsm8kInteraction:
         ground_truth_2 = "24"
 
         # Start multiple interactions
-        instance_id_1 = await self.interaction.start_interaction(ground_truth=ground_truth_1)
-        instance_id_2 = await self.interaction.start_interaction(ground_truth=ground_truth_2)
+        instance_id_1 = await self.interaction.start_interaction(
+            ground_truth=ground_truth_1
+        )
+        instance_id_2 = await self.interaction.start_interaction(
+            ground_truth=ground_truth_2
+        )
 
         assert len(self.interaction._instance_dict) == 2
         assert instance_id_1 in self.interaction._instance_dict
@@ -329,9 +374,15 @@ class TestGsm8kInteraction:
         messages_1 = [{"role": "user", "content": "42"}]
         messages_2 = [{"role": "user", "content": "24"}]
 
-        with patch("verl.utils.reward_score.gsm8k.compute_score", side_effect=[1.0, 1.0]):
-            should_terminate_1, _, reward_1, _ = await self.interaction.generate_response(instance_id_1, messages_1)
-            should_terminate_2, _, reward_2, _ = await self.interaction.generate_response(instance_id_2, messages_2)
+        with patch(
+            "verl.utils.reward_score.gsm8k.compute_score", side_effect=[1.0, 1.0]
+        ):
+            should_terminate_1, _, reward_1, _ = (
+                await self.interaction.generate_response(instance_id_1, messages_1)
+            )
+            should_terminate_2, _, reward_2, _ = (
+                await self.interaction.generate_response(instance_id_2, messages_2)
+            )
 
         assert should_terminate_1 is True
         assert should_terminate_2 is True
@@ -351,13 +402,15 @@ class TestGsm8kInteraction:
         ground_truth = "42"
 
         # Setup instance
-        await self.interaction.start_interaction(instance_id=instance_id, ground_truth=ground_truth)
+        await self.interaction.start_interaction(
+            instance_id=instance_id, ground_truth=ground_truth
+        )
 
         messages = []
 
         with patch("verl.utils.reward_score.gsm8k.compute_score", return_value=0.0):
-            should_terminate, response, reward, metadata = await self.interaction.generate_response(
-                instance_id, messages
+            should_terminate, response, reward, metadata = (
+                await self.interaction.generate_response(instance_id, messages)
             )
 
         assert should_terminate is False
@@ -371,15 +424,15 @@ class TestGsm8kInteraction:
         ground_truth = "42"
 
         # Setup instance
-        await self.interaction.start_interaction(instance_id=instance_id, ground_truth=ground_truth)
+        await self.interaction.start_interaction(
+            instance_id=instance_id, ground_truth=ground_truth
+        )
 
-        messages = [
-            {"role": "user"}  # Missing content field
-        ]
+        messages = [{"role": "user"}]  # Missing content field
 
         with patch("verl.utils.reward_score.gsm8k.compute_score", return_value=0.0):
-            should_terminate, response, reward, metadata = await self.interaction.generate_response(
-                instance_id, messages
+            should_terminate, response, reward, metadata = (
+                await self.interaction.generate_response(instance_id, messages)
             )
 
         assert should_terminate is False
@@ -414,7 +467,9 @@ class TestGsm8kInteraction:
         # Test with default name when not provided in config
         config_without_name = {}
         interaction_without_name = Gsm8kInteraction(config_without_name)
-        assert interaction_without_name.name == "interaction_agent"  # Default from BaseInteraction
+        assert (
+            interaction_without_name.name == "interaction_agent"
+        )  # Default from BaseInteraction
 
         # Test that name is accessible as attribute
         assert hasattr(self.interaction, "name")

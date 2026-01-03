@@ -22,7 +22,12 @@ class MemoryBuffer:
         self.numel = numel
         self.numel_padded = numel_padded
         self.dtype = dtype
-        self.data = torch.zeros(self.numel_padded, dtype=self.dtype, device=get_device_id(), requires_grad=False)
+        self.data = torch.zeros(
+            self.numel_padded,
+            dtype=self.dtype,
+            device=get_device_id(),
+            requires_grad=False,
+        )
 
     def zero(self):
         """Reset the buffer to zero."""

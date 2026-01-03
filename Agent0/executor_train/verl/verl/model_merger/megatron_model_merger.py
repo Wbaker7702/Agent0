@@ -226,7 +226,11 @@ class MegatronModelMerger(BaseModelMerger):
             )
 
     def _split_tensors(
-        self, key: str, tensor: torch.Tensor, config: PretrainedConfig, is_value_model: bool = False
+        self,
+        key: str,
+        tensor: torch.Tensor,
+        config: PretrainedConfig,
+        is_value_model: bool = False,
     ) -> list[torch.Tensor]:
         """
         Splits a tensor into multiple tensors based on the name.
@@ -248,9 +252,9 @@ class MegatronModelMerger(BaseModelMerger):
             q_lst, k_lst, v_lst = [], [], []
             assert config.num_attention_heads % config.num_key_value_heads == 0
             num_q_per_kv = config.num_attention_heads // config.num_key_value_heads
-            assert tensor.shape[0] % (num_q_per_kv + 2) == 0, (
-                f"Tensor shape {tensor.shape} is not divisible by {num_q_per_kv + 2}"
-            )
+            assert (
+                tensor.shape[0] % (num_q_per_kv + 2) == 0
+            ), f"Tensor shape {tensor.shape} is not divisible by {num_q_per_kv + 2}"
             kv_size = tensor.shape[0] // (num_q_per_kv + 2)
             split_size = [kv_size * num_q_per_kv, kv_size, kv_size]
 
@@ -266,11 +270,17 @@ class MegatronModelMerger(BaseModelMerger):
                 k_lst.append(k)
                 v_lst.append(v)
 
-            return [torch.cat(q_lst, dim=0), torch.cat(k_lst, dim=0), torch.cat(v_lst, dim=0)]
+            return [
+                torch.cat(q_lst, dim=0),
+                torch.cat(k_lst, dim=0),
+                torch.cat(v_lst, dim=0),
+            ]
         else:
             return [tensor]
 
-    def _merge_state_dicts(self, model_state_dict_list: list[dict[str, Any]]) -> dict[str, torch.Tensor]:
+    def _merge_state_dicts(
+        self, model_state_dict_list: list[dict[str, Any]]
+    ) -> dict[str, torch.Tensor]:
         state_dict = {}
         layers_cum = 0
 
@@ -281,12 +291,16 @@ class MegatronModelMerger(BaseModelMerger):
                 if "extra_state" in key:
                     continue
                 if self.config.tie_word_embedding and ("output_layer" in key):
-                    print("skip lm_head and reward_head loading because of tie_word_embeddings")
+                    print(
+                        "skip lm_head and reward_head loading because of tie_word_embeddings"
+                    )
                     continue
 
                 self._check_megatron_state_key(key)
                 hf_name = self._replace_name(key, self.params_mapping)
-                assert hf_name is not None, f"Failed to convert layer name [{key}] from megatron to huggingface."
+                assert (
+                    hf_name is not None
+                ), f"Failed to convert layer name [{key}] from megatron to huggingface."
                 if "model.layers." in hf_name:
                     local_layer_no = int(hf_name.split(".")[2])
                     layers_handled = max(local_layer_no, layers_handled)
@@ -295,11 +309,17 @@ class MegatronModelMerger(BaseModelMerger):
                     new_key_list[2] = str(global_layer_no)
                     hf_name = ".".join(new_key_list)
                 else:
-                    warnings.warn(f"hf_name {hf_name} will not be fixed with layer number", stacklevel=2)
+                    warnings.warn(
+                        f"hf_name {hf_name} will not be fixed with layer number",
+                        stacklevel=2,
+                    )
 
                 tensor = model_state_dict[key]
                 split_tensor = self._split_tensors(
-                    key, tensor, self.hf_config, is_value_model=self.config.is_value_model
+                    key,
+                    tensor,
+                    self.hf_config,
+                    is_value_model=self.config.is_value_model,
                 )
 
                 if len(split_tensor) == 1:
@@ -313,7 +333,9 @@ class MegatronModelMerger(BaseModelMerger):
                     state_dict[hf_name.replace("gate_up", "gate")] = split_tensor[0]
                     state_dict[hf_name.replace("gate_up", "up")] = split_tensor[1]
                 shape_info = (
-                    split_tensor.shape if isinstance(split_tensor, torch.Tensor) else [t.shape for t in split_tensor]
+                    split_tensor.shape
+                    if isinstance(split_tensor, torch.Tensor)
+                    else [t.shape for t in split_tensor]
                 )
                 print(f"converted {key} to {hf_name} with shape {shape_info}")
 
@@ -361,7 +383,9 @@ class MegatronModelMerger(BaseModelMerger):
                 raise RuntimeError(f"key: {name} not exist in state_dict")
             param = ref_state_dict[name]
             assert loaded_weight.dtype == param.dtype
-            torch.testing.assert_close(loaded_weight.to("cpu"), param, atol=1e-2, rtol=5e-2)
+            torch.testing.assert_close(
+                loaded_weight.to("cpu"), param, atol=1e-2, rtol=5e-2
+            )
 
     def _replace_name(self, megatron_name: str, name_mapping: dict[str, str]) -> str:
         for m_name, v_name in name_mapping.items():

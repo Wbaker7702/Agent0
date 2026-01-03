@@ -57,11 +57,15 @@ class RewardManager:
 
             prompt_length = prompt_ids.shape[-1]
 
-            valid_prompt_length = data_item.batch["attention_mask"][:prompt_length].sum()
+            valid_prompt_length = data_item.batch["attention_mask"][
+                :prompt_length
+            ].sum()
             valid_prompt_ids = prompt_ids[-valid_prompt_length:]
 
             response_ids = data_item.batch["responses"]
-            valid_response_length = data_item.batch["attention_mask"][prompt_length:].sum()
+            valid_response_length = data_item.batch["attention_mask"][
+                prompt_length:
+            ].sum()
             valid_response_ids = response_ids[:valid_response_length]
 
             # decode
@@ -74,7 +78,9 @@ class RewardManager:
             data_source = data_item.non_tensor_batch["data_source"]
             compute_score_fn = _select_rm_score_fn(data_source)
 
-            score = compute_score_fn(solution_str=sequences_str, ground_truth=ground_truth)
+            score = compute_score_fn(
+                solution_str=sequences_str, ground_truth=ground_truth
+            )
             reward_tensor[i, valid_response_length - 1] = score
 
             if data_source not in already_print_data_sources:
@@ -95,7 +101,9 @@ def main(config):
     if not ray.is_initialized():
         # this is for local ray cluster
         ray.init(
-            runtime_env={"env_vars": {"TOKENIZERS_PARALLELISM": "true", "NCCL_DEBUG": "WARN"}},
+            runtime_env={
+                "env_vars": {"TOKENIZERS_PARALLELISM": "true", "NCCL_DEBUG": "WARN"}
+            },
             num_cpus=config.ray_init.num_cpus,
         )
 
@@ -111,7 +119,9 @@ def main_task(config):
 
     from verl.utils.fs import copy_to_local
 
-    pprint(OmegaConf.to_container(config, resolve=True))  # resolve=True will eval symbol values
+    pprint(
+        OmegaConf.to_container(config, resolve=True)
+    )  # resolve=True will eval symbol values
     OmegaConf.resolve(config)
 
     # download the checkpoint from hdfs
@@ -152,13 +162,17 @@ def main_task(config):
     critic_pool_id = "critic_pool"
     if config.trainer.nnodes // 2 == 0 and config.trainer.n_gpus_per_node // 2 > 0:
         resource_pool_spec = {
-            actor_rollout_ref_pool_id: [config.trainer.n_gpus_per_node // 2] * config.trainer.nnodes,
-            critic_pool_id: [config.trainer.n_gpus_per_node // 2] * config.trainer.nnodes,
+            actor_rollout_ref_pool_id: [config.trainer.n_gpus_per_node // 2]
+            * config.trainer.nnodes,
+            critic_pool_id: [config.trainer.n_gpus_per_node // 2]
+            * config.trainer.nnodes,
         }
     else:
         resource_pool_spec = {
-            actor_rollout_ref_pool_id: [config.trainer.n_gpus_per_node] * (config.trainer.nnodes // 2),
-            critic_pool_id: [config.trainer.n_gpus_per_node] * (config.trainer.nnodes // 2),
+            actor_rollout_ref_pool_id: [config.trainer.n_gpus_per_node]
+            * (config.trainer.nnodes // 2),
+            critic_pool_id: [config.trainer.n_gpus_per_node]
+            * (config.trainer.nnodes // 2),
         }
     print(f"resource_pool_spec: {resource_pool_spec}")
     mapping = {
@@ -192,7 +206,9 @@ def main_task(config):
     # Note that we always use function-based RM for validation
     val_reward_fn = RewardManager(tokenizer=tokenizer, num_examine=1)
 
-    resource_pool_manager = ResourcePoolManager(resource_pool_spec=resource_pool_spec, mapping=mapping)
+    resource_pool_manager = ResourcePoolManager(
+        resource_pool_spec=resource_pool_spec, mapping=mapping
+    )
 
     RayPPOTrainer.fit = fit
     trainer = RayPPOTrainer(

@@ -27,6 +27,8 @@ __version__ = "0.3.1.dev0"
 if os.getenv("USE_MODELSCOPE_HUB", "0").lower() in ["true", "y", "1"]:
     # Patch hub to download models from modelscope to speed up.
     if not is_package_available("modelscope"):
-        raise ImportError("You are using the modelscope hub, please install modelscope by `pip install modelscope`.")
+        raise ImportError(
+            "You are using the modelscope hub, please install modelscope by `pip install modelscope`."
+        )
 
     patch_hub()

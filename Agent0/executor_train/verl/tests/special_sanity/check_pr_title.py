@@ -22,7 +22,17 @@ pr_title = os.environ.get("PR_TITLE", "").strip()
 allowed_modules = ["fsdp", "megatron", "sglang", "vllm", "rollout", "trainer"]
 allowed_modules += ["tests", "training_utils", "recipe", "hardware", "deployment"]
 allowed_modules += ["ray", "worker", "single_controller", "misc", "docker", "ci"]
-allowed_modules += ["perf", "model", "algo", "env", "tool", "ckpt", "doc", "data", "cfg"]
+allowed_modules += [
+    "perf",
+    "model",
+    "algo",
+    "env",
+    "tool",
+    "ckpt",
+    "doc",
+    "data",
+    "cfg",
+]
 allowed_types = ["feat", "fix", "refactor", "chore", "test"]
 
 # Check for [BREAKING] prefix and extract the rest of the title
@@ -45,13 +55,17 @@ if not re_modules:
 else:
     modules = re.findall(r"[a-z_]+", re_modules.group(1).lower())
     if not all(module in allowed_modules for module in modules):
-        invalid_modules = [module for module in modules if module not in allowed_modules]
+        invalid_modules = [
+            module for module in modules if module not in allowed_modules
+        ]
         print(f"❌ Invalid modules: {', '.join(invalid_modules)}")
         print(f"Allowed modules: {', '.join(allowed_modules)}")
         raise Exception("Invalid PR title")
 
 types_pattern = "|".join(re.escape(t) for t in allowed_types)
-re_types_pattern = re.compile(rf"^\[[a-z_,\s]+\]\s+({types_pattern}):\s+.+$", re.IGNORECASE)
+re_types_pattern = re.compile(
+    rf"^\[[a-z_,\s]+\]\s+({types_pattern}):\s+.+$", re.IGNORECASE
+)
 match = re_types_pattern.match(core_pr_title)
 
 if not match:
@@ -64,4 +78,6 @@ change_type = match.group(1).lower()
 
 # Build the success message
 breaking_info = " (BREAKING CHANGE)" if is_breaking else ""
-print(f"✅ PR title is valid: {pr_title}, modules: {modules}, type: {change_type}{breaking_info}")
+print(
+    f"✅ PR title is valid: {pr_title}, modules: {modules}, type: {change_type}{breaking_info}"
+)

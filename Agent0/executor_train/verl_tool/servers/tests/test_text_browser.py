@@ -22,8 +22,7 @@ import fire
 # Logging
 # ───────────────────────────────────────────────
 logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s"
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -31,11 +30,13 @@ logger = logging.getLogger(__name__)
 # ───────────────────────────────────────────────
 # Helpers
 # ───────────────────────────────────────────────
-def _send_test_request(url: str,
-                       trajectory_ids: list[str],
-                       actions: list[str],
-                       extra_fields: list[dict],
-                       test_name: str):
+def _send_test_request(
+    url: str,
+    trajectory_ids: list[str],
+    actions: list[str],
+    extra_fields: list[dict],
+    test_name: str,
+):
     """
     Build the payload, POST to the tool server, and pretty-print the response.
     """
@@ -69,17 +70,16 @@ def _send_test_request(url: str,
 # ───────────────────────────────────────────────
 # Browser tests
 # ───────────────────────────────────────────────
-def test_browser(url: str = "http://localhost:5000/get_observation",
-                 trajectory_id: str = "test-browser"):
+def test_browser(
+    url: str = "http://localhost:5000/get_observation",
+    trajectory_id: str = "test-browser",
+):
     """
     Fire a couple of minimal actions against the text-browser endpoint.
     """
 
     # Generate two unique trajectory IDs to simulate two parallel agents
-    traj_ids = [
-        f"{trajectory_id}-{uuid.uuid4()}",
-        f"{trajectory_id}-{uuid.uuid4()}"
-    ]
+    traj_ids = [f"{trajectory_id}-{uuid.uuid4()}", f"{trajectory_id}-{uuid.uuid4()}"]
 
     # Action: simple “type” into the search box with element id 16
     action_str = (
@@ -102,7 +102,7 @@ def test_browser(url: str = "http://localhost:5000/get_observation",
                 "https://tigerai.ca/wiki/"
                 "wikipedia_en_all_maxi_2022-05/A/"
                 "User:The_other_Kiwix_guy/Landing"
-            )
+            ),
         }
     ] * len(traj_ids)
 
@@ -112,7 +112,7 @@ def test_browser(url: str = "http://localhost:5000/get_observation",
         trajectory_ids=traj_ids,
         actions=actions,
         extra_fields=extra_fields,
-        test_name="Browser-Smoke-Test"
+        test_name="Browser-Smoke-Test",
     )
 
     return True
@@ -129,9 +129,11 @@ def main():
         python -m verl_tool.servers.tests.test_text_browser browser \
             --url=http://localhost:5000/get_observation
     """
-    fire.Fire({
-        "browser": test_browser,
-    })
+    fire.Fire(
+        {
+            "browser": test_browser,
+        }
+    )
 
 
 if __name__ == "__main__":

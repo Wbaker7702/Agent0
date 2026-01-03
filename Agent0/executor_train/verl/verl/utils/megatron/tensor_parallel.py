@@ -114,21 +114,35 @@ class _VocabParallelEntropy(torch.autograd.Function):
             return (a * b).sum(dim=-1, keepdim=True)
 
         logits_max = vocab_parallel_logits.max(dim=-1, keepdim=True).values
-        dist.all_reduce(logits_max, op=dist.ReduceOp.MAX, group=mpu.get_tensor_model_parallel_group())
+        dist.all_reduce(
+            logits_max,
+            op=dist.ReduceOp.MAX,
+            group=mpu.get_tensor_model_parallel_group(),
+        )
         normalized_vocab_parallel_logits = vocab_parallel_logits - logits_max
         normalized_exp_logits = normalized_vocab_parallel_logits.exp_()
         normalized_sum_exp_logits = normalized_exp_logits.sum(dim=-1, keepdim=True)
-        dist.all_reduce(normalized_sum_exp_logits, group=mpu.get_tensor_model_parallel_group())
+        dist.all_reduce(
+            normalized_sum_exp_logits, group=mpu.get_tensor_model_parallel_group()
+        )
         softmax_logits = normalized_exp_logits.div_(normalized_sum_exp_logits)
         sum_softmax_times_logits = mul_reduce(softmax_logits, vocab_parallel_logits)
-        dist.all_reduce(sum_softmax_times_logits, group=mpu.get_tensor_model_parallel_group())
-        entropy = logits_max + normalized_sum_exp_logits.log() - sum_softmax_times_logits
-        ctx.save_for_backward(vocab_parallel_logits, softmax_logits, sum_softmax_times_logits)
+        dist.all_reduce(
+            sum_softmax_times_logits, group=mpu.get_tensor_model_parallel_group()
+        )
+        entropy = (
+            logits_max + normalized_sum_exp_logits.log() - sum_softmax_times_logits
+        )
+        ctx.save_for_backward(
+            vocab_parallel_logits, softmax_logits, sum_softmax_times_logits
+        )
         return entropy.squeeze(dim=-1)
 
     @staticmethod
     def backward(ctx, grad_output: torch.Tensor) -> torch.Tensor:
-        vocab_parallel_logits, softmax_logits, sum_softmax_times_logits = ctx.saved_tensors
+        vocab_parallel_logits, softmax_logits, sum_softmax_times_logits = (
+            ctx.saved_tensors
+        )
         # reuse softmax_logits as grad
         vocab_parallel_logits.sub_(sum_softmax_times_logits)
         softmax_logits.mul_(vocab_parallel_logits)
@@ -155,10 +169,14 @@ def vocab_parallel_log_probs_from_logits(logits, labels):
     """TODO(zhangchi.usc1992): We may change the implementation later"""
     from megatron.core import tensor_parallel
 
-    return -tensor_parallel.vocab_parallel_cross_entropy(vocab_parallel_logits=logits, target=labels)
+    return -tensor_parallel.vocab_parallel_cross_entropy(
+        vocab_parallel_logits=logits, target=labels
+    )
 
 
-def vocab_parallel_log_probs_from_logits_response_rmpad(input_ids, attention_mask, logits_rmpad, response_length):
+def vocab_parallel_log_probs_from_logits_response_rmpad(
+    input_ids, attention_mask, logits_rmpad, response_length
+):
     """Similar to log_probs_from_logits_response_rmpad, but the logits_rmpad is now spliited across tensor parallel
     region.
     This will further reduce the peak memory usage during training
@@ -173,14 +191,21 @@ def vocab_parallel_log_probs_from_logits_response_rmpad(input_ids, attention_mas
     from flash_attn.bert_padding import pad_input, unpad_input
 
     batch_size, seqlen = input_ids.shape
-    input_ids_rmpad, indices, *_ = unpad_input(input_ids.unsqueeze(-1), attention_mask=attention_mask)
+    input_ids_rmpad, indices, *_ = unpad_input(
+        input_ids.unsqueeze(-1), attention_mask=attention_mask
+    )
     input_ids_rmpad = input_ids_rmpad.squeeze(-1)
     input_ids_rmpad_rolled = torch.roll(input_ids_rmpad, shifts=-1, dims=0)
     full_log_probs_rmpad = vocab_parallel_log_probs_from_logits(
         logits=logits_rmpad, labels=input_ids_rmpad_rolled
     )  # (total_nnz,)
     full_output = pad_input(
-        hidden_states=full_log_probs_rmpad.unsqueeze(-1), indices=indices, batch=batch_size, seqlen=seqlen
+        hidden_states=full_log_probs_rmpad.unsqueeze(-1),
+        indices=indices,
+        batch=batch_size,
+        seqlen=seqlen,
     )
-    output = full_output.squeeze(-1)[:, -response_length - 1 : -1]  # [batch_size, response_length]
+    output = full_output.squeeze(-1)[
+        :, -response_length - 1 : -1
+    ]  # [batch_size, response_length]
     return output

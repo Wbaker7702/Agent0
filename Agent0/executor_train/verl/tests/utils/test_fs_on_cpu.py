@@ -58,7 +58,9 @@ def test_copy_from_hdfs_with_mocks(tmp_path, monkeypatch):
 
     # Test initial copy
     local_path = fs.copy_to_local(hdfs_path, cache_dir=test_cache)
-    expected_path = os.path.join(test_cache, fs.md5_encode(hdfs_path), os.path.basename(hdfs_path))
+    expected_path = os.path.join(
+        test_cache, fs.md5_encode(hdfs_path), os.path.basename(hdfs_path)
+    )
     assert local_path == expected_path
     assert os.path.exists(local_path)
 

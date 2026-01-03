@@ -81,7 +81,9 @@ def marked_timer(name: str, timing_raw: dict[str, float], **kwargs):
     mark_end_range(mark_range)
 
 
-def get_npu_profiler(option: DictConfig, role: Optional[str] = None, profile_step: Optional[str] = None):
+def get_npu_profiler(
+    option: DictConfig, role: Optional[str] = None, profile_step: Optional[str] = None
+):
     """Generate and return an NPU profiler object.
 
     Args:
@@ -101,7 +103,9 @@ def get_npu_profiler(option: DictConfig, role: Optional[str] = None, profile_ste
     elif option.level == "level2":
         profile_level = torch_npu.profiler.ProfilerLevel.Level2
     else:
-        raise ValueError(f"level only supports level0, 1, 2, and level_none, but gets {option.level}")
+        raise ValueError(
+            f"level only supports level0, 1, 2, and level_none, but gets {option.level}"
+        )
 
     profile_save_path = option.save_path
     if profile_step:
@@ -129,7 +133,9 @@ def get_npu_profiler(option: DictConfig, role: Optional[str] = None, profile_ste
         record_shapes=option.record_shapes,
         profile_memory=option.with_memory,
         activities=activites,
-        on_trace_ready=torch_npu.profiler.tensorboard_trace_handler(profile_save_path, analyse_flag=option.analysis),
+        on_trace_ready=torch_npu.profiler.tensorboard_trace_handler(
+            profile_save_path, analyse_flag=option.analysis
+        ),
         experimental_config=experimental_config,
     )
     return prof
@@ -167,7 +173,9 @@ class NPUProfiler(DistProfiler):
         if self.this_rank and self.profile_option is not None:
             self.this_step = True
             if not self.discrete and NPUProfiler._define_count == 0:
-                self.profile_npu = get_npu_profiler(option=self.profile_option, role=role, profile_step=profile_step)
+                self.profile_npu = get_npu_profiler(
+                    option=self.profile_option, role=role, profile_step=profile_step
+                )
                 self.profile_npu.start()
                 NPUProfiler._define_count += 1
 
@@ -180,7 +188,9 @@ class NPUProfiler(DistProfiler):
                 NPUProfiler._define_count -= 1
 
     @staticmethod
-    def annotate(message: Optional[str] = None, role: Optional[str] = None, **kwargs) -> Callable:
+    def annotate(
+        message: Optional[str] = None, role: Optional[str] = None, **kwargs
+    ) -> Callable:
         """Decorate a Worker member function to profile the current rank in the current training step.
 
         Requires the target function to be a member function of a Worker,
@@ -200,7 +210,9 @@ class NPUProfiler(DistProfiler):
 
                 if self.profiler.this_step and self.profile_option is not None:
                     if self.profiler.discrete:
-                        profile_npu = get_npu_profiler(option=self.profile_option, role=role)
+                        profile_npu = get_npu_profiler(
+                            option=self.profile_option, role=role
+                        )
                         profile_npu.start()
                     mark_range = mark_start_range(message=profile_name)
 

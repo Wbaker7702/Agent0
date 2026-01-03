@@ -18,7 +18,11 @@ import torch
 from omegaconf import OmegaConf
 from torch.distributed.fsdp import CPUOffload, MixedPrecision
 from torch.distributed.fsdp import FullyShardedDataParallel as FSDP
-from torch.distributed.fsdp.api import ShardedStateDictConfig, ShardingStrategy, StateDictType
+from torch.distributed.fsdp.api import (
+    ShardedStateDictConfig,
+    ShardingStrategy,
+    StateDictType,
+)
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from verl import DataProto
@@ -52,10 +56,17 @@ def prepare_input_dataproto(tokenizer, config, validate):
         [{"role": "user", "content": "What's your name"}],
     ]
     formatted_prompts = [
-        tokenizer.apply_chat_template(conversation, tokenize=False, add_generation_prompt=True)
+        tokenizer.apply_chat_template(
+            conversation, tokenize=False, add_generation_prompt=True
+        )
         for conversation in preencode_prompts
     ]
-    prompts = tokenizer(formatted_prompts, return_tensors="pt", padding="max_length", max_length=config.prompt_length)
+    prompts = tokenizer(
+        formatted_prompts,
+        return_tensors="pt",
+        padding="max_length",
+        max_length=config.prompt_length,
+    )
     input_dataproto = DataProto.from_dict(
         {
             "input_ids": prompts["input_ids"],
@@ -75,9 +86,15 @@ def prepare_input_dataproto(tokenizer, config, validate):
 def prepare_fsdp_model(model, world_size):
     from torch.distributed.device_mesh import init_device_mesh
 
-    device_mesh = init_device_mesh("cuda", mesh_shape=(world_size,), mesh_dim_names=["fsdp"])
+    device_mesh = init_device_mesh(
+        "cuda", mesh_shape=(world_size,), mesh_dim_names=["fsdp"]
+    )
 
-    mixed_precision = MixedPrecision(param_dtype=torch.bfloat16, reduce_dtype=torch.float32, buffer_dtype=torch.float32)
+    mixed_precision = MixedPrecision(
+        param_dtype=torch.bfloat16,
+        reduce_dtype=torch.float32,
+        buffer_dtype=torch.float32,
+    )
 
     fsdp_model = FSDP(
         model,
@@ -92,7 +109,9 @@ def prepare_fsdp_model(model, world_size):
     )
 
     FSDP.set_state_dict_type(
-        fsdp_model, state_dict_type=StateDictType.SHARDED_STATE_DICT, state_dict_config=ShardedStateDictConfig()
+        fsdp_model,
+        state_dict_type=StateDictType.SHARDED_STATE_DICT,
+        state_dict_config=ShardedStateDictConfig(),
     )
     return fsdp_model
 
@@ -101,7 +120,9 @@ def test_hf_rollout(n: int = 1, do_sample: bool = True, validate: bool = False):
     config = OmegaConf.create(BASE_HF_ROLLOUT_CONFIG)
     config.update({"n": n, "do_sample": do_sample})
 
-    assert torch.cuda.device_count() >= 2, "At least 2 GPUs is required to run tp+dp tests."
+    assert (
+        torch.cuda.device_count() >= 2
+    ), "At least 2 GPUs is required to run tp+dp tests."
     local_rank, rank, world_size = initialize_global_process_group()
 
     # Initialize model and tokenizer
@@ -109,17 +130,23 @@ def test_hf_rollout(n: int = 1, do_sample: bool = True, validate: bool = False):
     local_cache_path = os.path.expanduser(local_cache_path)
     hdfs_path = "Qwen/Qwen2-7B-Instruct"
     local_model_path = copy_to_local(src=hdfs_path, cache_dir=local_cache_path)
-    tokenizer = AutoTokenizer.from_pretrained(local_model_path, padding_side="left", trust_remote_code=True)
+    tokenizer = AutoTokenizer.from_pretrained(
+        local_model_path, padding_side="left", trust_remote_code=True
+    )
     tokenizer.pad_token = tokenizer.eos_token
 
     # Initialize FSDP model
-    actor_model = AutoModelForCausalLM.from_pretrained(local_model_path, trust_remote_code=True)
+    actor_model = AutoModelForCausalLM.from_pretrained(
+        local_model_path, trust_remote_code=True
+    )
     actor_model.to(torch.bfloat16)
     fsdp_model = prepare_fsdp_model(actor_model, world_size)
 
     # Initialize HFRollout and start generate
     hf_rollout = HFRollout(fsdp_model, OmegaConf.create(config))
-    input = prepare_input_dataproto(tokenizer, config, validate).to(torch.cuda.current_device())
+    input = prepare_input_dataproto(tokenizer, config, validate).to(
+        torch.cuda.current_device()
+    )
     outputs = hf_rollout.generate_sequences(input)
 
     # check generated batch size is expected
@@ -147,16 +174,22 @@ def test_hf_rollout(n: int = 1, do_sample: bool = True, validate: bool = False):
 
         # check response attention mask is expected
         response_attention = attention_mask[prompt_length:]
-        eos_positions = (outputs.batch["responses"][i] == tokenizer.pad_token_id).nonzero(as_tuple=True)[0]
+        eos_positions = (
+            outputs.batch["responses"][i] == tokenizer.pad_token_id
+        ).nonzero(as_tuple=True)[0]
         if len(eos_positions) > 0:
             first_eos_pos = eos_positions[0].item()
-            assert response_attention[: first_eos_pos + 1].all(), "Response attention mask should be 1 until EOS"
+            assert response_attention[
+                : first_eos_pos + 1
+            ].all(), "Response attention mask should be 1 until EOS"
             if first_eos_pos + 1 < response_length:
-                assert not response_attention[first_eos_pos + 1 :].any(), (
-                    "Response attention mask should be 0 after EOS"
-                )
+                assert not response_attention[
+                    first_eos_pos + 1 :
+                ].any(), "Response attention mask should be 0 after EOS"
         else:
-            assert response_attention.all(), "Response attention mask should be all 1 if no EOS token"
+            assert (
+                response_attention.all()
+            ), "Response attention mask should be all 1 if no EOS token"
 
         # check response position ids is expected
         prompt_positions = position_ids[:prompt_length]

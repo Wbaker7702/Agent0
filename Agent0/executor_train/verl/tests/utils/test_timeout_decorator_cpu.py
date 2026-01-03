@@ -107,13 +107,17 @@ def test_slow_task_timeout():  # Renamed from test_multiprocessing_slow_task_tim
     with pytest.raises(TimeoutError) as excinfo:  # Use pytest.raises
         slow_task(1)
     # Check the error message from the multiprocessing implementation
-    assert f"timed out after {TEST_TIMEOUT_SECONDS} seconds" in str(excinfo.value)  # Use pytest assert
+    assert f"timed out after {TEST_TIMEOUT_SECONDS} seconds" in str(
+        excinfo.value
+    )  # Use pytest assert
 
 
 def test_internal_exception():  # Renamed from test_multiprocessing_internal_exception
     """Tests timeout correctly propagates internal exceptions."""
     # Apply the default timeout decorator dynamically to the undecorated function
-    decorated_task = timeout(seconds=TEST_TIMEOUT_SECONDS)(task_raises_value_error)  # Apply decorator dynamically
+    decorated_task = timeout(seconds=TEST_TIMEOUT_SECONDS)(
+        task_raises_value_error
+    )  # Apply decorator dynamically
     with pytest.raises(ValueError) as excinfo:  # Use pytest.raises
         decorated_task()  # Call the dynamically decorated function
     assert str(excinfo.value) == "Specific value error from task"  # Use pytest assert
@@ -132,7 +136,9 @@ def test_signal_quick_task_main_process():  # Removed self
         time.sleep(0.1)
         return "quick_ok_signal"
 
-    decorated_task = timeout(seconds=TEST_TIMEOUT_SECONDS, use_signals=True)(plain_quick_task_logic)
+    decorated_task = timeout(seconds=TEST_TIMEOUT_SECONDS, use_signals=True)(
+        plain_quick_task_logic
+    )
     assert decorated_task() == "quick_ok_signal"  # Use pytest assert
 
 
@@ -144,14 +150,20 @@ def test_signal_slow_task_main_process_timeout():  # Removed self
         time.sleep(LONG_TASK_DURATION)
         return "slow_finished_signal"
 
-    decorated_task = timeout(seconds=TEST_TIMEOUT_SECONDS, use_signals=True)(plain_slow_task_logic)
+    decorated_task = timeout(seconds=TEST_TIMEOUT_SECONDS, use_signals=True)(
+        plain_slow_task_logic
+    )
     with pytest.raises(TimeoutError) as excinfo:  # Use pytest.raises
         decorated_task()
     # Check the error message (falls back to multiprocessing message on POSIX)
-    assert f"timed out after {TEST_TIMEOUT_SECONDS} seconds" in str(excinfo.value)  # Use pytest assert
+    assert f"timed out after {TEST_TIMEOUT_SECONDS} seconds" in str(
+        excinfo.value
+    )  # Use pytest assert
 
 
-@pytest.mark.skip(reason="this test won't pass. Just to show why use_signals should not be used")
+@pytest.mark.skip(
+    reason="this test won't pass. Just to show why use_signals should not be used"
+)
 def test_signal_in_thread_does_not_timeout():
     """
     Tests that signal-based timeout does NOT work reliably in a child thread.

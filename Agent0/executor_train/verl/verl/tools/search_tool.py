@@ -75,11 +75,15 @@ class SearchExecutionWorker:
     """Worker for executing search operations with optional rate limiting."""
 
     def __init__(self, enable_global_rate_limit=True, rate_limit=10):
-        self.rate_limit_worker = self._init_rate_limit(rate_limit) if enable_global_rate_limit else None
+        self.rate_limit_worker = (
+            self._init_rate_limit(rate_limit) if enable_global_rate_limit else None
+        )
 
     def _init_rate_limit(self, rate_limit):
         """Initialize singleton rate limiter."""
-        return TokenBucketWorker.options(name="rate-limiter", get_if_exists=True).remote(rate_limit)
+        return TokenBucketWorker.options(
+            name="rate-limiter", get_if_exists=True
+        ).remote(rate_limit)
 
     def ping(self):
         """Health check method."""
@@ -101,14 +105,19 @@ class SearchExecutionWorker:
 
 
 def init_search_execution_pool(
-    num_workers: int, enable_global_rate_limit=True, rate_limit=10, mode: PoolMode = PoolMode.ThreadMode
+    num_workers: int,
+    enable_global_rate_limit=True,
+    rate_limit=10,
+    mode: PoolMode = PoolMode.ThreadMode,
 ):
     """Initialize search execution pool."""
     if mode == PoolMode.ThreadMode:
         return (
             ray.remote(SearchExecutionWorker)
             .options(max_concurrency=num_workers)
-            .remote(enable_global_rate_limit=enable_global_rate_limit, rate_limit=rate_limit)
+            .remote(
+                enable_global_rate_limit=enable_global_rate_limit, rate_limit=rate_limit
+            )
         )
     else:
         raise NotImplementedError("Process mode is not implemented yet")
@@ -174,7 +183,9 @@ class SearchTool(BaseTool):
 
         # Retrieval service configuration
         self.retrieval_service_url = config.get("retrieval_service_url")
-        assert self.retrieval_service_url, "Configuration must include 'retrieval_service_url'"
+        assert (
+            self.retrieval_service_url
+        ), "Configuration must include 'retrieval_service_url'"
         self.topk = config.get("topk", 3)
         if self.retrieval_service_url == "":
             raise ValueError("retrieval_service_url is not set")
@@ -202,7 +213,14 @@ class SearchTool(BaseTool):
         }
         return instance_id
 
-    def execute_search(self, instance_id: str, query_list: list, retrieval_service_url: str, topk: int, timeout: int):
+    def execute_search(
+        self,
+        instance_id: str,
+        query_list: list,
+        retrieval_service_url: str,
+        topk: int,
+        timeout: int,
+    ):
         """Execute search operation using retrieval service.
 
         Args:
@@ -226,7 +244,9 @@ class SearchTool(BaseTool):
         return result_text, metadata
 
     @rollout_trace_op
-    async def execute(self, instance_id: str, parameters: dict[str, Any], **kwargs) -> tuple[str, float, dict]:
+    async def execute(
+        self, instance_id: str, parameters: dict[str, Any], **kwargs
+    ) -> tuple[str, float, dict]:
         """Execute the search tool.
 
         Args:
@@ -242,14 +262,21 @@ class SearchTool(BaseTool):
         query_list_from_params = parameters.get("query_list")
 
         if not query_list_from_params or not isinstance(query_list_from_params, list):
-            error_msg = "Error: 'query_list' is missing, empty, or not a list in parameters."
+            error_msg = (
+                "Error: 'query_list' is missing, empty, or not a list in parameters."
+            )
             logger.error(f"[SearchTool] {error_msg} Received parameters: {parameters}")
             return json.dumps({"result": error_msg}), 0.0, {}
 
         # Execute search using Ray execution pool
         try:
             result_text, metadata = await self.execution_pool.execute.remote(
-                self.execute_search, instance_id, query_list_from_params, self.retrieval_service_url, self.topk, timeout
+                self.execute_search,
+                instance_id,
+                query_list_from_params,
+                self.retrieval_service_url,
+                self.topk,
+                timeout,
             )
 
             # Store results in instance dictionary

@@ -119,11 +119,15 @@ class TestSGLangMultiInteraction:
             # Mock SGLang engine and initialization methods like the reference test
             with (
                 patch.object(SGLangRollout, "_init_distributed_env", return_value=None),
-                patch.object(SGLangRollout, "_init_inference_engine", return_value=None),
+                patch.object(
+                    SGLangRollout, "_init_inference_engine", return_value=None
+                ),
                 patch.object(SGLangRollout, "_init_sampling_params", return_value=None),
             ):
                 # Create a real tokenizer like the reference test
-                tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen2.5-0.5B", padding_side="left")
+                tokenizer = AutoTokenizer.from_pretrained(
+                    "Qwen/Qwen2.5-0.5B", padding_side="left"
+                )
                 tokenizer.pad_token = tokenizer.eos_token
 
                 # Mock model config
@@ -154,12 +158,22 @@ class TestSGLangMultiInteraction:
                 assert "mock_agent2" in rollout.interaction_map
 
                 # Use class name comparison instead of isinstance for multi-process compatibility
-                assert rollout.interaction_map["mock_agent1"].__class__.__name__ == "MockInteraction"
-                assert rollout.interaction_map["mock_agent2"].__class__.__name__ == "MockInteraction"
+                assert (
+                    rollout.interaction_map["mock_agent1"].__class__.__name__
+                    == "MockInteraction"
+                )
+                assert (
+                    rollout.interaction_map["mock_agent2"].__class__.__name__
+                    == "MockInteraction"
+                )
 
                 # Also check that they are instances of BaseInteraction (which should work across processes)
-                assert isinstance(rollout.interaction_map["mock_agent1"], BaseInteraction)
-                assert isinstance(rollout.interaction_map["mock_agent2"], BaseInteraction)
+                assert isinstance(
+                    rollout.interaction_map["mock_agent1"], BaseInteraction
+                )
+                assert isinstance(
+                    rollout.interaction_map["mock_agent2"], BaseInteraction
+                )
 
                 # Check that names were set correctly
                 assert rollout.interaction_map["mock_agent1"].name == "mock_agent1"
@@ -176,10 +190,14 @@ class TestSGLangMultiInteraction:
         try:
             with (
                 patch.object(SGLangRollout, "_init_distributed_env", return_value=None),
-                patch.object(SGLangRollout, "_init_inference_engine", return_value=None),
+                patch.object(
+                    SGLangRollout, "_init_inference_engine", return_value=None
+                ),
                 patch.object(SGLangRollout, "_init_sampling_params", return_value=None),
             ):
-                tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen2.5-0.5B", padding_side="left")
+                tokenizer = AutoTokenizer.from_pretrained(
+                    "Qwen/Qwen2.5-0.5B", padding_side="left"
+                )
                 tokenizer.pad_token = tokenizer.eos_token
 
                 mock_model_config = MagicMock()
@@ -201,7 +219,11 @@ class TestSGLangMultiInteraction:
                 )
 
                 # Test interaction selection logic
-                from verl.workers.rollout.schemas import AsyncRolloutRequest, AsyncRolloutRequestStateEnum, Message
+                from verl.workers.rollout.schemas import (
+                    AsyncRolloutRequest,
+                    AsyncRolloutRequestStateEnum,
+                    Message,
+                )
 
                 # Create a mock request with specific interaction name
                 req = AsyncRolloutRequest(
@@ -288,10 +310,14 @@ class TestSGLangMultiInteraction:
         try:
             with (
                 patch.object(SGLangRollout, "_init_distributed_env", return_value=None),
-                patch.object(SGLangRollout, "_init_inference_engine", return_value=None),
+                patch.object(
+                    SGLangRollout, "_init_inference_engine", return_value=None
+                ),
                 patch.object(SGLangRollout, "_init_sampling_params", return_value=None),
             ):
-                tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen2.5-0.5B", padding_side="left")
+                tokenizer = AutoTokenizer.from_pretrained(
+                    "Qwen/Qwen2.5-0.5B", padding_side="left"
+                )
                 tokenizer.pad_token = tokenizer.eos_token
 
                 mock_model_config = MagicMock()
@@ -329,10 +355,14 @@ class TestSGLangMultiInteraction:
         try:
             with (
                 patch.object(SGLangRollout, "_init_distributed_env", return_value=None),
-                patch.object(SGLangRollout, "_init_inference_engine", return_value=None),
+                patch.object(
+                    SGLangRollout, "_init_inference_engine", return_value=None
+                ),
                 patch.object(SGLangRollout, "_init_sampling_params", return_value=None),
             ):
-                tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen2.5-0.5B", padding_side="left")
+                tokenizer = AutoTokenizer.from_pretrained(
+                    "Qwen/Qwen2.5-0.5B", padding_side="left"
+                )
                 tokenizer.pad_token = tokenizer.eos_token
 
                 mock_model_config = MagicMock()
@@ -401,7 +431,9 @@ class TestSGLangMultiInteraction:
             patch.object(SGLangRollout, "_init_inference_engine", return_value=None),
             patch.object(SGLangRollout, "_init_sampling_params", return_value=None),
         ):
-            tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen2.5-0.5B", padding_side="left")
+            tokenizer = AutoTokenizer.from_pretrained(
+                "Qwen/Qwen2.5-0.5B", padding_side="left"
+            )
             tokenizer.pad_token = tokenizer.eos_token
 
             mock_model_config = MagicMock()

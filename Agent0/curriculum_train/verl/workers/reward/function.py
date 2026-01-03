@@ -46,9 +46,13 @@ class FunctionRewardManager(ABC):
             raise ValueError("Reward function is not provided.")
 
         if not os.path.exists(config.reward_function):
-            raise FileNotFoundError(f"Reward function file {config.reward_function} not found.")
+            raise FileNotFoundError(
+                f"Reward function file {config.reward_function} not found."
+            )
 
-        spec = importlib.util.spec_from_file_location("custom_reward_fn", config.reward_function)
+        spec = importlib.util.spec_from_file_location(
+            "custom_reward_fn", config.reward_function
+        )
         module = importlib.util.module_from_spec(spec)
         try:
             sys.modules["custom_reward_fn"] = module
@@ -57,16 +61,22 @@ class FunctionRewardManager(ABC):
             raise RuntimeError(f"Failed to load reward function: {e}")
 
         if not hasattr(module, config.reward_function_name):
-            raise AttributeError(f"Module {module} does not have function {config.reward_function_name}.")
+            raise AttributeError(
+                f"Module {module} does not have function {config.reward_function_name}."
+            )
 
         reward_fn = getattr(module, config.reward_function_name)
-        print(f"Using reward function `{config.reward_function_name}` from `{config.reward_function}`.")
+        print(
+            f"Using reward function `{config.reward_function_name}` from `{config.reward_function}`."
+        )
         self.reward_fn = partial(reward_fn, **config.reward_function_kwargs)
         self.config = config
         self.tokenizer = tokenizer
 
     @abstractmethod
-    def compute_reward(self, data: DataProto) -> Tuple[torch.Tensor, Dict[str, List[float]]]:
+    def compute_reward(
+        self, data: DataProto
+    ) -> Tuple[torch.Tensor, Dict[str, List[float]]]:
         """Compute reward for a batch of data."""
         ...
 
@@ -74,7 +84,9 @@ class FunctionRewardManager(ABC):
 class SequentialFunctionRewardManager(FunctionRewardManager):
     reward_fn: SequentialRewardFunction
 
-    def compute_reward(self, data: DataProto) -> Tuple[torch.Tensor, Dict[str, List[float]]]:
+    def compute_reward(
+        self, data: DataProto
+    ) -> Tuple[torch.Tensor, Dict[str, List[float]]]:
         reward_tensor = torch.zeros_like(data.batch["responses"], dtype=torch.float32)
         reward_metrics = defaultdict(list)
         response_ids = data.batch["responses"]
@@ -97,14 +109,19 @@ class SequentialFunctionRewardManager(FunctionRewardManager):
 class BatchFunctionRewardManager(FunctionRewardManager):
     reward_fn: BatchRewardFunction
 
-    def compute_reward(self, data: DataProto) -> Tuple[torch.Tensor, Dict[str, List[float]]]:
+    def compute_reward(
+        self, data: DataProto
+    ) -> Tuple[torch.Tensor, Dict[str, List[float]]]:
         response_str, ground_truth = [], []
         response_ids = data.batch["responses"]
         response_length = data.batch["response_mask"].sum(dim=-1)
         for i in range(len(data)):
             valid_response_ids = response_ids[i][: response_length[i]]
             response_str.append(
-                self.tokenizer.decode(valid_response_ids, skip_special_tokens=self.config.skip_special_tokens)
+                self.tokenizer.decode(
+                    valid_response_ids,
+                    skip_special_tokens=self.config.skip_special_tokens,
+                )
             )
             ground_truth.append(data.non_tensor_batch["ground_truth"][i])
 

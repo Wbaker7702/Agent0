@@ -44,7 +44,9 @@ class AsyncSglangServer(AsyncServerBase):
             return
         all_actors = ray.util.list_named_actors(all_namespaces=True)
         matched_actors = [
-            actor for actor in all_actors if actor.get("name", None).startswith(self.wg_prefix + "WorkerDict_")
+            actor
+            for actor in all_actors
+            if actor.get("name", None).startswith(self.wg_prefix + "WorkerDict_")
         ]
 
         for matched_actor in matched_actors:
@@ -52,10 +54,14 @@ class AsyncSglangServer(AsyncServerBase):
             assert len(fields) == 2, f"invalid actor name: {matched_actor['name']}"
             pg_index, local_rank = int(fields[0].split("_")[-1]), int(fields[1])
 
-            if (self._dp_size * pg_index + local_rank) // self._tp_size == self._dp_rank:
+            if (
+                self._dp_size * pg_index + local_rank
+            ) // self._tp_size == self._dp_rank:
                 worker = ray.get_actor(**matched_actor)
                 self.workers.append(worker)
-                if (self._dp_size * pg_index + local_rank) / self._tp_size == self._dp_rank:
+                if (
+                    self._dp_size * pg_index + local_rank
+                ) / self._tp_size == self._dp_rank:
                     self.master_worker = worker
 
     async def chat_completion(self, raw_request: Request):
@@ -66,8 +72,12 @@ class AsyncSglangServer(AsyncServerBase):
         [outputs] = await asyncio.gather(output_future)
         return JSONResponse(outputs)
 
-    async def generate(self, prompt_ids: list[int], sampling_params: dict[str, Any], request_id: str) -> list[int]:
-        return await self.master_worker.generate.remote(prompt_ids, sampling_params, request_id)
+    async def generate(
+        self, prompt_ids: list[int], sampling_params: dict[str, Any], request_id: str
+    ) -> list[int]:
+        return await self.master_worker.generate.remote(
+            prompt_ids, sampling_params, request_id
+        )
 
     async def wake_up(self):
         if not self.config.rollout.free_cache_engine:

@@ -37,7 +37,13 @@ class RolloutTraceConfig:
         return cls._instance
 
     @classmethod
-    def init(cls, project_name: str, experiment_name: str, backend: str, token2text: bool = False):
+    def init(
+        cls,
+        project_name: str,
+        experiment_name: str,
+        backend: str,
+        token2text: bool = False,
+    ):
         config = cls.get_instance()
         config.backend = backend
         config.token2text = token2text
@@ -123,15 +129,23 @@ def rollout_trace_op(func):
         del inputs["self"]
 
         async def add_token2text(self, result):
-            if hasattr(result, "prompt_ids") and hasattr(self, "tokenizer") and hasattr(self.tokenizer, "decode"):
+            if (
+                hasattr(result, "prompt_ids")
+                and hasattr(self, "tokenizer")
+                and hasattr(self.tokenizer, "decode")
+            ):
                 _result = [result]
                 loop = asyncio.get_running_loop()
                 if hasattr(result, "prompt_ids"):
-                    prompt_text = await loop.run_in_executor(None, self.tokenizer.decode, result.prompt_ids)
+                    prompt_text = await loop.run_in_executor(
+                        None, self.tokenizer.decode, result.prompt_ids
+                    )
                     _result.append(prompt_text)
 
                 if hasattr(result, "response_ids"):
-                    response_text = await loop.run_in_executor(None, self.tokenizer.decode, result.response_ids)
+                    response_text = await loop.run_in_executor(
+                        None, self.tokenizer.decode, result.response_ids
+                    )
                     _result.append(response_text)
                 return _result
             return result
@@ -141,7 +155,9 @@ def rollout_trace_op(func):
             from weave.trace.context import call_context
 
             cur_attributes = {**call_context.call_attributes.get()}
-            call = tracer.create_call(op=func.__qualname__, inputs=inputs, attributes=cur_attributes)
+            call = tracer.create_call(
+                op=func.__qualname__, inputs=inputs, attributes=cur_attributes
+            )
             try:
                 result = await func(self, *args, **kwargs)
 
@@ -177,7 +193,9 @@ def rollout_trace_op(func):
             from weave.trace.context import call_context
 
             cur_attributes = {**call_context.call_attributes.get()}
-            call = tracer.create_call(op=func.__qualname__, inputs=inputs, attributes=cur_attributes)
+            call = tracer.create_call(
+                op=func.__qualname__, inputs=inputs, attributes=cur_attributes
+            )
             try:
                 result = func(self, *args, **kwargs)
                 tracer.finish_call(call, output=result)

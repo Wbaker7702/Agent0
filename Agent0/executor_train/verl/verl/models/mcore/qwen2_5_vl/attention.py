@@ -63,15 +63,21 @@ class Qwen2_5VLSelfAttention(SelfAttention):
 
         """
 
-        inference_context = deprecate_inference_params(inference_context, inference_params)
+        inference_context = deprecate_inference_params(
+            inference_context, inference_params
+        )
 
         if inference_context and inference_context.is_dynamic_batching():
-            assert flash_decode_and_prefill_kernel is not None, (
-                "Internal use only: install package `nvidia_chunked_flash_attn`."
-            )
+            assert (
+                flash_decode_and_prefill_kernel is not None
+            ), "Internal use only: install package `nvidia_chunked_flash_attn`."
 
         # hidden_states: [sq, b, h]
-        if self.config.flash_decode and not self.training and inference_context is not None:
+        if (
+            self.config.flash_decode
+            and not self.training
+            and inference_context is not None
+        ):
             rotary_pos_emb = None
         else:
             assert rotary_pos_cos is None and rotary_pos_sin is None
@@ -85,7 +91,9 @@ class Qwen2_5VLSelfAttention(SelfAttention):
         # =====================
         # Get the query, key and value tensors based on the type of attention -
         # self or cross attn.
-        query, key, value = self.get_query_key_value_tensors(hidden_states, key_value_states)
+        query, key, value = self.get_query_key_value_tensors(
+            hidden_states, key_value_states
+        )
 
         # ===================================================
         # Adjust key, value, and rotary_pos_emb for inference
@@ -102,7 +110,9 @@ class Qwen2_5VLSelfAttention(SelfAttention):
         ):
             assert self.layer_number in inference_context.key_value_memory_dict
             assert inference_context.sequence_len_offset is not None
-            inference_key_memory, inference_value_memory = inference_context.key_value_memory_dict[self.layer_number]
+            inference_key_memory, inference_value_memory = (
+                inference_context.key_value_memory_dict[self.layer_number]
+            )
             output = self.flash_decode(
                 sequence_len_offset=sequence_len_offset,
                 query_layer=query,
@@ -118,15 +128,17 @@ class Qwen2_5VLSelfAttention(SelfAttention):
             output, bias = self.linear_proj(context_layer)
             return output, bias
 
-        query, key, value, rotary_pos_emb, attn_mask_type = self._adjust_key_value_for_inference(
-            inference_context,
-            query,
-            key,
-            value,
-            rotary_pos_emb,
-            rotary_pos_cos,
-            rotary_pos_sin,
-            sequence_len_offset,
+        query, key, value, rotary_pos_emb, attn_mask_type = (
+            self._adjust_key_value_for_inference(
+                inference_context,
+                query,
+                key,
+                value,
+                rotary_pos_emb,
+                rotary_pos_cos,
+                rotary_pos_sin,
+                sequence_len_offset,
+            )
         )
 
         if packed_seq_params is not None:
@@ -155,11 +167,17 @@ class Qwen2_5VLSelfAttention(SelfAttention):
             if q_pos_emb is not None:
                 # TODO VIJAY: simplify
                 if inference_context is None or inference_context.is_static_batching():
-                    query = apply_rotary_pos_emb_absolute(query, q_pos_emb, config=self.config, cu_seqlens=cu_seqlens_q)
+                    query = apply_rotary_pos_emb_absolute(
+                        query, q_pos_emb, config=self.config, cu_seqlens=cu_seqlens_q
+                    )
                 else:
-                    query = inference_context.apply_rotary_emb_query(query, q_pos_emb, self.config, cu_seqlens_q)
+                    query = inference_context.apply_rotary_emb_query(
+                        query, q_pos_emb, self.config, cu_seqlens_q
+                    )
             if k_pos_emb is not None:
-                key = apply_rotary_pos_emb_absolute(key, k_pos_emb, config=self.config, cu_seqlens=cu_seqlens_kv)
+                key = apply_rotary_pos_emb_absolute(
+                    key, k_pos_emb, config=self.config, cu_seqlens=cu_seqlens_kv
+                )
 
             # TODO, can apply positional embedding to value_layer so it has
             # absolute positional embedding.

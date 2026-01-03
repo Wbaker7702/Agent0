@@ -20,7 +20,12 @@ import torch
 import torch.distributed
 from flash_attn.bert_padding import index_first_axis, rearrange, unpad_input
 from torch.distributed import init_device_mesh
-from transformers import AutoModelForCausalLM, LlamaConfig, PretrainedConfig, Qwen2Config
+from transformers import (
+    AutoModelForCausalLM,
+    LlamaConfig,
+    PretrainedConfig,
+    Qwen2Config,
+)
 
 from verl.models.transformers.monkey_patch import apply_monkey_patch
 from verl.protocol import DataProto
@@ -48,23 +53,45 @@ class SequenceParallelConfig:
 def test_configs():
     return [
         SequenceParallelConfig(
-            LlamaConfig(num_hidden_layers=2, num_attention_heads=32, num_key_value_heads=32), sp_size=8, is_valid=True
+            LlamaConfig(
+                num_hidden_layers=2, num_attention_heads=32, num_key_value_heads=32
+            ),
+            sp_size=8,
+            is_valid=True,
         ),
         SequenceParallelConfig(
-            Qwen2Config(num_hidden_layers=2, num_attention_heads=28, num_key_value_heads=4, hidden_size=3584),
+            Qwen2Config(
+                num_hidden_layers=2,
+                num_attention_heads=28,
+                num_key_value_heads=4,
+                hidden_size=3584,
+            ),
             sp_size=4,
             is_valid=True,
         ),
         SequenceParallelConfig(
-            Qwen2Config(num_hidden_layers=2, num_attention_heads=28, num_key_value_heads=4, hidden_size=3584),
+            Qwen2Config(
+                num_hidden_layers=2,
+                num_attention_heads=28,
+                num_key_value_heads=4,
+                hidden_size=3584,
+            ),
             sp_size=8,
             is_valid=False,
         ),
         SequenceParallelConfig(
-            Qwen2Config(num_hidden_layers=2, num_attention_heads=32, num_key_value_heads=4), sp_size=4, is_valid=True
+            Qwen2Config(
+                num_hidden_layers=2, num_attention_heads=32, num_key_value_heads=4
+            ),
+            sp_size=4,
+            is_valid=True,
         ),
         SequenceParallelConfig(
-            Qwen2Config(num_hidden_layers=2, num_attention_heads=32, num_key_value_heads=4), sp_size=8, is_valid=True
+            Qwen2Config(
+                num_hidden_layers=2, num_attention_heads=32, num_key_value_heads=4
+            ),
+            sp_size=8,
+            is_valid=True,
         ),
     ]
 
@@ -80,10 +107,16 @@ def test_hf_casual_fwd_bwd(test_config):
     if not torch.distributed.is_initialized():
         initialize_global_process_group()
 
-    context = contextlib.nullcontext() if test_config.is_valid else pytest.raises(AssertionError)
+    context = (
+        contextlib.nullcontext()
+        if test_config.is_valid
+        else pytest.raises(AssertionError)
+    )
     with context:
         world_size = torch.distributed.get_world_size()
-        _hf_casual_fwd_bwd(test_config.config, test_config.sp_size, world_size // test_config.sp_size)
+        _hf_casual_fwd_bwd(
+            test_config.config, test_config.sp_size, world_size // test_config.sp_size
+        )
 
     # TODO: seems not work, will cause `socketStartConnect: Connect to xxx failed : Software caused connection abort`
     # torch.distributed.destroy_process_group()
@@ -104,16 +137,23 @@ def _hf_casual_fwd(config, sp_size, dp_size):
     # patch before load
     with torch.device("cuda"):
         model = AutoModelForCausalLM.from_config(
-            config=config, torch_dtype=torch.bfloat16, attn_implementation="flash_attention_2"
+            config=config,
+            torch_dtype=torch.bfloat16,
+            attn_implementation="flash_attention_2",
         )
         apply_monkey_patch(model, sp_size)
         model = model.to(device="cuda")
         sync_model_parameters_global(model)
 
     # different rank will generate different input_ids following fsdp
-    input_ids = torch.randint(low=0, high=config.vocab_size, size=(batch_size, seqlen), device="cuda")
+    input_ids = torch.randint(
+        low=0, high=config.vocab_size, size=(batch_size, seqlen), device="cuda"
+    )
     attention_mask = create_random_mask(
-        input_ids=input_ids, max_ratio_of_left_padding=0, max_ratio_of_valid_token=0.9, min_ratio_of_valid_token=0.8
+        input_ids=input_ids,
+        max_ratio_of_left_padding=0,
+        max_ratio_of_valid_token=0.9,
+        min_ratio_of_valid_token=0.8,
     )
     position_ids = compute_position_id_with_mask(
         attention_mask
@@ -145,17 +185,25 @@ def _hf_casual_fwd(config, sp_size, dp_size):
         # slice input tensor for ulysses
         # input_ids are padded and sliced
         # postition_ids are only padded but not sliced
-        input_ids_rmpad_sliced, position_ids_rmpad_padded, pad_size = ulysses_pad_and_slice_inputs(
-            input_ids_rmpad, position_ids_rmpad, sp_size=get_ulysses_sequence_parallel_world_size()
+        input_ids_rmpad_sliced, position_ids_rmpad_padded, pad_size = (
+            ulysses_pad_and_slice_inputs(
+                input_ids_rmpad,
+                position_ids_rmpad,
+                sp_size=get_ulysses_sequence_parallel_world_size(),
+            )
         )
 
         # input with input_ids_rmpad and postition_ids to enable flash attention varlen
         logits_split_in_seq = model(
-            input_ids_rmpad_sliced, position_ids=position_ids_rmpad_padded, use_cache=False
+            input_ids_rmpad_sliced,
+            position_ids=position_ids_rmpad_padded,
+            use_cache=False,
         ).logits  # (1, total_nnz/n, vocab_size)
 
         # all_gather output
-        logits_full = gather_outpus_and_unpad(logits_split_in_seq, gather_dim=1, unpad_dim=1, padding_size=pad_size)
+        logits_full = gather_outpus_and_unpad(
+            logits_split_in_seq, gather_dim=1, unpad_dim=1, padding_size=pad_size
+        )
 
     # 2. perform normal forward
     set_ulysses_sequence_parallel_group(None)
@@ -183,16 +231,23 @@ def _hf_casual_fwd_bwd(config, sp_size, dp_size):
     # patch before load
     with torch.device("cuda"):
         model = AutoModelForCausalLM.from_config(
-            config=config, torch_dtype=torch.bfloat16, attn_implementation="flash_attention_2"
+            config=config,
+            torch_dtype=torch.bfloat16,
+            attn_implementation="flash_attention_2",
         )
         apply_monkey_patch(model, sp_size)
         model = model.to(device="cuda")
         sync_model_parameters_global(model)
 
     # different rank will generate different input_ids following fsdp
-    input_ids = torch.randint(low=0, high=config.vocab_size, size=(batch_size, seqlen), device="cuda")
+    input_ids = torch.randint(
+        low=0, high=config.vocab_size, size=(batch_size, seqlen), device="cuda"
+    )
     attention_mask = create_random_mask(
-        input_ids=input_ids, max_ratio_of_left_padding=0, max_ratio_of_valid_token=0.9, min_ratio_of_valid_token=0.8
+        input_ids=input_ids,
+        max_ratio_of_left_padding=0,
+        max_ratio_of_valid_token=0.9,
+        min_ratio_of_valid_token=0.8,
     )
     position_ids = compute_position_id_with_mask(
         attention_mask
@@ -224,17 +279,25 @@ def _hf_casual_fwd_bwd(config, sp_size, dp_size):
         # slice input tensor for ulysses
         # input_ids are padded and sliced
         # postition_ids are only padded but not sliced
-        input_ids_rmpad_sliced, position_ids_rmpad_padded, pad_size = ulysses_pad_and_slice_inputs(
-            input_ids_rmpad, position_ids_rmpad, sp_size=get_ulysses_sequence_parallel_world_size()
+        input_ids_rmpad_sliced, position_ids_rmpad_padded, pad_size = (
+            ulysses_pad_and_slice_inputs(
+                input_ids_rmpad,
+                position_ids_rmpad,
+                sp_size=get_ulysses_sequence_parallel_world_size(),
+            )
         )
 
         # input with input_ids_rmpad and postition_ids to enable flash attention varlen
         logits_split_in_seq = model(
-            input_ids_rmpad_sliced, position_ids=position_ids_rmpad_padded, use_cache=False
+            input_ids_rmpad_sliced,
+            position_ids=position_ids_rmpad_padded,
+            use_cache=False,
         ).logits  # (1, total_nnz/n, vocab_size)
 
         # all_gather output
-        logits_full = gather_outpus_and_unpad(logits_split_in_seq, gather_dim=1, unpad_dim=1, padding_size=pad_size)
+        logits_full = gather_outpus_and_unpad(
+            logits_split_in_seq, gather_dim=1, unpad_dim=1, padding_size=pad_size
+        )
 
     # 2. perform normal forward
     set_ulysses_sequence_parallel_group(None)

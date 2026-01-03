@@ -69,13 +69,17 @@ def _pre_process_inputs(pad_token_id, prompt_token_ids: torch.Tensor) -> list[in
     # remove the left padding in the prompt token_id
     # pad_token_id = self.llm_engine.tokenizer.pad_token_id if self.llm_engine.tokenizer.pad_token_id
     # is not None else self.llm_engine.tokenizer.eos_token_id
-    non_pad_index = torch.nonzero(prompt_token_ids != pad_token_id, as_tuple=False)[0][0]
+    non_pad_index = torch.nonzero(prompt_token_ids != pad_token_id, as_tuple=False)[0][
+        0
+    ]
     token_ids = prompt_token_ids[non_pad_index:].tolist()
     return token_ids
 
 
 class vLLMRollout(BaseRollout):
-    def __init__(self, model_path: str, config: DictConfig, tokenizer, model_hf_config, **kwargs):
+    def __init__(
+        self, model_path: str, config: DictConfig, tokenizer, model_hf_config, **kwargs
+    ):
         """A vLLM rollout. It requires the module is supported by the vllm.
 
         Args:
@@ -89,9 +93,9 @@ class vLLMRollout(BaseRollout):
         self.config = config
 
         tensor_parallel_size = self.config.get("tensor_model_parallel_size", 1)
-        assert tensor_parallel_size <= torch.distributed.get_world_size(), (
-            "tensor parallel size should be less than or equal to the world size"
-        )
+        assert (
+            tensor_parallel_size <= torch.distributed.get_world_size()
+        ), "tensor parallel size should be less than or equal to the world size"
         max_num_batched_tokens = self.config.get("max_num_batched_tokens", 8192)
 
         if kwargs.get("train_tp") is not None:
@@ -100,7 +104,9 @@ class vLLMRollout(BaseRollout):
 
             os.environ["CUDA_TIMER_STREAM_KAFKA_ENABLE"] = "0"
             os.environ["MEGATRON_IMPORT_TIMERS"] = "0"
-            vllm_ps.initialize_model_parallel(tensor_model_parallel_size=tensor_parallel_size)
+            vllm_ps.initialize_model_parallel(
+                tensor_model_parallel_size=tensor_parallel_size
+            )
 
         rope_scaling_config = getattr(model_hf_config, "rope_scaling", None)
         if not rope_scaling_config:
@@ -110,16 +116,20 @@ class vLLMRollout(BaseRollout):
             elif hasattr(model_hf_config, "llm_config") and hasattr(
                 model_hf_config.llm_config, "max_position_embeddings"
             ):
-                max_position_embeddings = model_hf_config.llm_config.max_position_embeddings
+                max_position_embeddings = (
+                    model_hf_config.llm_config.max_position_embeddings
+                )
             elif hasattr(model_hf_config, "text_config") and hasattr(
                 model_hf_config.text_config, "max_position_embeddings"
             ):
-                max_position_embeddings = model_hf_config.text_config.max_position_embeddings
+                max_position_embeddings = (
+                    model_hf_config.text_config.max_position_embeddings
+                )
             if max_position_embeddings is None:
                 raise ValueError("max_position_embeddings not found in model_hf_config")
-            assert max_position_embeddings >= config.prompt_length + config.response_length, (
-                "model context length should be greater than total sequence length"
-            )
+            assert (
+                max_position_embeddings >= config.prompt_length + config.response_length
+            ), "model context length should be greater than total sequence length"
         else:
             # handle type where there's a length extend factor
             # see https://qwen.readthedocs.io/en/latest/deployment/vllm.html#extended-context-support
@@ -135,16 +145,23 @@ class vLLMRollout(BaseRollout):
                 + f"max_position_embeddings={model_hf_config.max_position_embeddings}"
             )
 
-        max_model_len = int(config.max_model_len or config.prompt_length + config.response_length)
+        max_model_len = int(
+            config.max_model_len or config.prompt_length + config.response_length
+        )
 
-        if max_num_batched_tokens < max_model_len and self.config.enable_chunked_prefill:
+        if (
+            max_num_batched_tokens < max_model_len
+            and self.config.enable_chunked_prefill
+        ):
             raise ValueError(
                 "Enable chunked prefill, max_num_batched_tokens is smaller than max_model_len, \
                              please increase max_num_batched_tokens or disable chunked prefill"
             )
 
         trust_remote_code = kwargs.get("trust_remote_code", False)
-        load_format = "dummy" if config.load_format.startswith("dummy") else config.load_format
+        load_format = (
+            "dummy" if config.load_format.startswith("dummy") else config.load_format
+        )
 
         lora_kwargs = kwargs.pop("lora_kwargs", {})
         self.lora_kwargs = lora_kwargs
@@ -158,7 +175,9 @@ class vLLMRollout(BaseRollout):
         # - `None` means not setting it, so we pop it, and leave it to vLLM default value
         #    (which can vary across different vLLM versions);
         # - Otherwise it's the desired value we want to explicitly set.
-        engine_kwargs = {key: val for key, val in engine_kwargs.items() if val is not None}
+        engine_kwargs = {
+            key: val for key, val in engine_kwargs.items() if val is not None
+        }
         if config.get("limit_images", None):  # support for multi-image data
             engine_kwargs["limit_mm_per_prompt"] = {"image": config.get("limit_images")}
 
@@ -258,7 +277,11 @@ class vLLMRollout(BaseRollout):
         non_tensor_batch = prompts.non_tensor_batch
         if "raw_prompt_ids" not in non_tensor_batch:
             non_tensor_batch["raw_prompt_ids"] = np.array(
-                [_pre_process_inputs(self.pad_token_id, idx[i]) for i in range(batch_size)], dtype=object
+                [
+                    _pre_process_inputs(self.pad_token_id, idx[i])
+                    for i in range(batch_size)
+                ],
+                dtype=object,
             )
 
         if batch_size != len(non_tensor_batch["raw_prompt_ids"]):
@@ -267,12 +290,20 @@ class vLLMRollout(BaseRollout):
         if "multi_modal_data" in non_tensor_batch:
             vllm_inputs = []
             for raw_prompt_ids, multi_modal_data in zip(
-                non_tensor_batch.pop("raw_prompt_ids"), non_tensor_batch.pop("multi_modal_data"), strict=True
+                non_tensor_batch.pop("raw_prompt_ids"),
+                non_tensor_batch.pop("multi_modal_data"),
+                strict=True,
             ):
-                vllm_inputs.append({"prompt_token_ids": raw_prompt_ids, "multi_modal_data": multi_modal_data})
+                vllm_inputs.append(
+                    {
+                        "prompt_token_ids": raw_prompt_ids,
+                        "multi_modal_data": multi_modal_data,
+                    }
+                )
         else:
             vllm_inputs = [
-                {"prompt_token_ids": raw_prompt_ids} for raw_prompt_ids in non_tensor_batch.pop("raw_prompt_ids")
+                {"prompt_token_ids": raw_prompt_ids}
+                for raw_prompt_ids in non_tensor_batch.pop("raw_prompt_ids")
             ]
 
         # ensure the type of `prompt_token_ids` passed to vllm is list[int]
@@ -311,7 +342,11 @@ class vLLMRollout(BaseRollout):
             if len(lora_int_ids) > 0:
                 lora_int_id = lora_int_ids[0]
                 lora_requests = [
-                    LoRARequest(lora_name=f"{lora_int_id}", lora_int_id=lora_int_id, lora_path="/simon-stub-path")
+                    LoRARequest(
+                        lora_name=f"{lora_int_id}",
+                        lora_int_id=lora_int_id,
+                        lora_path="/simon-stub-path",
+                    )
                 ] * batch_size
 
         # users can customize different sampling_params at different run
@@ -338,9 +373,9 @@ class vLLMRollout(BaseRollout):
                             curr_log_prob.append(logprob[response_ids[i]].logprob)
                         rollout_log_probs.append(curr_log_prob)
 
-            response = pad_2d_list_to_length(response, self.pad_token_id, max_length=self.config.response_length).to(
-                idx.device
-            )
+            response = pad_2d_list_to_length(
+                response, self.pad_token_id, max_length=self.config.response_length
+            ).to(idx.device)
             if self.config.calculate_log_probs:
                 rollout_log_probs = pad_2d_list_to_length(
                     rollout_log_probs, -1, max_length=self.config.response_length
@@ -350,10 +385,14 @@ class vLLMRollout(BaseRollout):
             seq = torch.cat([idx, response], dim=-1)
 
         response_length = response.size(1)
-        delta_position_id = torch.arange(1, response_length + 1, device=position_ids.device)
+        delta_position_id = torch.arange(
+            1, response_length + 1, device=position_ids.device
+        )
         delta_position_id = delta_position_id.unsqueeze(0).expand(batch_size, -1)
         if position_ids.dim() == 3:  # qwen2vl mrope
-            delta_position_id = delta_position_id.view(batch_size, 1, -1).expand(batch_size, 3, -1)
+            delta_position_id = delta_position_id.view(batch_size, 1, -1).expand(
+                batch_size, 3, -1
+            )
 
         # TODO(sgm): fix position_ids on right_pad
         # prompt: left pad + response: right pad
@@ -405,7 +444,9 @@ class vLLMAsyncRollout:
     which is engine in single worker process.
     """
 
-    def __init__(self, model_path: str, config: DictConfig, tokenizer, model_hf_config, **kwargs):
+    def __init__(
+        self, model_path: str, config: DictConfig, tokenizer, model_hf_config, **kwargs
+    ):
         self.tokenizer = tokenizer
 
         # Engine is deferred to be initialized in init_worker
@@ -472,7 +513,9 @@ class vLLMAsyncRollout:
         self.sharding_manager.inference_engine = self.inference_engine
         self.sharding_manager.model_runner = self.inference_engine.worker.model_runner
 
-        _monkey_patch_compute_logits(self.inference_engine.worker.model_runner.model, len(self.tokenizer))
+        _monkey_patch_compute_logits(
+            self.inference_engine.worker.model_runner.model, len(self.tokenizer)
+        )
 
     def sleep(self, *args, **kwargs):
         """Offload model weights and discard kv cache."""

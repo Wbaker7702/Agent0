@@ -51,12 +51,17 @@ class _DataProtoConfigMeta(type):
 
     @property
     def auto_padding(cls):
-        enabled_by_env = os.getenv("VERL_AUTO_PADDING", "FALSE").upper() in ["TRUE", "1"]
+        enabled_by_env = os.getenv("VERL_AUTO_PADDING", "FALSE").upper() in [
+            "TRUE",
+            "1",
+        ]
         return enabled_by_env or cls._config.get(cls.auto_padding_key, False)
 
     @auto_padding.setter
     def auto_padding(cls, enabled: bool):
-        assert isinstance(enabled, bool), f"enabled must be a boolean, got {enabled} as {type(enabled)}"
+        assert isinstance(
+            enabled, bool
+        ), f"enabled must be a boolean, got {enabled} as {type(enabled)}"
         cls._config[cls.auto_padding_key] = enabled
 
 
@@ -104,29 +109,31 @@ def unpad_dataproto(data: "DataProto", pad_size):
 
 def union_tensor_dict(tensor_dict1: TensorDict, tensor_dict2: TensorDict) -> TensorDict:
     """Union two tensordicts."""
-    assert tensor_dict1.batch_size == tensor_dict2.batch_size, (
-        f"Two tensor dict must have identical batch size. Got {tensor_dict1.batch_size} and {tensor_dict2.batch_size}"
-    )
+    assert (
+        tensor_dict1.batch_size == tensor_dict2.batch_size
+    ), f"Two tensor dict must have identical batch size. Got {tensor_dict1.batch_size} and {tensor_dict2.batch_size}"
     for key in tensor_dict2.keys():
         if key not in tensor_dict1.keys():
             tensor_dict1[key] = tensor_dict2[key]
         else:
-            assert tensor_dict1[key].equal(tensor_dict2[key]), (
-                f"{key} in tensor_dict1 and tensor_dict2 are not the same object"
-            )
+            assert tensor_dict1[key].equal(
+                tensor_dict2[key]
+            ), f"{key} in tensor_dict1 and tensor_dict2 are not the same object"
 
     return tensor_dict1
 
 
-def union_numpy_dict(tensor_dict1: dict[str, np.ndarray], tensor_dict2: dict[str, np.ndarray]) -> dict[str, np.ndarray]:
+def union_numpy_dict(
+    tensor_dict1: dict[str, np.ndarray], tensor_dict2: dict[str, np.ndarray]
+) -> dict[str, np.ndarray]:
     for key, val in tensor_dict2.items():
         if key in tensor_dict1:
             assert isinstance(tensor_dict2[key], np.ndarray)
             assert isinstance(tensor_dict1[key], np.ndarray)
             # to properly deal with nan and object type
-            assert pd.DataFrame(tensor_dict2[key]).equals(pd.DataFrame(tensor_dict1[key])), (
-                f"{key} in tensor_dict1 and tensor_dict2 are not the same object"
-            )
+            assert pd.DataFrame(tensor_dict2[key]).equals(
+                pd.DataFrame(tensor_dict1[key])
+            ), f"{key} in tensor_dict1 and tensor_dict2 are not the same object"
         tensor_dict1[key] = val
 
     return tensor_dict1
@@ -161,7 +168,9 @@ def fold_batch_dim(data: "DataProto", new_batch_size):
     for key, val in non_tensor.items():
         non_tensor[key] = np.reshape(val, newshape=(new_batch_size, -1, *val.shape[1:]))
 
-    return type(data)(batch=tensor, non_tensor_batch=non_tensor, meta_info=data.meta_info)
+    return type(data)(
+        batch=tensor, non_tensor_batch=non_tensor, meta_info=data.meta_info
+    )
 
 
 def unfold_batch_dim(data: "DataProto", batch_dims=2):
@@ -178,9 +187,13 @@ def unfold_batch_dim(data: "DataProto", batch_dims=2):
     non_tensor_new = {}
 
     for key, val in non_tensor.items():
-        non_tensor_new[key] = np.reshape(val, newshape=(batch_size, *val.shape[batch_dims:]))
+        non_tensor_new[key] = np.reshape(
+            val, newshape=(batch_size, *val.shape[batch_dims:])
+        )
 
-    return type(data)(batch=tensor, non_tensor_batch=non_tensor_new, meta_info=data.meta_info)
+    return type(data)(
+        batch=tensor, non_tensor_batch=non_tensor_new, meta_info=data.meta_info
+    )
 
 
 def collate_fn(x: list["DataProtoItem"]):
@@ -257,8 +270,14 @@ class DataProto:
         # Case 3: Single integer - return DataProtoItem for backward compatibility
         elif isinstance(item, int | np.integer):
             tensor_data = self.batch[item] if self.batch is not None else None
-            non_tensor_data = {key: val[item] for key, val in self.non_tensor_batch.items()}
-            return DataProtoItem(batch=tensor_data, non_tensor_batch=non_tensor_data, meta_info=self.meta_info)
+            non_tensor_data = {
+                key: val[item] for key, val in self.non_tensor_batch.items()
+            }
+            return DataProtoItem(
+                batch=tensor_data,
+                non_tensor_batch=non_tensor_data,
+                meta_info=self.meta_info,
+            )
 
         # # Case 4: Unsupported type
         else:
@@ -268,7 +287,10 @@ class DataProto:
         import io
 
         buffer = io.BytesIO()
-        if version.parse(tensordict.__version__) >= version.parse("0.5.0") and self.batch is not None:
+        if (
+            version.parse(tensordict.__version__) >= version.parse("0.5.0")
+            and self.batch is not None
+        ):
             self.batch = self.batch.contiguous()
             self.batch = self.batch.consolidate()
         torch.save(self.batch, buffer)
@@ -328,9 +350,15 @@ class DataProto:
             for key, val in self.non_tensor_batch.items():
                 assert isinstance(val, np.ndarray)
 
-        if self.batch is not None and self.non_tensor_batch is not None and len(self.non_tensor_batch) != 0:
+        if (
+            self.batch is not None
+            and self.non_tensor_batch is not None
+            and len(self.non_tensor_batch) != 0
+        ):
             # TODO: we can actually lift this restriction if needed
-            assert len(self.batch.batch_size) == 1, "only support num_batch_dims=1 when non_tensor_batch is not empty."
+            assert (
+                len(self.batch.batch_size) == 1
+            ), "only support num_batch_dims=1 when non_tensor_batch is not empty."
 
             batch_size = self.batch.batch_size[0]
             for key, val in self.non_tensor_batch.items():
@@ -338,12 +366,17 @@ class DataProto:
                     f"data in the non_tensor_batch must be a numpy.array with dtype=object, but for "
                     f"{key=}, got {type(val)=}"
                 )
-                assert val.shape[0] == batch_size, (
-                    f"key {key} length {len(val)} is not equal to batch size {batch_size}"
-                )
+                assert (
+                    val.shape[0] == batch_size
+                ), f"key {key} length {len(val)} is not equal to batch size {batch_size}"
 
     @classmethod
-    def from_single_dict(cls, data: dict[str, torch.Tensor | np.ndarray], meta_info=None, auto_padding=False):
+    def from_single_dict(
+        cls,
+        data: dict[str, torch.Tensor | np.ndarray],
+        meta_info=None,
+        auto_padding=False,
+    ):
         """Create a DataProto from a dict of tensors and non_tensors"""
         tensors = {}
         non_tensors = {}
@@ -356,7 +389,12 @@ class DataProto:
             else:
                 raise ValueError(f"Unsupported type in data {type(val)}")
 
-        return cls.from_dict(tensors=tensors, non_tensors=non_tensors, meta_info=meta_info, auto_padding=auto_padding)
+        return cls.from_dict(
+            tensors=tensors,
+            non_tensors=non_tensors,
+            meta_info=meta_info,
+            auto_padding=auto_padding,
+        )
 
     @classmethod
     def from_dict(
@@ -374,7 +412,9 @@ class DataProto:
 
         assert num_batch_dims > 0, "num_batch_dims must be greater than zero"
         if non_tensors is not None:
-            assert num_batch_dims == 1, "only support num_batch_dims=1 when non_tensors is not None."
+            assert (
+                num_batch_dims == 1
+            ), "only support num_batch_dims=1 when non_tensors is not None."
 
         if tensors is None:
             tensors = {}
@@ -403,7 +443,9 @@ class DataProto:
             if not isinstance(val, np.ndarray):
                 non_tensors[key] = np.array(val, dtype=object)
 
-        tensor_dict = TensorDict(source=tensors, batch_size=batch_size) if tensors else None
+        tensor_dict = (
+            TensorDict(source=tensors, batch_size=batch_size) if tensors else None
+        )
         if auto_padding:
             meta_info[DataProtoConfig.auto_padding_key] = True
         return cls(batch=tensor_dict, non_tensor_batch=non_tensors, meta_info=meta_info)
@@ -422,7 +464,13 @@ class DataProto:
             self.batch = self.batch.to(device)
         return self
 
-    def select(self, batch_keys=None, non_tensor_batch_keys=None, meta_info_keys=None, deepcopy=False) -> "DataProto":
+    def select(
+        self,
+        batch_keys=None,
+        non_tensor_batch_keys=None,
+        meta_info_keys=None,
+        deepcopy=False,
+    ) -> "DataProto":
         """Select a subset of the DataProto via batch_keys and meta_info_keys
 
         Args:
@@ -440,7 +488,11 @@ class DataProto:
             sub_batch = self.batch
 
         if non_tensor_batch_keys is not None:
-            non_tensor_batch = {key: val for key, val in self.non_tensor_batch.items() if key in non_tensor_batch_keys}
+            non_tensor_batch = {
+                key: val
+                for key, val in self.non_tensor_batch.items()
+                if key in non_tensor_batch_keys
+            }
         else:
             non_tensor_batch = self.non_tensor_batch
 
@@ -448,14 +500,18 @@ class DataProto:
             non_tensor_batch = copy.deepcopy(non_tensor_batch)
 
         if meta_info_keys is not None:
-            sub_meta_info = {key: val for key, val in self.meta_info.items() if key in meta_info_keys}
+            sub_meta_info = {
+                key: val for key, val in self.meta_info.items() if key in meta_info_keys
+            }
         else:
             sub_meta_info = self.meta_info
 
         if deepcopy:
             sub_meta_info = copy.deepcopy(sub_meta_info)
 
-        return type(self)(batch=sub_batch, non_tensor_batch=non_tensor_batch, meta_info=sub_meta_info)
+        return type(self)(
+            batch=sub_batch, non_tensor_batch=non_tensor_batch, meta_info=sub_meta_info
+        )
 
     def select_idxs(self, idxs):
         """
@@ -495,7 +551,11 @@ class DataProto:
         for key, val in self.non_tensor_batch.items():
             selected_non_tensor[key] = val[idxs_np]
 
-        return type(self)(batch=selected_batch, non_tensor_batch=selected_non_tensor, meta_info=self.meta_info)
+        return type(self)(
+            batch=selected_batch,
+            non_tensor_batch=selected_non_tensor,
+            meta_info=self.meta_info,
+        )
 
     def slice(self, start=None, end=None, step=None):
         """
@@ -541,9 +601,15 @@ class DataProto:
             sliced_non_tensor[key] = val[slice_obj]
 
         # Return a new DataProto object
-        return type(self)(batch=sliced_batch, non_tensor_batch=sliced_non_tensor, meta_info=self.meta_info)
+        return type(self)(
+            batch=sliced_batch,
+            non_tensor_batch=sliced_non_tensor,
+            meta_info=self.meta_info,
+        )
 
-    def pop(self, batch_keys=None, non_tensor_batch_keys=None, meta_info_keys=None) -> "DataProto":
+    def pop(
+        self, batch_keys=None, non_tensor_batch_keys=None, meta_info_keys=None
+    ) -> "DataProto":
         """Pop a subset of the DataProto via `batch_keys` and `meta_info_keys`
 
         Args:
@@ -574,7 +640,9 @@ class DataProto:
         for key in meta_info_keys:
             assert key in self.meta_info.keys()
             meta_info[key] = self.meta_info.pop(key)
-        return DataProto.from_dict(tensors=tensors, non_tensors=non_tensors, meta_info=meta_info)
+        return DataProto.from_dict(
+            tensors=tensors, non_tensors=non_tensors, meta_info=meta_info
+        )
 
     def rename(self, old_keys=None, new_keys=None) -> "DataProto":
         """
@@ -588,7 +656,9 @@ class DataProto:
                 elif isinstance(keys, list):
                     pass
                 else:
-                    raise TypeError(f"keys must be a list or a string, but got {type(keys)}")
+                    raise TypeError(
+                        f"keys must be a list or a string, but got {type(keys)}"
+                    )
             return keys
 
         old_keys = validate_input(old_keys)
@@ -618,7 +688,9 @@ class DataProto:
             DataProto: the DataProto after union
         """
         self.batch = union_tensor_dict(self.batch, other.batch)
-        self.non_tensor_batch = union_numpy_dict(self.non_tensor_batch, other.non_tensor_batch)
+        self.non_tensor_batch = union_numpy_dict(
+            self.non_tensor_batch, other.non_tensor_batch
+        )
         self.meta_info = union_two_dict(self.meta_info, other.meta_info)
         return self
 
@@ -638,7 +710,9 @@ class DataProto:
             Iterator: an iterator that yields a mini-batch data at a time. The total number of iteration
                 steps is ``self.batch.batch_size * epochs // mini_batch_size``
         """
-        assert self.batch.batch_size[0] % mini_batch_size == 0, f"{self.batch.batch_size[0]} % {mini_batch_size} != 0"
+        assert (
+            self.batch.batch_size[0] % mini_batch_size == 0
+        ), f"{self.batch.batch_size[0]} % {mini_batch_size} != 0"
         # we can directly create a dataloader from TensorDict
         if dataloader_kwargs is None:
             dataloader_kwargs = {}
@@ -651,7 +725,11 @@ class DataProto:
 
         assert isinstance(dataloader_kwargs, dict)
         train_dataloader = DataLoader(
-            dataset=self, batch_size=mini_batch_size, collate_fn=collate_fn, generator=generator, **dataloader_kwargs
+            dataset=self,
+            batch_size=mini_batch_size,
+            collate_fn=collate_fn,
+            generator=generator,
+            **dataloader_kwargs,
         )
 
         def get_data():
@@ -668,7 +746,9 @@ class DataProto:
         Returns:
             bool: True if padding is enabled, False otherwise.
         """
-        dataproto_specific_padding = self.meta_info.get(DataProtoConfig.auto_padding_key, False)
+        dataproto_specific_padding = self.meta_info.get(
+            DataProtoConfig.auto_padding_key, False
+        )
         return dataproto_specific_padding or DataProtoConfig.auto_padding
 
     def padding(self, padding_size, padding_candidate=""):
@@ -680,7 +760,9 @@ class DataProto:
         """
         if padding_size == 0:
             return
-        padding_candidate = self.select_idxs([0 if padding_candidate == "first" else len(self) - 1])
+        padding_candidate = self.select_idxs(
+            [0 if padding_candidate == "first" else len(self) - 1]
+        )
         padding_part = padding_candidate.repeat(padding_size)
         padded_dp = DataProto.concat([self, padding_part])
         self.batch = padded_dp.batch
@@ -696,9 +778,9 @@ class DataProto:
             List[DataProto]: a list of DataProto after splitting
         """
         if not self.is_padding_enabled():
-            assert len(self) % chunks == 0, (
-                f"only support equal chunk. Got size of DataProto {len(self)} and chunk {chunks}."
-            )
+            assert (
+                len(self) % chunks == 0
+            ), f"only support equal chunk. Got size of DataProto {len(self)} and chunk {chunks}."
 
         bsz_in_batch = None
         if self.batch is not None:
@@ -722,7 +804,11 @@ class DataProto:
         output = []
         for i in range(chunks):
             output.append(
-                type(self)(batch=batch_lst[i], non_tensor_batch=non_tensor_batch_lst[i], meta_info=self.meta_info)
+                type(self)(
+                    batch=batch_lst[i],
+                    non_tensor_batch=non_tensor_batch_lst[i],
+                    meta_info=self.meta_info,
+                )
             )
 
         return output
@@ -743,12 +829,18 @@ class DataProto:
             batch_lst.append(batch.batch)
         new_batch = torch.cat(batch_lst, dim=0) if batch_lst[0] is not None else None
 
-        non_tensor_batch = list_of_dict_to_dict_of_list(list_of_dict=[d.non_tensor_batch for d in data])
+        non_tensor_batch = list_of_dict_to_dict_of_list(
+            list_of_dict=[d.non_tensor_batch for d in data]
+        )
         for key, val in non_tensor_batch.items():
             non_tensor_batch[key] = np.concatenate(val, axis=0)
 
         cls = type(data[0]) if len(data) > 0 else DataProto
-        return cls(batch=new_batch, non_tensor_batch=non_tensor_batch, meta_info=data[0].meta_info)
+        return cls(
+            batch=new_batch,
+            non_tensor_batch=non_tensor_batch,
+            meta_info=data[0].meta_info,
+        )
 
     def reorder(self, indices):
         """
@@ -756,7 +848,9 @@ class DataProto:
         """
         indices_np = indices.detach().numpy()
         self.batch = self.batch[indices]
-        self.non_tensor_batch = {key: val[indices_np] for key, val in self.non_tensor_batch.items()}
+        self.non_tensor_batch = {
+            key: val[indices_np] for key, val in self.non_tensor_batch.items()
+        }
 
     def repeat(self, repeat_times=2, interleave=True):
         """
@@ -773,12 +867,15 @@ class DataProto:
             if interleave:
                 # Interleave the data
                 repeated_tensors = {
-                    key: tensor.repeat_interleave(repeat_times, dim=0) for key, tensor in self.batch.items()
+                    key: tensor.repeat_interleave(repeat_times, dim=0)
+                    for key, tensor in self.batch.items()
                 }
             else:
                 # Stack the data
                 repeated_tensors = {
-                    key: tensor.unsqueeze(0).expand(repeat_times, *tensor.shape).reshape(-1, *tensor.shape[1:])
+                    key: tensor.unsqueeze(0)
+                    .expand(repeat_times, *tensor.shape)
+                    .reshape(-1, *tensor.shape[1:])
                     for key, tensor in self.batch.items()
                 }
 
@@ -794,7 +891,9 @@ class DataProto:
             if interleave:
                 repeated_non_tensor_batch[key] = np.repeat(val, repeat_times, axis=0)
             else:
-                repeated_non_tensor_batch[key] = np.tile(val, (repeat_times,) + (1,) * (val.ndim - 1))
+                repeated_non_tensor_batch[key] = np.tile(
+                    val, (repeat_times,) + (1,) * (val.ndim - 1)
+                )
 
         return type(self)(
             batch=repeated_batch,
@@ -802,7 +901,9 @@ class DataProto:
             meta_info=self.meta_info,
         )
 
-    def unfold_column_chunks(self, n_split: int, split_keys: Optional[list[str]] = None):
+    def unfold_column_chunks(
+        self, n_split: int, split_keys: Optional[list[str]] = None
+    ):
         """Split along the second dim into `n_split`, unfold it to the first dim (batch dim)
         Useful in passing grouped tensors that doesn't want to be shuffled in dataset.
         keys not in split_keys are repeated to match the shape
@@ -817,10 +918,14 @@ class DataProto:
                     shape[1] = self.batch[key].shape[1] // n_split
                     unfolded_batch[key] = self.batch[key].reshape(*shape)
                 else:
-                    unfolded_batch[key] = torch.repeat_interleave(self.batch[key], n_split, dim=0)
+                    unfolded_batch[key] = torch.repeat_interleave(
+                        self.batch[key], n_split, dim=0
+                    )
             # locate the `unfolded_batch` as a TensorDict on the same device as the original batch
             unfolded_batch = TensorDict(
-                source=unfolded_batch, batch_size=(self.batch.batch_size[0] * n_split,), device=self.batch.device
+                source=unfolded_batch,
+                batch_size=(self.batch.batch_size[0] * n_split,),
+                device=self.batch.device,
             )
         else:
             unfolded_batch = None
@@ -860,15 +965,16 @@ class DataProto:
             assert len(repeat_times.shape) == 1
             repeat_times = repeat_times.tolist()
         else:
-            assert isinstance(repeat_times, list), (
-                f"repeat_times type must be in [list, torch.Tensor, np.ndarray, tuple], got {type(repeat_times)}"
-            )
+            assert isinstance(
+                repeat_times, list
+            ), f"repeat_times type must be in [list, torch.Tensor, np.ndarray, tuple], got {type(repeat_times)}"
         repeat_times = torch.tensor(repeat_times)
 
         if self.batch is not None:
             # Interleave the data
             repeated_tensors = {
-                key: tensor.repeat_interleave(repeat_times, dim=0) for key, tensor in self.batch.items()
+                key: tensor.repeat_interleave(repeat_times, dim=0)
+                for key, tensor in self.batch.items()
             }
 
             repeated_batch = TensorDict(
@@ -924,7 +1030,9 @@ class DataProtoFuture:
                 return x.chunk(chunks=chunks)[i]
 
             arg_future = DataProtoFuture(
-                collect_fn=self.collect_fn, dispatch_fn=partial(dispatch_fn, i=i, chunks=chunks), futures=self.futures
+                collect_fn=self.collect_fn,
+                dispatch_fn=partial(dispatch_fn, i=i, chunks=chunks),
+                futures=self.futures,
             )
             arg_future_lst.append(arg_future)
         return arg_future_lst
@@ -945,9 +1053,16 @@ def all_gather_data_proto(data: DataProto, process_group):
     assert isinstance(data, DataProto)
     prev_device = data.batch.device
     data.batch = data.batch.to(get_device_id())
-    data.batch = allgather_dict_tensors(data.batch.contiguous(), size=group_size, group=process_group, dim=0)
+    data.batch = allgather_dict_tensors(
+        data.batch.contiguous(), size=group_size, group=process_group, dim=0
+    )
     data.batch = data.batch.to(prev_device)
     # all gather non_tensor_batch
     all_non_tensor_batch = [None for _ in range(group_size)]
-    torch.distributed.all_gather_object(all_non_tensor_batch, data.non_tensor_batch, group=process_group)
-    data.non_tensor_batch = {k: np.concatenate([d[k] for d in all_non_tensor_batch]) for k in data.non_tensor_batch}
+    torch.distributed.all_gather_object(
+        all_non_tensor_batch, data.non_tensor_batch, group=process_group
+    )
+    data.non_tensor_batch = {
+        k: np.concatenate([d[k] for d in all_non_tensor_batch])
+        for k in data.non_tensor_batch
+    }

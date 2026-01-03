@@ -85,7 +85,9 @@ class BaseCheckpointManager(ABC):
                 os.makedirs(path, exist_ok=True)
         except Exception as e:
             print(f"Warning: Failed to acquire lock for {path}: {e}")
-            os.makedirs(path, exist_ok=True)  # even if the lock is not acquired, try to create the directory
+            os.makedirs(
+                path, exist_ok=True
+            )  # even if the lock is not acquired, try to create the directory
 
         return path
 
@@ -107,7 +109,9 @@ class BaseCheckpointManager(ABC):
         random.setstate(rng_state["random"])
 
 
-def find_latest_ckpt_path(path: Optional[str] = None, directory_format: str = "global_step_{}") -> Optional[str]:
+def find_latest_ckpt_path(
+    path: Optional[str] = None, directory_format: str = "global_step_{}"
+) -> Optional[str]:
     if path is None:
         return None
 
@@ -135,7 +139,12 @@ def get_checkpoint_tracker_filename(root_path: str) -> str:
     return os.path.join(root_path, CHECKPOINT_TRACKER)
 
 
-def remove_obsolete_ckpt(path: str, global_step: int, save_limit: int = -1, directory_format: str = "global_step_{}"):
+def remove_obsolete_ckpt(
+    path: str,
+    global_step: int,
+    save_limit: int = -1,
+    directory_format: str = "global_step_{}",
+):
     """
     Remove the obsolete checkpoints that exceed the save_limit.
     """

@@ -55,14 +55,18 @@ def _fused_linear_for_ppo_bwd(
 
     # Gradient from log_probs
     if dlog_probs is not None:
-        one_hot_input = torch.zeros_like(logits).scatter_(-1, input_ids.unsqueeze(-1), 1)
+        one_hot_input = torch.zeros_like(logits).scatter_(
+            -1, input_ids.unsqueeze(-1), 1
+        )
         dlogits += dlog_probs.to(torch.float32).unsqueeze(-1) * (one_hot_input - probs)
 
     # Gradient from entropy
     if dentropy is not None:
         log_probs = logits.log_softmax(dim=-1)
         entropy = torch.logsumexp(logits, dim=-1) - torch.sum(probs * logits, dim=-1)
-        dlogits += probs * (log_probs + entropy.unsqueeze(-1)) * (-dentropy.unsqueeze(-1))
+        dlogits += (
+            probs * (log_probs + entropy.unsqueeze(-1)) * (-dentropy.unsqueeze(-1))
+        )
 
     dlogits = dlogits.to(orig_dtype) / temperature
 
@@ -86,11 +90,16 @@ class FusedLinearForPPOFunction(torch.autograd.Function):
 
         # Cast to a 2D tensor of the shape [T, D] for ease of working
         orig_ndim = hidden_states.ndim
-        assert orig_ndim in (2, 3), f"Invalid hidden_states shape, received {hidden_states.shape}"
+        assert orig_ndim in (
+            2,
+            3,
+        ), f"Invalid hidden_states shape, received {hidden_states.shape}"
 
         orig_batch_size = -1
         if orig_ndim == 3:
-            assert input_ids.ndim == 2, f"input_ids shape doesn't match, {hidden_states.shape} {input_ids.shape}"
+            assert (
+                input_ids.ndim == 2
+            ), f"input_ids shape doesn't match, {hidden_states.shape} {input_ids.shape}"
             orig_batch_size = hidden_states.shape[0]
             hidden_states = hidden_states.flatten(0, 1)
             input_ids = input_ids.flatten(0, 1)
@@ -98,7 +107,9 @@ class FusedLinearForPPOFunction(torch.autograd.Function):
         T = hidden_states.shape[0]
 
         # Allocate memory for outputs
-        output_requires_grad = hidden_states.requires_grad or vocab_weights.requires_grad
+        output_requires_grad = (
+            hidden_states.requires_grad or vocab_weights.requires_grad
+        )
         log_probs = hidden_states.new_zeros(T, requires_grad=output_requires_grad)
         entropy = hidden_states.new_zeros(T, requires_grad=output_requires_grad)
 
@@ -129,7 +140,11 @@ class FusedLinearForPPOFunction(torch.autograd.Function):
         return log_probs, entropy
 
     @staticmethod
-    def backward(ctx, dlog_probs: Optional[torch.FloatTensor], dentropy: Optional[torch.FloatTensor]):
+    def backward(
+        ctx,
+        dlog_probs: Optional[torch.FloatTensor],
+        dentropy: Optional[torch.FloatTensor],
+    ):
         assert dlog_probs is not None or dentropy is not None
 
         hidden_states, vocab_weights, input_ids = ctx.saved_tensors

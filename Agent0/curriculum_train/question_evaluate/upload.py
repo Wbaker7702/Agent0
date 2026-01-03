@@ -21,9 +21,11 @@ args = parser.parse_args()
 
 datas = []
 for i in range(8):
-    file_path = f'{STORAGE_PATH}/generated_question/{args.experiment_name}_{i}_results.json'
+    file_path = (
+        f"{STORAGE_PATH}/generated_question/{args.experiment_name}_{i}_results.json"
+    )
     try:
-        with open(file_path, 'r') as f:
+        with open(file_path, "r") as f:
             data = json.load(f)
             datas.extend(data)
     except FileNotFoundError:
@@ -32,16 +34,18 @@ for i in range(8):
 
 print("Cleaning up temporary JSON files...", file=sys.stderr)
 for i in range(8):
-    file_path = f'{STORAGE_PATH}/generated_question/{args.experiment_name}_{i}_results.json'
+    file_path = (
+        f"{STORAGE_PATH}/generated_question/{args.experiment_name}_{i}_results.json"
+    )
     try:
         os.remove(file_path)
     except FileNotFoundError:
         pass
 
 filtered_datas = [
-    {'problem': data['question'], 'answer': data['answer'], 'score': data['score']}
+    {"problem": data["question"], "answer": data["answer"], "score": data["score"]}
     for data in datas
-    if args.min_score <= data.get('score', 0) <= args.max_score and data.get('answer')
+    if args.min_score <= data.get("score", 0) <= args.max_score and data.get("answer")
 ]
 
 print(f"Filtered down to {len(filtered_datas)} samples.", file=sys.stderr)
@@ -53,9 +57,9 @@ if filtered_datas:
     os.makedirs(save_dir, exist_ok=True)
 
     save_path = f"{save_dir}/train.parquet"
-    
+
     train_dataset.to_parquet(save_path)
-    
+
     print(save_path)
 else:
     print("Warning: No data to save after filtering.", file=sys.stderr)

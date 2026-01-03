@@ -23,7 +23,11 @@ from tensordict import TensorDict
 from verl.protocol import DataProto, DataProtoFuture
 from verl.single_controller.base.decorator import Dispatch, register
 from verl.single_controller.base.worker import Worker
-from verl.single_controller.ray import RayClassWithInitArgs, RayResourcePool, RayWorkerGroup
+from verl.single_controller.ray import (
+    RayClassWithInitArgs,
+    RayResourcePool,
+    RayWorkerGroup,
+)
 
 
 # Pytest fixture for Ray setup/teardown
@@ -47,7 +51,11 @@ class DecoratorTestWorker(Worker):
     @register(dispatch_mode=Dispatch.DP_COMPUTE_PROTO)
     def dp_compute(self, data: DataProto) -> DataProto:
         time.sleep(0.1)  # Simulate work
-        rank_value = torch.tensor(self.rank, device=data.batch["input"].device, dtype=data.batch["input"].dtype)
+        rank_value = torch.tensor(
+            self.rank,
+            device=data.batch["input"].device,
+            dtype=data.batch["input"].dtype,
+        )
         data.batch["output"] = data.batch["input"] + self.value + rank_value
         return data
 
@@ -56,7 +64,11 @@ class DecoratorTestWorker(Worker):
     async def async_dp_compute(self, data: DataProto) -> DataProto:
         # Simulate async work
         await asyncio.sleep(0.1)  # Simulate async work
-        rank_value = torch.tensor(self.rank, device=data.batch["input"].device, dtype=data.batch["input"].dtype)
+        rank_value = torch.tensor(
+            self.rank,
+            device=data.batch["input"].device,
+            dtype=data.batch["input"].dtype,
+        )
         data.batch["output_async"] = data.batch["input"] * 2 + self.value + rank_value
         return data
 
@@ -68,10 +80,14 @@ def test_decorator_dp_compute(ray_init_shutdown):
     Verifies the result correctness.
     """
     num_workers = 2
-    resource_pool = RayResourcePool([num_workers], use_gpu=False, max_colocate_count=1)  # Use CPU for simplicity
+    resource_pool = RayResourcePool(
+        [num_workers], use_gpu=False, max_colocate_count=1
+    )  # Use CPU for simplicity
     cls_with_args = RayClassWithInitArgs(cls=DecoratorTestWorker, initial_value=10)
     worker_group = RayWorkerGroup(
-        resource_pool, cls_with_args, name_prefix=f"decorator_test_sync_dp_{int(time.time())}"
+        resource_pool,
+        cls_with_args,
+        name_prefix=f"decorator_test_sync_dp_{int(time.time())}",
     )
 
     # Prepare input data (size 4, for 2 workers)
@@ -94,7 +110,11 @@ def test_decorator_dp_compute(ray_init_shutdown):
     expected_output_part2 = torch.tensor([2, 3], dtype=torch.float32) + 10 + 1
     expected_output = torch.cat([expected_output_part1, expected_output_part2])
 
-    torch.testing.assert_close(output.batch["output"], expected_output, msg="Sync DP compute output data mismatch")
+    torch.testing.assert_close(
+        output.batch["output"],
+        expected_output,
+        msg="Sync DP compute output data mismatch",
+    )
 
 
 # Test function for async def method with DP compute
@@ -107,7 +127,9 @@ def test_decorator_async_function(ray_init_shutdown):
     resource_pool = RayResourcePool([num_workers], use_gpu=False, max_colocate_count=1)
     cls_with_args = RayClassWithInitArgs(cls=DecoratorTestWorker, initial_value=5)
     worker_group = RayWorkerGroup(
-        resource_pool, cls_with_args, name_prefix=f"decorator_test_async_dp_{int(time.time())}"
+        resource_pool,
+        cls_with_args,
+        name_prefix=f"decorator_test_async_dp_{int(time.time())}",
     )
 
     # Prepare input data (size 4, for 2 workers)
@@ -118,7 +140,9 @@ def test_decorator_async_function(ray_init_shutdown):
     future_output: DataProtoFuture = worker_group.async_dp_compute(data)
 
     # Assert that the call returned a future
-    assert isinstance(future_output, DataProtoFuture), "Expected DataProtoFuture for async def call"
+    assert isinstance(
+        future_output, DataProtoFuture
+    ), "Expected DataProtoFuture for async def call"
 
     # Get the result (this should block)
     result_data = future_output.get()
@@ -137,5 +161,7 @@ def test_decorator_async_function(ray_init_shutdown):
     expected_output = torch.cat([expected_output_part1, expected_output_part2])
 
     torch.testing.assert_close(
-        result_data.batch["output_async"], expected_output, msg="Async DP compute output data mismatch"
+        result_data.batch["output_async"],
+        expected_output,
+        msg="Async DP compute output data mismatch",
     )

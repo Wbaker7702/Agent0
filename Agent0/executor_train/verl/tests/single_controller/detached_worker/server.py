@@ -38,7 +38,11 @@ from verl.single_controller.base.megatron.worker import MegatronWorker
 from verl.single_controller.ray import RayClassWithInitArgs, RayResourcePool
 from verl.single_controller.ray.megatron import NVMegatronRayWorkerGroup
 from verl.utils.megatron.optimizer import get_megatron_optimizer
-from verl.utils.megatron_utils import get_model, init_megatron_optim_config, mcore_model_parallel_config
+from verl.utils.megatron_utils import (
+    get_model,
+    init_megatron_optim_config,
+    mcore_model_parallel_config,
+)
 
 
 @ray.remote
@@ -75,7 +79,9 @@ class Trainer(MegatronWorker):
             num_key_value_heads=16,
         )
 
-        megatron_config = mcore_model_parallel_config(sequence_parallel=True, params_dtype=torch.bfloat16)
+        megatron_config = mcore_model_parallel_config(
+            sequence_parallel=True, params_dtype=torch.bfloat16
+        )
         self.megatron_config = megatron_config
 
         def megatron_actor_model_provider(pre_process, post_process):
@@ -102,7 +108,9 @@ class Trainer(MegatronWorker):
 
         optim_config = init_megatron_optim_config(optim_config)
         self.optimizer_config = optim_config
-        actor_optimizer = get_megatron_optimizer(model=actor_module, config=optim_config)
+        actor_optimizer = get_megatron_optimizer(
+            model=actor_module, config=optim_config
+        )
 
         self.model = actor_module[0]
         self.optimizer = actor_optimizer
@@ -118,14 +126,20 @@ class Trainer(MegatronWorker):
             zero_buffer=(not self.optimizer_config.use_distributed_optimizer)
         )  # use use_contiguous_buffers_in_local_ddp and no overlap_dp_param_comm
         # update for 1 iteration
-        output = self.model(input_ids=input_ids, attention_mask=attention_mask, position_ids=position_ids).logits
+        output = self.model(
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            position_ids=position_ids,
+        ).logits
         output.mean().backward()
 
         update_successful, grad_norm, num_zeros_in_grad = self.optimizer.step(
             self.megatron_config, self.megatron_config.timers
         )
 
-        return DataProto(batch=TensorDict({"loss": output.detach()}, batch_size=output.shape[0]))
+        return DataProto(
+            batch=TensorDict({"loss": output.detach()}, batch_size=output.shape[0])
+        )
 
 
 if __name__ == "__main__":

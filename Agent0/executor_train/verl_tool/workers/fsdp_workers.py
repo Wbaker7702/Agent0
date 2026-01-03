@@ -9,15 +9,26 @@ from .utils import SiblingMetaClass, SiblingMarker
 def dispatch_no_change(worker_group, *args, **kwargs):
     return args, kwargs
 
+
 def collect_dp_compute(worker_group, output):
     from verl.single_controller.base.worker_group import WorkerGroup
+
     assert isinstance(worker_group, WorkerGroup)
     assert len(output) == worker_group.world_size
     return output
 
-class AgentActorRolloutRefWorker(Worker, DistProfilerExtension, ActorRolloutRefWorker, SiblingMarker, metaclass=SiblingMetaClass):
+
+class AgentActorRolloutRefWorker(
+    Worker,
+    DistProfilerExtension,
+    ActorRolloutRefWorker,
+    SiblingMarker,
+    metaclass=SiblingMetaClass,
+):
     def __init__(self, config: DictConfig, role: str, **kwargs):
-        self.manager = AgentActorManager.from_rollout_config(self, self.config, rollout_mode="sync")
+        self.manager = AgentActorManager.from_rollout_config(
+            self, self.config, rollout_mode="sync"
+        )
         self.agent_config = self.manager.config
 
     @register(dispatch_mode=Dispatch.DP_COMPUTE_PROTO)
@@ -29,17 +40,23 @@ class AgentActorRolloutRefWorker(Worker, DistProfilerExtension, ActorRolloutRefW
         assert self._is_rollout
 
         meta_info = {
-            "eos_token_id": self.generation_config.eos_token_id
-            if self.generation_config is not None
-            else self.tokenizer.eos_token_id,
-            "pad_token_id": self.generation_config.pad_token_id
-            if self.generation_config is not None
-            else self.tokenizer.pad_token_id,
+            "eos_token_id": (
+                self.generation_config.eos_token_id
+                if self.generation_config is not None
+                else self.tokenizer.eos_token_id
+            ),
+            "pad_token_id": (
+                self.generation_config.pad_token_id
+                if self.generation_config is not None
+                else self.tokenizer.pad_token_id
+            ),
         }
         prompts.meta_info.update(meta_info)
         timing_generate = {}
         with self.rollout_sharding_manager:
-            log_gpu_memory_usage("After entering rollout sharding manager", logger=logger)
+            log_gpu_memory_usage(
+                "After entering rollout sharding manager", logger=logger
+            )
 
             prompts = self.rollout_sharding_manager.preprocess_data(prompts)
             with simple_timer("generate_sequences", timing_generate):
@@ -48,7 +65,7 @@ class AgentActorRolloutRefWorker(Worker, DistProfilerExtension, ActorRolloutRefW
                     output = self.rollout.generate_sequences(prompts=prompts)
                 else:
                     # agent behavior
-                    output = self.manager.run_llm_loop(prompts) # our agent behavior
+                    output = self.manager.run_llm_loop(prompts)  # our agent behavior
 
             log_gpu_memory_usage("After rollout generation", logger=logger)
 
@@ -79,7 +96,9 @@ class AgentActorRolloutRefWorker(Worker, DistProfilerExtension, ActorRolloutRefW
             load_fsdp_model_to_gpu(self.actor_module_fsdp)
 
         self.checkpoint_manager.load_checkpoint(
-            local_path=local_path, hdfs_path=hdfs_path, del_local_after_load=del_local_after_load
+            local_path=local_path,
+            hdfs_path=hdfs_path,
+            del_local_after_load=del_local_after_load,
         )
         # load the weight to vllm
         self.rollout_sharding_manager.__enter__()

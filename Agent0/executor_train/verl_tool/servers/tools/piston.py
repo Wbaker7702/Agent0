@@ -8,13 +8,14 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 @register_tool
 class PistonTool(BaseTool):
     tool_type = "piston"
-    
+
     def __init__(self, num_workers=1, api_url=None, use_local=False):
         super().__init__(num_workers)
-        
+
         # Determine API URL
         if api_url is not None:
             self.api_url = api_url
@@ -27,7 +28,7 @@ class PistonTool(BaseTool):
             self.api_url = "https://emkc.org/api/v2/piston"
             self.is_public_api = True
             self._show_public_api_info()
-        
+
         # Test connection
         try:
             asyncio.get_event_loop().run_until_complete(self._test_connection())
@@ -39,7 +40,7 @@ class PistonTool(BaseTool):
             if not self.is_public_api:
                 self._show_docker_guide()
             raise e
-    
+
     def _show_docker_guide(self):
         """Display Docker startup guide"""
         guide = """
@@ -73,7 +74,7 @@ For Python client (optional):
    pip install pyston
 """
         logger.error(guide)
-    
+
     def _show_public_api_info(self):
         """Display public API information and rate limits"""
         info = """
@@ -86,7 +87,7 @@ To use local instance:
 PistonTool(use_local=True) or PistonTool(api_url="http://localhost:2000/api/v2")
 """
         logger.info(info)
-    
+
     def _get_api_endpoint(self, endpoint):
         """Build full endpoint path based on API URL"""
         if self.is_public_api:
@@ -98,7 +99,7 @@ PistonTool(use_local=True) or PistonTool(api_url="http://localhost:2000/api/v2")
                 return f"{self.api_url}/{endpoint}"
             else:
                 return f"{self.api_url}/api/v2/{endpoint}"
-    
+
     async def _test_connection(self):
         """Test connection to the Piston API"""
         try:
@@ -106,45 +107,53 @@ PistonTool(use_local=True) or PistonTool(api_url="http://localhost:2000/api/v2")
                 url = self._get_api_endpoint("runtimes")
                 async with session.get(url) as response:
                     if response.status != 200:
-                        raise ConnectionError(f"Failed to connect to Piston API: HTTP {response.status}")
-                    
+                        raise ConnectionError(
+                            f"Failed to connect to Piston API: HTTP {response.status}"
+                        )
+
                     # Get list of available runtimes for info
                     runtimes = await response.json()
-                    languages = [f"{r['language']} ({r['version']})" for r in runtimes[:5]]
-                    logger.info(f"Piston API connected. Available languages (showing 5 of {len(runtimes)}): {', '.join(languages)}...")
-                        
+                    languages = [
+                        f"{r['language']} ({r['version']})" for r in runtimes[:5]
+                    ]
+                    logger.info(
+                        f"Piston API connected. Available languages (showing 5 of {len(runtimes)}): {', '.join(languages)}..."
+                    )
+
         except aiohttp.ClientConnectorError:
-            raise ConnectionError("Cannot connect to Piston API. Is the Docker container running?")
+            raise ConnectionError(
+                "Cannot connect to Piston API. Is the Docker container running?"
+            )
         except Exception as e:
             raise ConnectionError(f"Failed to connect to Piston API: {str(e)}")
-    
-    def parse_action(self, action:str):
+
+    def parse_action(self, action: str):
         """Parse action string in either XML or JSON format"""
         action = action.strip()
-        
+
         # Try to parse as XML format
         if action.startswith("<piston>") and action.endswith("</piston>"):
             return self._parse_xml_action(action)
-        
+
         # Try to parse as JSON format
         elif action.startswith("{") and action.endswith("}"):
             return self._parse_json_action(action)
-        
+
         # Invalid format
         else:
             logger.error("Unrecognized action format")
             return None, False
-    
-    def _parse_xml_action(self, action:str):
+
+    def _parse_xml_action(self, action: str):
         """Parse XML formatted action"""
         try:
             # Process XML
             root = ET.fromstring(action)
             if root.tag != "piston":
                 return None, False
-            
+
             parsed = {}
-            
+
             # Parse basic attributes
             for elem in root:
                 if elem.tag in ["language", "version", "args", "stdin"]:
@@ -152,28 +161,25 @@ PistonTool(use_local=True) or PistonTool(api_url="http://localhost:2000/api/v2")
                 elif elem.tag == "file":
                     if "files" not in parsed:
                         parsed["files"] = []
-                    
+
                     filename = elem.get("name", f"file{len(parsed['files'])}")
                     content = elem.text if elem.text else ""
-                    
-                    parsed["files"].append({
-                        "name": filename,
-                        "content": content
-                    })
-            
+
+                    parsed["files"].append({"name": filename, "content": content})
+
             # Ensure required fields exist
             if "language" not in parsed:
                 logger.error("Missing required language field")
                 return None, False
-                
+
             if "files" not in parsed or len(parsed["files"]) == 0:
                 logger.error("Missing file content")
                 return None, False
-                
+
             # Process args
             if "args" in parsed:
                 parsed["args"] = parsed["args"].split()
-                
+
             return parsed, True
         except ET.ParseError as e:
             logger.error(f"XML parsing error: {str(e)}")
@@ -181,32 +187,38 @@ PistonTool(use_local=True) or PistonTool(api_url="http://localhost:2000/api/v2")
         except Exception as e:
             logger.error(f"Error parsing XML action: {str(e)}")
             return None, False
-    
-    def _parse_json_action(self, action:str):
+
+    def _parse_json_action(self, action: str):
         """Parse JSON formatted action"""
         try:
             parsed = json.loads(action)
-            
+
             # Ensure required fields exist
             if "language" not in parsed:
                 logger.error("Missing required language field")
                 return None, False
-                
-            if "files" not in parsed or not isinstance(parsed["files"], list) or len(parsed["files"]) == 0:
+
+            if (
+                "files" not in parsed
+                or not isinstance(parsed["files"], list)
+                or len(parsed["files"]) == 0
+            ):
                 logger.error("Missing file content or files field is not a valid array")
                 return None, False
-                
+
             # Validate files structure
             for i, file in enumerate(parsed["files"]):
                 if not isinstance(file, dict) or "content" not in file:
-                    logger.error(f"File #{i+1} is missing content or has invalid format")
+                    logger.error(
+                        f"File #{i+1} is missing content or has invalid format"
+                    )
                     return None, False
-                    
+
                 if "name" not in file:
                     # Generate default filename
                     extension = self._get_extension_for_language(parsed["language"])
                     file["name"] = f"file{i}{extension}"
-            
+
             return parsed, True
         except json.JSONDecodeError as e:
             logger.error(f"JSON parsing error: {str(e)}")
@@ -214,12 +226,12 @@ PistonTool(use_local=True) or PistonTool(api_url="http://localhost:2000/api/v2")
         except Exception as e:
             logger.error(f"Error parsing JSON action: {str(e)}")
             return None, False
-    
+
     def _get_extension_for_language(self, language):
         """Get file extension for a given language"""
         extensions = {
             "python": ".py",
-            "javascript": ".js", 
+            "javascript": ".js",
             "typescript": ".ts",
             "java": ".java",
             "c": ".c",
@@ -231,11 +243,11 @@ PistonTool(use_local=True) or PistonTool(api_url="http://localhost:2000/api/v2")
             "php": ".php",
             "swift": ".swift",
             "kotlin": ".kt",
-            "scala": ".scala"
+            "scala": ".scala",
         }
-        
+
         return extensions.get(language.lower(), f".{language}")
-    
+
     async def _execute_code(self, parsed_action):
         """Execute code and return result"""
         try:
@@ -244,7 +256,7 @@ PistonTool(use_local=True) or PistonTool(api_url="http://localhost:2000/api/v2")
             args = parsed_action.get("args", [])
             stdin = parsed_action.get("stdin", "")
             files = parsed_action.get("files", [])
-            
+
             payload = {
                 "language": language,
                 "version": version,
@@ -254,32 +266,34 @@ PistonTool(use_local=True) or PistonTool(api_url="http://localhost:2000/api/v2")
                 "compile_timeout": 10000,
                 "run_timeout": 3000,
                 "compile_memory_limit": -1,
-                "run_memory_limit": -1
+                "run_memory_limit": -1,
             }
-            
+
             async with aiohttp.ClientSession() as session:
                 url = self._get_api_endpoint("execute")
                 async with session.post(url, json=payload) as response:
                     if response.status != 200:
                         # Handle rate limiting
                         if self.is_public_api and response.status == 429:
-                            retry_after = response.headers.get('Retry-After', '60')
-                            return {"error": f"Rate limit exceeded. Try again after {retry_after} seconds."}
-                            
+                            retry_after = response.headers.get("Retry-After", "60")
+                            return {
+                                "error": f"Rate limit exceeded. Try again after {retry_after} seconds."
+                            }
+
                         error_text = await response.text()
                         return {"error": f"HTTP {response.status}: {error_text}"}
-                    
+
                     result = await response.json()
                     return result
         except Exception as e:
             logger.error(f"Error executing code: {str(e)}")
             return {"error": f"Failed to execute code: {str(e)}"}
-    
+
     def conduct_action(self, trajectory_id, action, extra_field):
         """Execute action and return observation result"""
         parsed_action, is_valid = self.parse_action(action)
         env = self.load_env(trajectory_id)
-        
+
         if not is_valid:
             observation = """
 Invalid action format. Supported formats:
@@ -330,10 +344,10 @@ def add(a, b):
                     # No event loop in current thread, create a new one
                     loop = asyncio.new_event_loop()
                     asyncio.set_event_loop(loop)
-                
+
                 # Execute code
                 result = loop.run_until_complete(self._execute_code(parsed_action))
-                
+
                 # Format output
                 if "error" in result:
                     observation = f"Error: {result['error']}"
@@ -345,11 +359,11 @@ def add(a, b):
                     signal = result["run"].get("signal")
                     cpu_time = result["run"].get("cpu_time", 0)
                     memory = result["run"].get("memory", 0)
-                    
+
                     status_msg = ""
                     if result["run"].get("status"):
                         status_msg = f" ({result['run']['status']})"
-                    
+
                     observation = f"""Execution result:
 
 Language: {parsed_action.get('language')}
@@ -367,12 +381,14 @@ CPU time: {cpu_time}ms
 Memory usage: {memory/1000000:.2f}MB
 """
                     valid = True
-                elif "compile" in result and result["compile"].get("status") is not None:
+                elif (
+                    "compile" in result and result["compile"].get("status") is not None
+                ):
                     # Compilation error
                     stdout = result["compile"].get("stdout", "")
                     stderr = result["compile"].get("stderr", "")
                     code = result["compile"].get("code")
-                    
+
                     observation = f"""Compilation error:
 
 --- Compile output ---
@@ -386,17 +402,25 @@ Status: {result["compile"].get("status", "Unknown")}
 """
                     valid = True
                 else:
-                    observation = f"Unknown result format: {json.dumps(result, indent=2)}"
+                    observation = (
+                        f"Unknown result format: {json.dumps(result, indent=2)}"
+                    )
                     valid = False
-                
+
                 done = True
             except Exception as e:
                 observation = f"Error executing code: {str(e)}"
                 done = True
                 valid = False
-        
-        self.update_env(trajectory_id, env, parsed_action if is_valid else action, 
-                        is_valid, extra_field, observation)
+
+        self.update_env(
+            trajectory_id,
+            env,
+            parsed_action if is_valid else action,
+            is_valid,
+            extra_field,
+            observation,
+        )
         self.save_env(trajectory_id, env)
-        
+
         return observation, done, valid

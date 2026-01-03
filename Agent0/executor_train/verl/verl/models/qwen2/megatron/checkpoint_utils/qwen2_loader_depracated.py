@@ -39,7 +39,8 @@ def _megatron_calc_layer_map(config):
     for pp_rank_idx in range(pp_size):
         for virtual_pp_rank_idx in range(virtual_pp_size):
             layer_offset = (
-                virtual_pp_rank_idx * (config.num_hidden_layers // virtual_pp_size) + pp_rank_idx * num_layers_per_model
+                virtual_pp_rank_idx * (config.num_hidden_layers // virtual_pp_size)
+                + pp_rank_idx * num_layers_per_model
             )
             for layer_idx in range(num_layers_per_model):
                 layer_map[layer_offset + layer_idx] = (
@@ -51,7 +52,12 @@ def _megatron_calc_layer_map(config):
 
 
 def load_state_dict_to_megatron_qwen2(
-    state_dict, wrapped_models, config, params_dtype, is_value_model=False, tie_word_embeddings=False
+    state_dict,
+    wrapped_models,
+    config,
+    params_dtype,
+    is_value_model=False,
+    tie_word_embeddings=False,
 ):
     """Load merged state_dict to sharded Megatron module in training."""
     from megatron.core import DistributedDataParallel as LocalDDP
@@ -70,7 +76,9 @@ def load_state_dict_to_megatron_qwen2(
     def broadcast_params(module):
         for param in module.parameters():
             torch.distributed.broadcast(
-                param.data, src=mpu.get_data_parallel_src_rank(), group=mpu.get_data_parallel_group()
+                param.data,
+                src=mpu.get_data_parallel_src_rank(),
+                group=mpu.get_data_parallel_group(),
             )
 
     dp_rank = mpu.get_data_parallel_rank()
@@ -89,7 +97,9 @@ def load_state_dict_to_megatron_qwen2(
 
     assert len(wrapped_models) == virtual_pp_size
     num_layers_per_model = config.num_hidden_layers // pp_size // virtual_pp_size
-    assert num_layers_per_model * pp_size * virtual_pp_size == config.num_hidden_layers, (
+    assert (
+        num_layers_per_model * pp_size * virtual_pp_size == config.num_hidden_layers
+    ), (
         f"num_layers_per_model: {num_layers_per_model} * pp_size: {pp_size} * virtual_pp_size: "
         f"{virtual_pp_size} != config.num_hidden_layers: {config.num_hidden_layers}"
     )
@@ -135,7 +145,9 @@ def load_state_dict_to_megatron_qwen2(
             tensor.data.copy_(weight)
         dist.broadcast(tensor, src=0, group=mp_group)
 
-    def _broadcast_tp_shard_tensor_vocab(tensor, name, chunk_dim=0, mutate_func=None) -> torch.Tensor:
+    def _broadcast_tp_shard_tensor_vocab(
+        tensor, name, chunk_dim=0, mutate_func=None
+    ) -> torch.Tensor:
         """broadcast tensor in tp shards across mp_group"""
         nonlocal state_dict
         nonlocal mp_group
@@ -171,10 +183,12 @@ def load_state_dict_to_megatron_qwen2(
                 requires_grad=False,
             )
         else:
-            assert tensor.shape == chunk_shape, (
-                f"rank #{torch.distributed.get_rank()} tensor {name} shape {tensor.shape} != {chunk_shape}"
+            assert (
+                tensor.shape == chunk_shape
+            ), f"rank #{torch.distributed.get_rank()} tensor {name} shape {tensor.shape} != {chunk_shape}"
+            sync_tensor = torch.empty_like(
+                tensor, device=get_device_id(), requires_grad=False
             )
-            sync_tensor = torch.empty_like(tensor, device=get_device_id(), requires_grad=False)
 
         for i in range(tp_size):
             if torch.distributed.get_rank() == 0:
@@ -183,7 +197,9 @@ def load_state_dict_to_megatron_qwen2(
             if (i == tp_rank) and (tensor is not None):
                 tensor.data.copy_(sync_tensor)
 
-    def _broadcast_tp_shard_tensor(tensor, name, chunk_dim=0, mutate_func=None) -> torch.Tensor:
+    def _broadcast_tp_shard_tensor(
+        tensor, name, chunk_dim=0, mutate_func=None
+    ) -> torch.Tensor:
         """broadcast tensor in tp shards across mp_group"""
         nonlocal state_dict
         nonlocal mp_group
@@ -218,10 +234,12 @@ def load_state_dict_to_megatron_qwen2(
                 requires_grad=False,
             )
         else:
-            assert tensor.shape == chunk_shape, (
-                f"rank #{torch.distributed.get_rank()} tensor {name} shape {tensor.shape} != {chunk_shape}"
+            assert (
+                tensor.shape == chunk_shape
+            ), f"rank #{torch.distributed.get_rank()} tensor {name} shape {tensor.shape} != {chunk_shape}"
+            sync_tensor = torch.empty_like(
+                tensor, device=get_device_id(), requires_grad=False
             )
-            sync_tensor = torch.empty_like(tensor, device=get_device_id(), requires_grad=False)
 
         for i in range(tp_size):
             if torch.distributed.get_rank() == 0:
@@ -241,15 +259,22 @@ def load_state_dict_to_megatron_qwen2(
             gate_weight = state_dict[gate_name]
             up_weight = state_dict[up_name]
             new_gate_up_weight = torch.empty(
-                config.intermediate_size * 2, config.hidden_size, dtype=params_dtype, device=get_device_id()
+                config.intermediate_size * 2,
+                config.hidden_size,
+                dtype=params_dtype,
+                device=get_device_id(),
             )
             for i in range(tp_size):
                 intermediate_size_tp = config.intermediate_size // tp_size
-                gate_weight_tp = gate_weight[i * intermediate_size_tp : (i + 1) * intermediate_size_tp]
-                up_weight_tp = up_weight[i * intermediate_size_tp : (i + 1) * intermediate_size_tp]
-                new_gate_up_weight[intermediate_size_tp * 2 * i : intermediate_size_tp * 2 * (i + 1)].copy_(
-                    torch.cat([gate_weight_tp, up_weight_tp], dim=0)
-                )
+                gate_weight_tp = gate_weight[
+                    i * intermediate_size_tp : (i + 1) * intermediate_size_tp
+                ]
+                up_weight_tp = up_weight[
+                    i * intermediate_size_tp : (i + 1) * intermediate_size_tp
+                ]
+                new_gate_up_weight[
+                    intermediate_size_tp * 2 * i : intermediate_size_tp * 2 * (i + 1)
+                ].copy_(torch.cat([gate_weight_tp, up_weight_tp], dim=0))
 
             tensor_chunk = torch.chunk(new_gate_up_weight, tp_size, dim=0)
             chunk_shape = tensor_chunk[0].shape
@@ -261,7 +286,9 @@ def load_state_dict_to_megatron_qwen2(
         chunk_shape = obj_list[0]
         if chunk_shape is None:
             # all or none ranks in the mp_group should reach here
-            print_rank_0(f"tp_shard tensor:[{gate_name, up_name}] not in state_dict, skip loading")
+            print_rank_0(
+                f"tp_shard tensor:[{gate_name, up_name}] not in state_dict, skip loading"
+            )
             return
 
         if tensor is None:
@@ -276,7 +303,9 @@ def load_state_dict_to_megatron_qwen2(
                 f"rank #{torch.distributed.get_rank() == 0:} tensor {gate_name, up_name} shape "
                 f"{tensor.shape} != {chunk_shape}"
             )
-            sync_tensor = torch.empty_like(tensor, device=get_device_id(), requires_grad=False)
+            sync_tensor = torch.empty_like(
+                tensor, device=get_device_id(), requires_grad=False
+            )
 
         for i in range(tp_size):
             if torch.distributed.get_rank() == 0:
@@ -285,7 +314,9 @@ def load_state_dict_to_megatron_qwen2(
             if (i == tp_rank) and (tensor is not None):
                 tensor.data.copy_(sync_tensor)
 
-    def _broadcast_tp_shard_tensor_qkv(tensor, q_name, k_name, v_name, bias=False) -> torch.Tensor:
+    def _broadcast_tp_shard_tensor_qkv(
+        tensor, q_name, k_name, v_name, bias=False
+    ) -> torch.Tensor:
         """broadcast tensor in tp shards across mp_group"""
         nonlocal state_dict
         nonlocal mp_group
@@ -293,7 +324,9 @@ def load_state_dict_to_megatron_qwen2(
         tp_size = mpu.get_tensor_model_parallel_world_size()
 
         if torch.distributed.get_rank() == 0:
-            assert q_name in state_dict and k_name in state_dict and v_name in state_dict
+            assert (
+                q_name in state_dict and k_name in state_dict and v_name in state_dict
+            )
             full_weight_q = state_dict[q_name]
             full_weight_k = state_dict[k_name]
             full_weight_v = state_dict[v_name]
@@ -302,14 +335,21 @@ def load_state_dict_to_megatron_qwen2(
 
             if config.num_key_value_heads >= tp_size:
                 q_size_tp = config.hidden_size // tp_size
-                kv_size_tp = hidden_size_per_head * config.num_key_value_heads // tp_size
+                kv_size_tp = (
+                    hidden_size_per_head * config.num_key_value_heads // tp_size
+                )
                 total_size = q_size_tp + 2 * kv_size_tp
                 if not bias:
                     new_weight_qkv = torch.empty(
-                        total_size * tp_size, config.hidden_size, dtype=params_dtype, device=get_device_id()
+                        total_size * tp_size,
+                        config.hidden_size,
+                        dtype=params_dtype,
+                        device=get_device_id(),
                     )
                 else:
-                    new_weight_qkv = torch.empty(total_size * tp_size, dtype=params_dtype, device=get_device_id())
+                    new_weight_qkv = torch.empty(
+                        total_size * tp_size, dtype=params_dtype, device=get_device_id()
+                    )
                 for i in range(tp_size):
                     q_part = full_weight_q[i * q_size_tp : (i + 1) * q_size_tp]
                     k_part = full_weight_k[i * kv_size_tp : (i + 1) * kv_size_tp]
@@ -324,14 +364,23 @@ def load_state_dict_to_megatron_qwen2(
                 total_size = q_size_tp + 2 * kv_size_tp
                 if not bias:
                     new_weight_qkv = torch.empty(
-                        total_size * tp_size, config.hidden_size, dtype=params_dtype, device=get_device_id()
+                        total_size * tp_size,
+                        config.hidden_size,
+                        dtype=params_dtype,
+                        device=get_device_id(),
                     )
                 else:
-                    new_weight_qkv = torch.empty(total_size * tp_size, dtype=params_dtype, device=get_device_id())
+                    new_weight_qkv = torch.empty(
+                        total_size * tp_size, dtype=params_dtype, device=get_device_id()
+                    )
                 for i in range(tp_size):
                     q_part = full_weight_q[i * q_size_tp : (i + 1) * q_size_tp]
-                    start_idx = i * config.num_key_value_heads // tp_size * hidden_size_per_head
-                    end_idx = (i * config.num_key_value_heads // tp_size + 1) * hidden_size_per_head
+                    start_idx = (
+                        i * config.num_key_value_heads // tp_size * hidden_size_per_head
+                    )
+                    end_idx = (
+                        i * config.num_key_value_heads // tp_size + 1
+                    ) * hidden_size_per_head
                     k_part = full_weight_k[start_idx:end_idx]
                     v_part = full_weight_v[start_idx:end_idx]
                     new_weight_qkv[i * total_size : (i + 1) * total_size].copy_(
@@ -348,7 +397,9 @@ def load_state_dict_to_megatron_qwen2(
         chunk_shape = obj_list[0]
         if chunk_shape is None:
             # all or none ranks in the mp_group should reach here
-            print_rank_0(f"tp_shard tensor:[{q_name, k_name, v_name}] not in state_dict, skip loading")
+            print_rank_0(
+                f"tp_shard tensor:[{q_name, k_name, v_name}] not in state_dict, skip loading"
+            )
             return
 
         if tensor is None:
@@ -359,10 +410,12 @@ def load_state_dict_to_megatron_qwen2(
                 requires_grad=False,
             )
         else:
-            assert tensor.shape == chunk_shape, (
-                f"rank #{torch.distributed.get_rank()} tensor {q_name} shape {tensor.shape} != {chunk_shape}"
+            assert (
+                tensor.shape == chunk_shape
+            ), f"rank #{torch.distributed.get_rank()} tensor {q_name} shape {tensor.shape} != {chunk_shape}"
+            sync_tensor = torch.empty_like(
+                tensor, device=get_device_id(), requires_grad=False
             )
-            sync_tensor = torch.empty_like(tensor, device=get_device_id(), requires_grad=False)
 
         for i in range(tp_size):
             if torch.distributed.get_rank() == 0:
@@ -379,7 +432,9 @@ def load_state_dict_to_megatron_qwen2(
         embed_tokens_weight = None
         if pp_rank == 0:
             embed_tokens_weight = gpt_model_module.model.embed_tokens.weight
-        _broadcast_tp_shard_tensor_vocab(embed_tokens_weight, "model.embed_tokens.weight")
+        _broadcast_tp_shard_tensor_vocab(
+            embed_tokens_weight, "model.embed_tokens.weight"
+        )
 
         # Transformer layers
         # -------------------
@@ -399,7 +454,11 @@ def load_state_dict_to_megatron_qwen2(
             )
 
             _broadcast_tp_shard_tensor_qkv(
-                sync_layer.self_attn.qkv_proj.weight if dst_pp_rank == pp_rank else None,
+                (
+                    sync_layer.self_attn.qkv_proj.weight
+                    if dst_pp_rank == pp_rank
+                    else None
+                ),
                 f"{layer_name}.self_attn.q_proj.weight",
                 f"{layer_name}.self_attn.k_proj.weight",
                 f"{layer_name}.self_attn.v_proj.weight",
@@ -420,7 +479,11 @@ def load_state_dict_to_megatron_qwen2(
             )
 
             _broadcast_tensor(
-                sync_layer.post_attention_layernorm.weight if dst_pp_rank == pp_rank else None,
+                (
+                    sync_layer.post_attention_layernorm.weight
+                    if dst_pp_rank == pp_rank
+                    else None
+                ),
                 f"{layer_name}.post_attention_layernorm.weight",
             )
 
@@ -453,10 +516,16 @@ def load_state_dict_to_megatron_qwen2(
                 lm_head_weight = gpt_model_module.lm_head.weight
 
             if is_value_model:
-                if "lm_head.weight" in state_dict and state_dict["lm_head.weight"].shape[0] == 1:
+                if (
+                    "lm_head.weight" in state_dict
+                    and state_dict["lm_head.weight"].shape[0] == 1
+                ):
                     _broadcast_tensor(lm_head_weight, "lm_head.weight")
                     print_rank_0("load lm_head from value_head weight")
-                elif "reward_head.weight" in state_dict and state_dict["reward_head.weight"].shape[0] == 1:
+                elif (
+                    "reward_head.weight" in state_dict
+                    and state_dict["reward_head.weight"].shape[0] == 1
+                ):
                     _broadcast_tensor(lm_head_weight, "reward_head.weight")
                     print_rank_0("load lm_head from value_head weight")
                 else:
@@ -472,4 +541,6 @@ def load_state_dict_to_megatron_qwen2(
         broadcast_params(wrapped_model)
 
     get_torch_device().empty_cache()
-    print_rank_0(f"loading megatron ckpt done, time elapsed {time.time() - start_time}s")
+    print_rank_0(
+        f"loading megatron ckpt done, time elapsed {time.time() - start_time}s"
+    )

@@ -44,7 +44,9 @@ def _get_current_mem_info(unit: str = "GB", precision: int = 2) -> tuple[str]:
     return mem_allocated, mem_reserved, mem_used, mem_total
 
 
-def log_gpu_memory_usage(head: str, logger: logging.Logger = None, level=logging.DEBUG, rank: int = 0):
+def log_gpu_memory_usage(
+    head: str, logger: logging.Logger = None, level=logging.DEBUG, rank: int = 0
+):
     """Log GPU memory usage information.
 
     Args:
@@ -77,7 +79,13 @@ class GPUMemoryLogger(DecoratorLoggerBase):
         ...     return
     """
 
-    def __init__(self, role: str, logger: logging.Logger = None, level=logging.DEBUG, log_only_rank_0: bool = True):
+    def __init__(
+        self,
+        role: str,
+        logger: logging.Logger = None,
+        level=logging.DEBUG,
+        log_only_rank_0: bool = True,
+    ):
         if dist.is_initialized() and dist.get_world_size() > 1:
             rank = dist.get_rank()
         else:

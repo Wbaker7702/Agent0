@@ -26,10 +26,16 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, Qwen2Config
 
 from verl.utils.activation_offload import enable_activation_offloading
 from verl.utils.checkpoint.fsdp_checkpoint_manager import FSDPCheckpointManager
-from verl.utils.fsdp_utils import MixedPrecisionPolicy, apply_fsdp2, get_fsdp_wrap_policy
+from verl.utils.fsdp_utils import (
+    MixedPrecisionPolicy,
+    apply_fsdp2,
+    get_fsdp_wrap_policy,
+)
 
 
-def _fsdp_activation_offloading_test(rank, world_size, rendezvous_file, strategy="fsdp"):
+def _fsdp_activation_offloading_test(
+    rank, world_size, rendezvous_file, strategy="fsdp"
+):
     torch.cuda.set_device(rank)
     torch.distributed.init_process_group(
         backend="nccl",
@@ -37,19 +43,27 @@ def _fsdp_activation_offloading_test(rank, world_size, rendezvous_file, strategy
         rank=rank,
         world_size=world_size,
     )
-    device_mesh = init_device_mesh("cuda", mesh_shape=(world_size,), mesh_dim_names=("dp",))
+    device_mesh = init_device_mesh(
+        "cuda", mesh_shape=(world_size,), mesh_dim_names=("dp",)
+    )
 
     model_name = "Qwen/Qwen2.5-0.5B-Instruct"
     config = Qwen2Config(num_hidden_layers=4)
 
     with torch.device("cuda"):
         model = AutoModelForCausalLM.from_config(
-            config=config, torch_dtype=torch.bfloat16, attn_implementation="flash_attention_2"
+            config=config,
+            torch_dtype=torch.bfloat16,
+            attn_implementation="flash_attention_2",
         )
         model = model.to(device="cuda")
 
     # Wrap model with FSDP
-    mixed_precision = MixedPrecision(param_dtype=torch.bfloat16, reduce_dtype=torch.float32, buffer_dtype=torch.float32)
+    mixed_precision = MixedPrecision(
+        param_dtype=torch.bfloat16,
+        reduce_dtype=torch.float32,
+        buffer_dtype=torch.float32,
+    )
 
     if strategy == "fsdp":
         model = FSDP(
@@ -63,7 +77,9 @@ def _fsdp_activation_offloading_test(rank, world_size, rendezvous_file, strategy
         )
     else:
         mp_policy = MixedPrecisionPolicy(
-            param_dtype=torch.bfloat16, reduce_dtype=torch.float32, cast_forward_inputs=True
+            param_dtype=torch.bfloat16,
+            reduce_dtype=torch.float32,
+            cast_forward_inputs=True,
         )
         fsdp_kwargs = {
             "mesh": device_mesh,
@@ -103,7 +119,9 @@ def _fsdp_activation_offloading_test(rank, world_size, rendezvous_file, strategy
     # Save checkpoint after first update
     temp_dir = tempfile.mkdtemp()
     checkpoint_path = os.path.join(temp_dir, "checkpoint")
-    checkpoint_manager.save_checkpoint(local_path=checkpoint_path, hdfs_path=None, global_step=0)
+    checkpoint_manager.save_checkpoint(
+        local_path=checkpoint_path, hdfs_path=None, global_step=0
+    )
 
     # Step 2: Second update and forward pass
     outputs2 = model(input_ids=input_ids2, attention_mask=attention_mask2)
@@ -115,7 +133,9 @@ def _fsdp_activation_offloading_test(rank, world_size, rendezvous_file, strategy
 
     # Record logits after second update
     with torch.no_grad():
-        logits_without_offloading = model(input_ids=input_ids2, attention_mask=attention_mask2).logits
+        logits_without_offloading = model(
+            input_ids=input_ids2, attention_mask=attention_mask2
+        ).logits
 
     # Step 3: wrap module with activation offloading and load checkpoint
     enable_activation_offloading(model, "fsdp")
@@ -131,10 +151,14 @@ def _fsdp_activation_offloading_test(rank, world_size, rendezvous_file, strategy
 
     # Record logits after loaded checkpoint and update
     with torch.no_grad():
-        logits_with_offloading = model(input_ids=input_ids2, attention_mask=attention_mask2).logits
+        logits_with_offloading = model(
+            input_ids=input_ids2, attention_mask=attention_mask2
+        ).logits
 
     # Step 4: Verify outputs match
-    torch.testing.assert_close(logits_without_offloading, logits_with_offloading, atol=0.0, rtol=0.0)
+    torch.testing.assert_close(
+        logits_without_offloading, logits_with_offloading, atol=0.0, rtol=0.0
+    )
     print(f"Activaiton offloading for {strategy} test passed on {world_size} GPUs!")
 
     # Cleanup

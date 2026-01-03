@@ -50,8 +50,14 @@ def get_kl_controller(kl_ctrl):
     if kl_ctrl.type == "fixed":
         return FixedKLController(kl_coef=kl_ctrl.kl_coef)
     elif kl_ctrl.type == "adaptive":
-        assert kl_ctrl.horizon > 0, f"horizon must be larger than 0. Got {kl_ctrl.horizon}"
-        return AdaptiveKLController(init_kl_coef=kl_ctrl.kl_coef, target_kl=kl_ctrl.target_kl, horizon=kl_ctrl.horizon)
+        assert (
+            kl_ctrl.horizon > 0
+        ), f"horizon must be larger than 0. Got {kl_ctrl.horizon}"
+        return AdaptiveKLController(
+            init_kl_coef=kl_ctrl.kl_coef,
+            target_kl=kl_ctrl.target_kl,
+            horizon=kl_ctrl.horizon,
+        )
     else:
         raise NotImplementedError
 
@@ -83,7 +89,9 @@ def compute_onlinedpo_pref(
             f"{token_level_rewards.shape}, {response_mask.shape}"
         )
     if token_level_rewards.shape != response_mask.shape:
-        raise ValueError(f"Shape mismatch between rewards {token_level_rewards.shape} and mask {response_mask.shape}")
+        raise ValueError(
+            f"Shape mismatch between rewards {token_level_rewards.shape} and mask {response_mask.shape}"
+        )
 
     # 1. Calculate Sequence Scores
     scores = (token_level_rewards * response_mask).sum(dim=-1)
@@ -99,7 +107,9 @@ def compute_onlinedpo_pref(
 
     # 3. Compare scores to find which index (0 or 1) is the winner within each pair
     #    winner_indices[i] = 0 if score_pairs[i, 0] >= score_pairs[i, 1] else 1
-    winner_indices = torch.argmax(score_pairs, dim=1)  # 0 if first is max, 1 if second is max
+    winner_indices = torch.argmax(
+        score_pairs, dim=1
+    )  # 0 if first is max, 1 if second is max
     # Handle ties explicitly if argmax behavior isn't guaranteed (usually picks first max)
     # Alternatively: winner_mask_original = score_pairs[:, 0] >= score_pairs[:, 1]
     # print(f"  Winner indices shape: {winner_indices.shape}") # [batch_size]
@@ -117,7 +127,9 @@ def compute_onlinedpo_pref(
     winner_global_indices = (pair_indices * 2) + winner_indices
 
     # Create boolean mask - True at the winner's position
-    output_preference_mask = torch.zeros(full_batch_size, dtype=torch.bool, device=scores.device)
+    output_preference_mask = torch.zeros(
+        full_batch_size, dtype=torch.bool, device=scores.device
+    )
     output_preference_mask[winner_global_indices] = True
 
     # print(f"  Output preference mask shape: {output_preference_mask.shape}") # Should be [batch_size * 2]
@@ -149,11 +161,16 @@ def compute_online_dpo_loss(
     logits = pi_logratios - ref_logratios
 
     if loss_type == "sigmoid":
-        losses = -F.logsigmoid(beta * logits) * (1 - label_smoothing) - F.logsigmoid(-beta * logits) * label_smoothing
+        losses = (
+            -F.logsigmoid(beta * logits) * (1 - label_smoothing)
+            - F.logsigmoid(-beta * logits) * label_smoothing
+        )
     elif loss_type == "ipo":
         losses = (logits - 1 / (2 * beta)) ** 2
     else:
-        raise ValueError(f"Unsupported loss_type: {loss_type}. Choose 'sigmoid', 'ipo', or 'hinge'.")
+        raise ValueError(
+            f"Unsupported loss_type: {loss_type}. Choose 'sigmoid', 'ipo', or 'hinge'."
+        )
 
     return losses.mean()
 
@@ -184,7 +201,9 @@ def get_batch_logps(
 
     # Calculate per token log probability
     loss_fct = torch.nn.CrossEntropyLoss(ignore_index=-100, reduction="none")
-    per_token_logps = -loss_fct(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1))
+    per_token_logps = -loss_fct(
+        shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1)
+    )
     per_token_logps = per_token_logps.view(
         shift_logits.size(0), shift_logits.size(1)
     )  # Reshape back to (batch_size, seq_len-1)

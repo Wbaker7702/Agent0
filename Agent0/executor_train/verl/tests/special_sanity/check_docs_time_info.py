@@ -51,7 +51,10 @@ def is_allowed(path: Path) -> bool:
 
 def main():
     if not DOCS_DIR.exists():
-        print(f"Error: Documentation directory '{DOCS_DIR}' does not exist.", file=sys.stderr)
+        print(
+            f"Error: Documentation directory '{DOCS_DIR}' does not exist.",
+            file=sys.stderr,
+        )
         sys.exit(1)
 
     missing = []

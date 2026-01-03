@@ -23,7 +23,9 @@ from omegaconf import OmegaConf
 class TestConfigComparison(unittest.TestCase):
     """Test that current configs match their legacy counterparts exactly."""
 
-    def _compare_configs_recursively(self, current_config, legacy_config, path="", legacy_allow_missing=True):
+    def _compare_configs_recursively(
+        self, current_config, legacy_config, path="", legacy_allow_missing=True
+    ):
         """Recursively compare two OmegaConf configs and assert they are identical.
 
         Args:
@@ -38,7 +40,9 @@ class TestConfigComparison(unittest.TestCase):
             missing_in_legacy = current_keys - legacy_keys
 
             if missing_in_current:
-                self.fail(f"Keys missing in current config at {path}: {missing_in_current}")
+                self.fail(
+                    f"Keys missing in current config at {path}: {missing_in_current}"
+                )
             if missing_in_legacy:
                 # if the legacy
                 msg = f"Keys missing in legacy config at {path}: {missing_in_legacy}"
@@ -50,15 +54,21 @@ class TestConfigComparison(unittest.TestCase):
             for key in current_keys:
                 current_path = f"{path}.{key}" if path else key
                 if key in legacy_config:
-                    self._compare_configs_recursively(current_config[key], legacy_config[key], current_path)
+                    self._compare_configs_recursively(
+                        current_config[key], legacy_config[key], current_path
+                    )
         elif isinstance(current_config, list) and isinstance(legacy_config, list):
             self.assertEqual(
                 len(current_config),
                 len(legacy_config),
                 f"List lengths differ at {path}: current={len(current_config)}, legacy={len(legacy_config)}",
             )
-            for i, (current_item, legacy_item) in enumerate(zip(current_config, legacy_config, strict=True)):
-                self._compare_configs_recursively(current_item, legacy_item, f"{path}[{i}]")
+            for i, (current_item, legacy_item) in enumerate(
+                zip(current_config, legacy_config, strict=True)
+            ):
+                self._compare_configs_recursively(
+                    current_item, legacy_item, f"{path}[{i}]"
+                )
         else:
             self.assertEqual(
                 current_config,
@@ -76,10 +86,14 @@ class TestConfigComparison(unittest.TestCase):
         GlobalHydra.instance().clear()
 
         try:
-            with initialize_config_dir(config_dir=os.path.abspath("verl/trainer/config")):
+            with initialize_config_dir(
+                config_dir=os.path.abspath("verl/trainer/config")
+            ):
                 current_config = compose(config_name="ppo_trainer")
 
-            legacy_config = OmegaConf.load("tests/trainer/config/legacy_ppo_trainer.yaml")
+            legacy_config = OmegaConf.load(
+                "tests/trainer/config/legacy_ppo_trainer.yaml"
+            )
             current_dict = OmegaConf.to_container(current_config, resolve=True)
             legacy_dict = OmegaConf.to_container(legacy_config, resolve=True)
 
@@ -96,17 +110,23 @@ class TestConfigComparison(unittest.TestCase):
         GlobalHydra.instance().clear()
 
         try:
-            with initialize_config_dir(config_dir=os.path.abspath("verl/trainer/config")):
+            with initialize_config_dir(
+                config_dir=os.path.abspath("verl/trainer/config")
+            ):
                 current_config = compose(config_name="ppo_megatron_trainer")
 
-            legacy_config = OmegaConf.load("tests/trainer/config/legacy_ppo_megatron_trainer.yaml")
+            legacy_config = OmegaConf.load(
+                "tests/trainer/config/legacy_ppo_megatron_trainer.yaml"
+            )
             current_dict = OmegaConf.to_container(current_config, resolve=True)
             legacy_dict = OmegaConf.to_container(legacy_config, resolve=True)
 
             if "defaults" in current_dict:
                 del current_dict["defaults"]
 
-            self._compare_configs_recursively(current_dict, legacy_dict, legacy_allow_missing=True)
+            self._compare_configs_recursively(
+                current_dict, legacy_dict, legacy_allow_missing=True
+            )
         finally:
             GlobalHydra.instance().clear()
 

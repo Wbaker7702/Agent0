@@ -44,9 +44,15 @@ def build_aime2024_dataset():
     print(f"Loading the {data_source} dataset from huggingface...", flush=True)
     dataset = load_dataset(data_source, split="train")
     map_fn = partial(
-        example_map_fn, process_fn=process_aime2024, data_source=data_source, ability="English", split="test"
+        example_map_fn,
+        process_fn=process_aime2024,
+        data_source=data_source,
+        ability="English",
+        split="test",
     )
-    dataset = dataset.map(map_fn, with_indices=True, remove_columns=dataset.column_names)
+    dataset = dataset.map(
+        map_fn, with_indices=True, remove_columns=dataset.column_names
+    )
     return dataset
 
 
@@ -60,12 +66,20 @@ def build_gpqa_dimond_dataset():
     )
 
     def process_gpqa_diamond(example):
-        choices = [example["Incorrect Answer 1"], example["Incorrect Answer 2"], example["Incorrect Answer 3"]]
+        choices = [
+            example["Incorrect Answer 1"],
+            example["Incorrect Answer 2"],
+            example["Incorrect Answer 3"],
+        ]
         random.shuffle(choices)
         gold_index = random.randint(0, 3)
         choices.insert(gold_index, example["Correct Answer"])
         query_prompt = GPQA_QUERY_TEMPLATE.format(
-            A=choices[0], B=choices[1], C=choices[2], D=choices[3], Question=example["Question"]
+            A=choices[0],
+            B=choices[1],
+            C=choices[2],
+            D=choices[3],
+            Question=example["Question"],
         )
         gold_choice = "ABCD"[gold_index]
         return query_prompt, gold_choice
@@ -75,9 +89,15 @@ def build_gpqa_dimond_dataset():
 
     dataset = load_dataset(data_source, "gpqa_diamond", split="train")
     map_fn = partial(
-        example_map_fn, process_fn=process_gpqa_diamond, data_source=data_source, ability="Math", split="test"
+        example_map_fn,
+        process_fn=process_gpqa_diamond,
+        data_source=data_source,
+        ability="Math",
+        split="test",
     )
-    dataset = dataset.map(map_fn, with_indices=True, remove_columns=dataset.column_names)
+    dataset = dataset.map(
+        map_fn, with_indices=True, remove_columns=dataset.column_names
+    )
     return dataset
 
 
@@ -90,15 +110,27 @@ def build_cnmo2024_dataset():
 
     dataset_en = load_dataset(data_source, "v202412_CNMO_en", split="test")
     map_fn_en = partial(
-        example_map_fn, process_fn=process_cnmo2024, data_source="opencompass/cnmo2024_en", ability="Math", split="test"
+        example_map_fn,
+        process_fn=process_cnmo2024,
+        data_source="opencompass/cnmo2024_en",
+        ability="Math",
+        split="test",
     )
-    dataset_en = dataset_en.map(map_fn_en, with_indices=True, remove_columns=dataset_en.column_names)
+    dataset_en = dataset_en.map(
+        map_fn_en, with_indices=True, remove_columns=dataset_en.column_names
+    )
 
     dataset_zh = load_dataset(data_source, "v202412_CNMO_cn", split="test")
     map_fn_zh = partial(
-        example_map_fn, process_fn=process_cnmo2024, data_source="opencompass/cnmo2024_zh", ability="Math", split="test"
+        example_map_fn,
+        process_fn=process_cnmo2024,
+        data_source="opencompass/cnmo2024_zh",
+        ability="Math",
+        split="test",
     )
-    dataset_zh = dataset_zh.map(map_fn_zh, with_indices=True, remove_columns=dataset_zh.column_names)
+    dataset_zh = dataset_zh.map(
+        map_fn_zh, with_indices=True, remove_columns=dataset_zh.column_names
+    )
 
     dataset = concatenate_datasets([dataset_en, dataset_zh])
     return dataset
@@ -137,7 +169,11 @@ def build_livecodebench_dataset():
         except Exception as e:
             print(f"Error loading private test cases: {e}")
             private_test_cases = json.loads(
-                pickle.loads(zlib.decompress(base64.b64decode(example["private_test_cases"].encode("utf-8"))))
+                pickle.loads(
+                    zlib.decompress(
+                        base64.b64decode(example["private_test_cases"].encode("utf-8"))
+                    )
+                )
             )
         full_test_cases = public_test_cases + private_test_cases
 
@@ -147,19 +183,31 @@ def build_livecodebench_dataset():
             "outputs": [t["output"] for t in full_test_cases],
             "fn_name": metadata.get("func_name", None),
         }
-        text_cases_compressed = base64.b64encode(zlib.compress(pickle.dumps(json.dumps(test_cases)))).decode("utf-8")
+        text_cases_compressed = base64.b64encode(
+            zlib.compress(pickle.dumps(json.dumps(test_cases)))
+        ).decode("utf-8")
         return query_prompt, text_cases_compressed
 
     data_source = "livecodebench/code_generation_lite"
     print(f"Loading the {data_source} dataset from huggingface...", flush=True)
     dataset = load_dataset(data_source, split="test")
     # R1 Evaluation use LiveCodeBench 24.08-25.01
-    dataset = dataset.filter(lambda line: "2024-08-00T00:00:00" <= line["contest_date"] < "2025-01-00T00:00:00")
+    dataset = dataset.filter(
+        lambda line: "2024-08-00T00:00:00"
+        <= line["contest_date"]
+        < "2025-01-00T00:00:00"
+    )
     map_fn = partial(
-        example_map_fn, process_fn=process_livecodebench, data_source=data_source, ability="Code", split="test"
+        example_map_fn,
+        process_fn=process_livecodebench,
+        data_source=data_source,
+        ability="Code",
+        split="test",
     )
 
-    dataset = dataset.map(map_fn, with_indices=True, remove_columns=dataset.column_names, num_proc=8)
+    dataset = dataset.map(
+        map_fn, with_indices=True, remove_columns=dataset.column_names, num_proc=8
+    )
     return dataset
 
 

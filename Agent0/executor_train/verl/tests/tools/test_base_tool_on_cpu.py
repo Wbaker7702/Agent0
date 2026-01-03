@@ -44,7 +44,9 @@ class WeatherToolForTest(BaseTool):
         schema = get_json_schema(self.get_current_temperature)
         return OpenAIFunctionToolSchema(**schema)
 
-    async def execute(self, instance_id: str, parameters: dict[str, Any], **kwargs) -> tuple[str, float, dict]:
+    async def execute(
+        self, instance_id: str, parameters: dict[str, Any], **kwargs
+    ) -> tuple[str, float, dict]:
         try:
             result = self.get_current_temperature(**parameters)
             return json.dumps(result), 0, {}
@@ -75,7 +77,9 @@ class WeatherToolWithDataForTest(BaseTool):
             "unit": unit,
         }
 
-    async def execute(self, instance_id: str, parameters: dict[str, Any], **kwargs) -> tuple[str, float, dict]:
+    async def execute(
+        self, instance_id: str, parameters: dict[str, Any], **kwargs
+    ) -> tuple[str, float, dict]:
         try:
             result = self.get_temperature_date(**parameters)
             return json.dumps(result), 0, {}
@@ -152,7 +156,10 @@ def test_initialize_tools_from_local_config(create_local_tool_config):
     tools = initialize_tools_from_config(tool_config_path)
 
     assert len(tools) == 2
-    from tests.tools.test_base_tool_on_cpu import WeatherToolForTest, WeatherToolWithDataForTest
+    from tests.tools.test_base_tool_on_cpu import (
+        WeatherToolForTest,
+        WeatherToolWithDataForTest,
+    )
 
     assert isinstance(tools[0], WeatherToolForTest)
     assert isinstance(tools[1], WeatherToolWithDataForTest)

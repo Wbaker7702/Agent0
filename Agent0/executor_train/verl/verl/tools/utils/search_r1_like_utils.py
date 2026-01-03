@@ -92,7 +92,9 @@ def call_search_api(
             response.raise_for_status()
 
             # If successful (status code 2xx)
-            logger.info(f"{log_prefix}Search API call successful on attempt {attempt + 1}")
+            logger.info(
+                f"{log_prefix}Search API call successful on attempt {attempt + 1}"
+            )
             return response.json(), None
 
         except requests.exceptions.ConnectionError as e:
@@ -124,7 +126,11 @@ def call_search_api(
 
     # If loop finishes without returning success, return the last recorded error
     logger.error(f"{log_prefix}Search API call failed. Last error: {last_error}")
-    return None, last_error.replace(log_prefix, "API Call Failed: ") if last_error else "API Call Failed after retries"
+    return None, (
+        last_error.replace(log_prefix, "API Call Failed: ")
+        if last_error
+        else "API Call Failed after retries"
+    )
 
 
 def _passages2string(retrieval_result):
@@ -198,7 +204,9 @@ def perform_single_search_batch(
         "formatted_result": None,
     }
 
-    result_text = json.dumps({"result": "Search request failed or timed out after retries."})
+    result_text = json.dumps(
+        {"result": "Search request failed or timed out after retries."}
+    )
 
     if error_msg:
         metadata["status"] = "api_error"
@@ -217,14 +225,18 @@ def perform_single_search_batch(
                 for retrieval in raw_results:
                     formatted = _passages2string(retrieval)
                     pretty_results.append(formatted)
-                    total_results += len(retrieval) if isinstance(retrieval, list) else 1
+                    total_results += (
+                        len(retrieval) if isinstance(retrieval, list) else 1
+                    )
 
                 final_result = "\n---\n".join(pretty_results)
                 result_text = json.dumps({"result": final_result})
                 metadata["status"] = "success"
                 metadata["total_results"] = total_results
                 metadata["formatted_result"] = final_result
-                logger.info(f"Batch search: Successful, got {total_results} total results")
+                logger.info(
+                    f"Batch search: Successful, got {total_results} total results"
+                )
             else:
                 result_text = json.dumps({"result": "No search results found."})
                 metadata["status"] = "no_results"
@@ -237,7 +249,9 @@ def perform_single_search_batch(
             logger.error(f"Batch search: {error_msg}")
     else:
         metadata["status"] = "unknown_api_state"
-        result_text = json.dumps({"result": "Unknown API state (no response and no error message)."})
+        result_text = json.dumps(
+            {"result": "Unknown API state (no response and no error message)."}
+        )
         logger.error("Batch search: Unknown API state.")
 
     return result_text, metadata

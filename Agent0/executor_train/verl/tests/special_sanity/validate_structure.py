@@ -43,7 +43,9 @@ def discover_allowed_modules(impl_root: Path, extra: list[str]) -> set[str]:
     return allowed
 
 
-def find_violations(tests_root: Path, allowed: set[str], allowed_files: list[str]) -> list[str]:
+def find_violations(
+    tests_root: Path, allowed: set[str], allowed_files: list[str]
+) -> list[str]:
     """Return a list of error strings for test files in the wrong place."""
     errors: list[str] = []
     for test_file in tests_root.rglob("test*.py"):
@@ -51,7 +53,9 @@ def find_violations(tests_root: Path, allowed: set[str], allowed_files: list[str
             continue
         rel_parts = test_file.relative_to(tests_root).parts
         if len(rel_parts) < 2:
-            errors.append(f"{test_file}: must be inside one of {sorted(allowed)} (not at tests root)")
+            errors.append(
+                f"{test_file}: must be inside one of {sorted(allowed)} (not at tests root)"
+            )
             continue
 
         first_folder = rel_parts[0]
@@ -64,7 +68,9 @@ def find_violations(tests_root: Path, allowed: set[str], allowed_files: list[str
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Check that test files follow tests/<module>/… layout.")
+    parser = argparse.ArgumentParser(
+        description="Check that test files follow tests/<module>/… layout."
+    )
     parser.add_argument(
         "--impl-root",
         type=Path,
@@ -80,7 +86,12 @@ def main() -> None:
     parser.add_argument(
         "--allow-dirs",
         nargs="*",
-        default=["special_e2e", "special_sanity", "special_standalone", "special_distributed"],
+        default=[
+            "special_e2e",
+            "special_sanity",
+            "special_standalone",
+            "special_distributed",
+        ],
         help="Extra top-level test folders that are exempt from the rule",
     )
     parser.add_argument(

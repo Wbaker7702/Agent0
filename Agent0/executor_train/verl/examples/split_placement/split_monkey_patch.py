@@ -59,7 +59,9 @@ def fit(self):
 
     # perform validation before training
     # currently, we only support validation using the reward_function.
-    if self.val_reward_fn is not None and self.config.trainer.get("val_before_train", True):
+    if self.val_reward_fn is not None and self.config.trainer.get(
+        "val_before_train", True
+    ):
         val_metrics = self._validate()
         pprint(f"Initial validation metrics: {val_metrics}")
         logger.log(data=val_metrics, step=self.global_steps)
@@ -78,13 +80,17 @@ def fit(self):
             batch: DataProto = DataProto.from_single_dict(batch_dict)
 
             # pop those keys for generation
-            gen_batch = batch.pop(batch_keys=["input_ids", "attention_mask", "position_ids"])
+            gen_batch = batch.pop(
+                batch_keys=["input_ids", "attention_mask", "position_ids"]
+            )
             is_last_step = self.global_steps >= self.total_training_steps
 
             with marked_timer("step", timing_raw):
                 # generate a batch
                 with marked_timer("gen", timing_raw):
-                    gen_batch_output = self.actor_rollout_wg.generate_sequences(gen_batch)
+                    gen_batch_output = self.actor_rollout_wg.generate_sequences(
+                        gen_batch
+                    )
                     timing_raw.update(gen_batch_output.meta_info["timing"])
                     gen_batch_output.meta_info.pop("timing", None)
 
@@ -92,7 +98,9 @@ def fit(self):
                     with marked_timer("gen_max", timing_raw):
                         gen_baseline_batch = deepcopy(gen_batch)
                         gen_baseline_batch.meta_info["do_sample"] = False
-                        gen_baseline_output = self.actor_rollout_wg.generate_sequences(gen_baseline_batch)
+                        gen_baseline_output = self.actor_rollout_wg.generate_sequences(
+                            gen_baseline_batch
+                        )
 
                         batch = batch.union(gen_baseline_output)
                         reward_baseline_tensor = self.reward_fn(batch)
@@ -108,7 +116,10 @@ def fit(self):
                     [str(uuid.uuid4()) for _ in range(len(batch.batch))], dtype=object
                 )
                 # repeat to align with repeated responses in rollout
-                batch = batch.repeat(repeat_times=self.config.actor_rollout_ref.rollout.n, interleave=True)
+                batch = batch.repeat(
+                    repeat_times=self.config.actor_rollout_ref.rollout.n,
+                    interleave=True,
+                )
                 batch = batch.union(gen_batch_output)
 
                 # Balance the number of valid tokens across DP ranks.
@@ -119,7 +130,9 @@ def fit(self):
                 self._balance_batch(batch, metrics=metrics)
 
                 # compute global_valid tokens
-                batch.meta_info["global_token_num"] = torch.sum(batch.batch["attention_mask"], dim=-1).tolist()
+                batch.meta_info["global_token_num"] = torch.sum(
+                    batch.batch["attention_mask"], dim=-1
+                ).tolist()
 
                 # recompute old_log_probs
                 with marked_timer("old_log_prob", timing_raw):
@@ -154,14 +167,20 @@ def fit(self):
                     # compute rewards. apply_kl_penalty if available
                     if self.config.algorithm.use_kl_in_reward:
                         batch, kl_metrics = apply_kl_penalty(
-                            batch, kl_ctrl=self.kl_ctrl_in_reward, kl_penalty=self.config.algorithm.kl_penalty
+                            batch,
+                            kl_ctrl=self.kl_ctrl_in_reward,
+                            kl_penalty=self.config.algorithm.kl_penalty,
                         )
                         metrics.update(kl_metrics)
                     else:
-                        batch.batch["token_level_rewards"] = batch.batch["token_level_scores"]
+                        batch.batch["token_level_rewards"] = batch.batch[
+                            "token_level_scores"
+                        ]
 
                     # compute advantages, executed on the driver process
-                    norm_adv_by_std_in_grpo = self.config.algorithm.get("norm_adv_by_std_in_grpo", True)
+                    norm_adv_by_std_in_grpo = self.config.algorithm.get(
+                        "norm_adv_by_std_in_grpo", True
+                    )
                     batch = compute_advantage(
                         batch,
                         adv_estimator=self.config.algorithm.adv_estimator,
@@ -187,19 +206,26 @@ def fit(self):
                     # NOTE: make sure you set blocking=False in update_actor and update_crtic in the worker class
                     with marked_timer("update_actor_critic", timing_raw):
                         critic_output = critic_output.get()
-                        critic_output_metrics = reduce_metrics(critic_output.meta_info["metrics"])
+                        critic_output_metrics = reduce_metrics(
+                            critic_output.meta_info["metrics"]
+                        )
                         metrics.update(critic_output_metrics)
 
                 if actor_output is not None:
                     actor_output = actor_output.get()
-                    actor_output_metrics = reduce_metrics(actor_output.meta_info["metrics"])
+                    actor_output_metrics = reduce_metrics(
+                        actor_output.meta_info["metrics"]
+                    )
                     metrics.update(actor_output_metrics)
 
                 # validate
                 if (
                     self.val_reward_fn is not None
                     and self.config.trainer.test_freq > 0
-                    and (is_last_step or self.global_steps % self.config.trainer.test_freq == 0)
+                    and (
+                        is_last_step
+                        or self.global_steps % self.config.trainer.test_freq == 0
+                    )
                 ):
                     with marked_timer("testing", timing_raw):
                         val_metrics: dict = self._validate()
@@ -208,13 +234,16 @@ def fit(self):
                     metrics.update(val_metrics)
 
                 if self.config.trainer.save_freq > 0 and (
-                    is_last_step or self.global_steps % self.config.trainer.save_freq == 0
+                    is_last_step
+                    or self.global_steps % self.config.trainer.save_freq == 0
                 ):
                     with marked_timer("save_checkpoint", timing_raw):
                         self._save_checkpoint()
 
             # collect metrics
-            metrics.update(compute_data_metrics(batch=batch, use_critic=self.use_critic))
+            metrics.update(
+                compute_data_metrics(batch=batch, use_critic=self.use_critic)
+            )
             metrics.update(compute_timing_metrics(batch=batch, timing_raw=timing_raw))
 
             # TODO: make a canonical logger that supports various backend

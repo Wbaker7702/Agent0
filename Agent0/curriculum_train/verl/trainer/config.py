@@ -72,6 +72,7 @@ class AlgorithmConfig:
     kl_target: float = 0.0
     mock_data: str = ""
 
+
 @dataclass
 class TrainerConfig:
     total_epochs: int = 10
@@ -93,9 +94,13 @@ class TrainerConfig:
 
     def post_init(self):
         if self.save_checkpoint_path is None:
-            self.save_checkpoint_path = os.path.join("checkpoints", self.project_name, self.experiment_name)
+            self.save_checkpoint_path = os.path.join(
+                "checkpoints", self.project_name, self.experiment_name
+            )
 
-        self.save_checkpoint_path = os.path.abspath(self.save_checkpoint_path)  # ray job uses absolute path
+        self.save_checkpoint_path = os.path.abspath(
+            self.save_checkpoint_path
+        )  # ray job uses absolute path
         if self.load_checkpoint_path is not None:
             self.load_checkpoint_path = os.path.abspath(self.load_checkpoint_path)
 
@@ -110,7 +115,9 @@ class PPOConfig:
     def post_init(self):
         self.worker.rollout.prompt_length = self.data.max_prompt_length
         self.worker.rollout.response_length = self.data.max_response_length
-        self.worker.rollout.trust_remote_code = self.worker.actor.model.trust_remote_code
+        self.worker.rollout.trust_remote_code = (
+            self.worker.actor.model.trust_remote_code
+        )
         self.worker.actor.disable_kl = self.algorithm.disable_kl
         self.worker.actor.use_kl_loss = self.algorithm.use_kl_loss
         self.worker.actor.kl_penalty = self.algorithm.kl_penalty

@@ -30,7 +30,9 @@ import sys
 
 
 def _parse_args() -> argparse.Namespace:
-    p = argparse.ArgumentParser(description="Verify that imported functions/classes have docstrings.")
+    p = argparse.ArgumentParser(
+        description="Verify that imported functions/classes have docstrings."
+    )
     p.add_argument(
         "--target-file",
         default="verl/trainer/ppo/ray_trainer.py",
@@ -60,7 +62,9 @@ def _import_attr(module_name: str, attr_name: str):
     return getattr(module, attr_name)
 
 
-def _check_file(py_file: pathlib.Path, project_root: pathlib.Path, allow_list: list[str]) -> list[str]:
+def _check_file(
+    py_file: pathlib.Path, project_root: pathlib.Path, allow_list: list[str]
+) -> list[str]:
     """Return a list of error strings (empty == success)."""
     # Ensure local packages resolve
     sys.path.insert(0, str(project_root.resolve()))
@@ -123,7 +127,9 @@ def main() -> None:
         raise Exception("❌ Docstring verification failed.")
 
     if not args.quiet:
-        print(f"✅ All explicitly imported functions/classes in {target_path} have docstrings.")
+        print(
+            f"✅ All explicitly imported functions/classes in {target_path} have docstrings."
+        )
 
 
 if __name__ == "__main__":

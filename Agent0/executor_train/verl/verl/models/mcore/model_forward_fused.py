@@ -76,10 +76,14 @@ def fused_forward_gptmodel(
     post_process: bool = unwrap_model(model).post_process
 
     batch_size, seq_len = attention_mask.shape[:2]
-    input_ids_rmpad, packed_seq_params = preprocess_packed_seqs(input_ids, attention_mask, pre_process=pre_process)
+    input_ids_rmpad, packed_seq_params = preprocess_packed_seqs(
+        input_ids, attention_mask, pre_process=pre_process
+    )
     input_ids_rmpad = input_ids_rmpad.contiguous()
     labels_rmpad, _ = preprocess_packed_seqs(labels, attention_mask, pre_process=True)
-    labels_mask_rmpad, _ = preprocess_packed_seqs(labels_mask, attention_mask, pre_process=True)
+    labels_mask_rmpad, _ = preprocess_packed_seqs(
+        labels_mask, attention_mask, pre_process=True
+    )
     labels_rmpad = labels_rmpad.contiguous()
     labels_mask_rmpad = labels_mask_rmpad.contiguous()
 
@@ -121,16 +125,24 @@ def fused_forward_qwen2_5_vl(
     post_process = unwrap_model(model).post_process
 
     pixel_values = (
-        multi_modal_inputs["pixel_values"].to(input_ids.device) if "pixel_values" in multi_modal_inputs else None
+        multi_modal_inputs["pixel_values"].to(input_ids.device)
+        if "pixel_values" in multi_modal_inputs
+        else None
     )
     image_grid_thw = (
-        multi_modal_inputs["image_grid_thw"].to(input_ids.device) if "image_grid_thw" in multi_modal_inputs else None
+        multi_modal_inputs["image_grid_thw"].to(input_ids.device)
+        if "image_grid_thw" in multi_modal_inputs
+        else None
     )
 
     batch_size, seq_len = attention_mask.shape[:2]
-    input_ids_rmpad, packed_seq_params = preprocess_packed_seqs(input_ids, attention_mask, pre_process=True)
+    input_ids_rmpad, packed_seq_params = preprocess_packed_seqs(
+        input_ids, attention_mask, pre_process=True
+    )
     labels_rmpad, _ = preprocess_packed_seqs(labels, attention_mask, pre_process=True)
-    labels_mask_rmpad, _ = preprocess_packed_seqs(labels_mask, attention_mask, pre_process=True)
+    labels_mask_rmpad, _ = preprocess_packed_seqs(
+        labels_mask, attention_mask, pre_process=True
+    )
     labels_rmpad = labels_rmpad.contiguous()
     labels_mask_rmpad = labels_mask_rmpad.contiguous()
     input_ids_rmpad = input_ids_rmpad.contiguous()
@@ -198,9 +210,14 @@ def _fused_GPTModel_forward(
     rotary_pos_emb = None
     rotary_pos_cos = None
     rotary_pos_sin = None
-    if self.position_embedding_type == "rope" and not self.config.multi_latent_attention:
+    if (
+        self.position_embedding_type == "rope"
+        and not self.config.multi_latent_attention
+    ):
         if not self.training and self.config.flash_decode and inference_context:
-            assert inference_context.is_static_batching(), "GPTModel currently only supports static inference batching."
+            assert (
+                inference_context.is_static_batching()
+            ), "GPTModel currently only supports static inference batching."
             # Flash decoding uses precomputed cos and sin for RoPE
             rotary_pos_cos, rotary_pos_sin = self.rotary_pos_emb_cache.setdefault(
                 inference_context.max_sequence_length,
@@ -208,13 +225,21 @@ def _fused_GPTModel_forward(
             )
         else:
             rotary_seq_len = self.rotary_pos_emb.get_rotary_seq_len(
-                inference_context, self.decoder, decoder_input, self.config, packed_seq_params
+                inference_context,
+                self.decoder,
+                decoder_input,
+                self.config,
+                packed_seq_params,
             )
             rotary_pos_emb = self.rotary_pos_emb(
                 rotary_seq_len,
-                packed_seq=packed_seq_params is not None and packed_seq_params.qkv_format == "thd",
+                packed_seq=packed_seq_params is not None
+                and packed_seq_params.qkv_format == "thd",
             )
-    elif self.position_embedding_type == "mrope" and not self.config.multi_latent_attention:
+    elif (
+        self.position_embedding_type == "mrope"
+        and not self.config.multi_latent_attention
+    ):
         if self.training or not self.config.flash_decode:
             rotary_pos_emb = self.rotary_pos_emb(position_ids, self.mrope_section)
         else:
@@ -231,7 +256,8 @@ def _fused_GPTModel_forward(
         and not self.training
     ):
         sequence_len_offset = torch.tensor(
-            [inference_context.sequence_len_offset] * inference_context.current_batch_size,
+            [inference_context.sequence_len_offset]
+            * inference_context.current_batch_size,
             dtype=torch.int32,
             device=rotary_pos_cos.device,  # Co-locate this with the rotary tensors
         )
@@ -257,7 +283,9 @@ def _fused_GPTModel_forward(
 
     # Process inference output.
     if inference_context and not inference_context.is_static_batching():
-        hidden_states = inference_context.last_token_logits(hidden_states.squeeze(1).unsqueeze(0)).unsqueeze(1)
+        hidden_states = inference_context.last_token_logits(
+            hidden_states.squeeze(1).unsqueeze(0)
+        ).unsqueeze(1)
 
     # logits and loss
     output_weight = None

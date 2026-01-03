@@ -56,7 +56,8 @@ def main(config):
 
     # Create remote tasks
     remote_tasks = [
-        process_item.remote(config, data_sources[i], responses[i], reward_model_data[i]) for i in range(total)
+        process_item.remote(config, data_sources[i], responses[i], reward_model_data[i])
+        for i in range(total)
     ]
 
     # Process results as they come in

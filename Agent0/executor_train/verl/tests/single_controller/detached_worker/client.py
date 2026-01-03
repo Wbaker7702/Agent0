@@ -42,13 +42,23 @@ if __name__ == "__main__":
     sequence_length = 1024
 
     # give Trainer some data to train
-    input_ids = torch.randint(low=0, high=256, size=(batch_size, sequence_length), dtype=torch.int64, device="cuda")
+    input_ids = torch.randint(
+        low=0,
+        high=256,
+        size=(batch_size, sequence_length),
+        dtype=torch.int64,
+        device="cuda",
+    )
     attention_mask = torch.ones_like(input_ids)
     position_ids = compute_position_id_with_mask(attention_mask)
 
     data = DataProto(
         batch=TensorDict(
-            {"input_ids": input_ids, "attention_mask": attention_mask, "position_ids": position_ids},
+            {
+                "input_ids": input_ids,
+                "attention_mask": attention_mask,
+                "position_ids": position_ids,
+            },
             batch_size=batch_size,
         ),
         meta_info={},

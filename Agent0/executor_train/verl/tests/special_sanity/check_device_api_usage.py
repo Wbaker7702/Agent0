@@ -65,7 +65,9 @@ if __name__ == "__main__":
             # for easy debugging in non-linux system
             sw = sw.replace("/", os.sep)
             if sw in path_in_str:
-                print(f"[SKIP] File {path_in_str} is in device api usage check whitelist, checking is skipped.")
+                print(
+                    f"[SKIP] File {path_in_str} is in device api usage check whitelist, checking is skipped."
+                )
                 path_in_whitelist = True
                 break
 

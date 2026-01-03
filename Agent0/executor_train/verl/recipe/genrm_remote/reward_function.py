@@ -81,7 +81,9 @@ def compute_score(data_source, solution_str, ground_truth, extra_info):
     split = extra_info["split"]
     from verl.utils.reward_score import default_compute_score
 
-    func_rm_score = default_compute_score(data_source, solution_str, ground_truth, extra_info)
+    func_rm_score = default_compute_score(
+        data_source, solution_str, ground_truth, extra_info
+    )
 
     if split == "test":
         return func_rm_score
@@ -102,7 +104,9 @@ def compute_score_batch(data_sources, solution_strs, ground_truths, extra_infos)
         for data_source, solution_str, ground_truth, extra_info in zip(
             data_sources, solution_strs, ground_truths, extra_infos, strict=True
         ):
-            future = executor.submit(compute_score, data_source, solution_str, ground_truth, extra_info)
+            future = executor.submit(
+                compute_score, data_source, solution_str, ground_truth, extra_info
+            )
             futures.append(future)
 
         results = [future.result() for future in futures]

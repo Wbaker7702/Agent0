@@ -35,7 +35,10 @@ from tests.workers.rollout.async_rollout_utils import init_async_rollout_manager
 from verl.protocol import DataProto
 from verl.utils import hf_tokenizer
 from verl.utils.reward_score.sandbox_fusion.utils import _process_single_case
-from verl.workers.rollout.chat_scheduler import ChatCompletionScheduler, ToolCompletionCallback
+from verl.workers.rollout.chat_scheduler import (
+    ChatCompletionScheduler,
+    ToolCompletionCallback,
+)
 
 
 def _get_free_port():
@@ -63,13 +66,18 @@ class Sandbox:
         code = request_json["code"]
         print(f"execute code:\n{code}")
 
-        _, temp_file = tempfile.mkstemp(suffix=".py", prefix="temp_code", dir=None, text=True)
+        _, temp_file = tempfile.mkstemp(
+            suffix=".py", prefix="temp_code", dir=None, text=True
+        )
         with open(temp_file, "w") as f:
             f.write(code)
 
         try:
             process = await asyncio.create_subprocess_exec(
-                sys.executable, temp_file, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+                sys.executable,
+                temp_file,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
             )
 
             stdout, stderr = await process.communicate()
@@ -97,14 +105,18 @@ class Sandbox:
             self.server_ready.set()
             yield
 
-            print("FastAPI shutdown, maybe address already in use, exit process immediately.")
+            print(
+                "FastAPI shutdown, maybe address already in use, exit process immediately."
+            )
             os._exit(-1)
 
         app = fastapi.FastAPI(lifespan=lifespan)
         app.router.add_api_route("/run_code", self.code_execution, methods=["POST"])
 
         self.port = _get_free_port()
-        config = uvicorn.Config(app, host=["::", "0.0.0.0"], port=self.port, log_level="warning")
+        config = uvicorn.Config(
+            app, host=["::", "0.0.0.0"], port=self.port, log_level="warning"
+        )
         server = uvicorn.Server(config)
         await server.serve()
 
@@ -120,13 +132,17 @@ class CustomCompletionCallback(ToolCompletionCallback):
 
         self.max_assistant_turns = 16
         self.answer_pattern = re.compile(r"<answer>(.*?)</answer>", re.DOTALL)
-        self.code_pattern = re.compile(r"<code>\s*```python(.*?)```\s*</code>", re.DOTALL)
+        self.code_pattern = re.compile(
+            r"<code>\s*```python(.*?)```\s*</code>", re.DOTALL
+        )
 
         self.sandbox_fusion_url = config.reward_model.sandbox_fusion.url
         self.default_timeout = 10
         self.memory_limit_mb = config.reward_model.sandbox_fusion.memory_limit_mb
         # TODO: support asyncio executor
-        self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=max(32, os.cpu_count() * 5))
+        self.executor = concurrent.futures.ThreadPoolExecutor(
+            max_workers=max(32, os.cpu_count() * 5)
+        )
 
     async def sandbox_code_execution(self, code: str) -> dict[str, Any]:
         loop = asyncio.get_running_loop()
@@ -153,7 +169,12 @@ class CustomCompletionCallback(ToolCompletionCallback):
         }
         return extra
 
-    async def __call__(self, messages: list[dict[str, str]], completions: ChatCompletion, info: dict[str, Any]):
+    async def __call__(
+        self,
+        messages: list[dict[str, str]],
+        completions: ChatCompletion,
+        info: dict[str, Any],
+    ):
         role, content, finish_reason = (
             completions.choices[0].message.role,
             completions.choices[0].message.content,
@@ -164,24 +185,32 @@ class CustomCompletionCallback(ToolCompletionCallback):
 
         # STEP 0: check if we reach max turns
         if len(messages) >= self.max_assistant_turns:
-            print(f"[id={completions.id},turn={turn},finish_reason={finish_reason}] Reach max turns, done!")
+            print(
+                f"[id={completions.id},turn={turn},finish_reason={finish_reason}] Reach max turns, done!"
+            )
             return
 
         # STEP 1: check if we reach max tokens
         if finish_reason == "length":
-            print(f"[id={completions.id},turn={turn},finish_reason={finish_reason}] Reach max tokens, done!")
+            print(
+                f"[id={completions.id},turn={turn},finish_reason={finish_reason}] Reach max tokens, done!"
+            )
             return
 
         # STEP 2: check if we got answer
         matches = self.answer_pattern.findall(content)
         if matches:
-            print(f"[id={completions.id},turn={turn},finish_reason={finish_reason}] Got answer: {matches[0]}, done!")
+            print(
+                f"[id={completions.id},turn={turn},finish_reason={finish_reason}] Got answer: {matches[0]}, done!"
+            )
             return
 
         # STEP 3: check if we got code block
         matches = self.code_pattern.findall(content)
         if not matches:
-            print(f"[id={completions.id},turn={turn},finish_reason={finish_reason}] No code block found, done!")
+            print(
+                f"[id={completions.id},turn={turn},finish_reason={finish_reason}] No code block found, done!"
+            )
             return
 
         # STEP 4: execute code block in sandbox
@@ -195,8 +224,12 @@ class CustomCompletionCallback(ToolCompletionCallback):
             return
 
         stdout, stderr = metadata["stdout"], metadata["stderr"]
-        messages.append({"role": "tool", "content": f"<interpreter>{stdout}{stderr}</interpreter>"})
-        print(f"[id={completions.id},turn={turn},finish_reason={finish_reason}] Code block executed, continue...")
+        messages.append(
+            {"role": "tool", "content": f"<interpreter>{stdout}{stderr}</interpreter>"}
+        )
+        print(
+            f"[id={completions.id},turn={turn},finish_reason={finish_reason}] Code block executed, continue..."
+        )
 
         # STEP 5: resubmit chat completions with code block output
         self.scheduler.submit_chat_completions(
@@ -273,7 +306,14 @@ if __name__ == "__main__":
         non_tensor_batch={
             "raw_prompt": np.array(
                 [
-                    [{"role": "user", "content": user_prompt_template.replace("{question}", problem)}]
+                    [
+                        {
+                            "role": "user",
+                            "content": user_prompt_template.replace(
+                                "{question}", problem
+                            ),
+                        }
+                    ]
                     for problem in dataset["Problem"]
                 ]
             ),
@@ -292,14 +332,20 @@ if __name__ == "__main__":
     tokenizer = hf_tokenizer(config.actor_rollout_ref.model.path)
     responses = result.batch["responses"]
     response_mask = result.batch["response_mask"]
-    assert responses.size() == response_mask.size(), f"{responses.size()} != {response_mask.size()}"
+    assert (
+        responses.size() == response_mask.size()
+    ), f"{responses.size()} != {response_mask.size()}"
 
     # Decode responses with response_mask
     for i in range(len(responses)):
         valid_tokens = responses[i][response_mask[i].bool()]
         response_str = tokenizer.decode(valid_tokens)
-        assert "<tool_response>" not in response_str, f"found <tool_response> in response: {response_str}"
-        assert "</tool_response>" not in response_str, f"found </tool_response> in response: {response_str}"
+        assert (
+            "<tool_response>" not in response_str
+        ), f"found <tool_response> in response: {response_str}"
+        assert (
+            "</tool_response>" not in response_str
+        ), f"found </tool_response> in response: {response_str}"
         print(f"response: {response_str}")
 
     print("Test passed!")

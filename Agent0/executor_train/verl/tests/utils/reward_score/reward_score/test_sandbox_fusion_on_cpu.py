@@ -63,7 +63,10 @@ print("Finished sleeping", file=sys.stderr)
 """
 
 # --- Test input/output data ---
-INPUT_OUTPUT_VALID = {"inputs": ["input1", "input2"], "outputs": ["output1\n", "output2\n"]}
+INPUT_OUTPUT_VALID = {
+    "inputs": ["input1", "input2"],
+    "outputs": ["output1\n", "output2\n"],
+}
 
 INPUT_OUTPUT_SINGLE = {"inputs": ["input1"], "outputs": ["output1\n"]}
 
@@ -77,7 +80,9 @@ INPUT_OUTPUT_INVALID_MISSING_KEY = {"inputs": ["input1"]}
 @pytest.mark.skipif(skip_condition, reason=skip_reason)
 def test_integration_success_correct():
     """Integration test: Code is correct, output is correct"""
-    results, metadata_list = check_correctness(SANDBOX_URL, INPUT_OUTPUT_VALID, CODE_SUCCESS)
+    results, metadata_list = check_correctness(
+        SANDBOX_URL, INPUT_OUTPUT_VALID, CODE_SUCCESS
+    )
     assert results == [True, True]
     assert metadata_list[0]["status"] == "success"
     assert metadata_list[0]["stdout"] == "output1\n"
@@ -88,7 +93,9 @@ def test_integration_success_correct():
 @pytest.mark.skipif(skip_condition, reason=skip_reason)
 def test_integration_success_wrong_output():
     """Integration test: Code runs successfully, but output is wrong"""
-    results, metadata_list = check_correctness(SANDBOX_URL, INPUT_OUTPUT_VALID, CODE_WRONG_OUTPUT)
+    results, metadata_list = check_correctness(
+        SANDBOX_URL, INPUT_OUTPUT_VALID, CODE_WRONG_OUTPUT
+    )
     assert results == [False, False]
     assert metadata_list[0]["status"] == "wrong_answer"
     assert metadata_list[0]["stdout"] == "wrong_output\n"
@@ -98,7 +105,9 @@ def test_integration_success_wrong_output():
 @pytest.mark.skipif(skip_condition, reason=skip_reason)
 def test_integration_compile_error():
     """Integration test: Code causes compile error"""
-    results, metadata_list = check_correctness(SANDBOX_URL, INPUT_OUTPUT_VALID, CODE_COMPILE_ERROR, language="cpp")
+    results, metadata_list = check_correctness(
+        SANDBOX_URL, INPUT_OUTPUT_VALID, CODE_COMPILE_ERROR, language="cpp"
+    )
     assert results == [-4, -4]
     assert metadata_list[0]["status"] == "compile_error"
     assert metadata_list[1]["status"] == "compile_error"
@@ -107,7 +116,9 @@ def test_integration_compile_error():
 @pytest.mark.skipif(skip_condition, reason=skip_reason)
 def test_integration_runtime_error():
     """Integration test: Code causes runtime error"""
-    results, metadata_list = check_correctness(SANDBOX_URL, INPUT_OUTPUT_SINGLE, CODE_RUNTIME_ERROR)
+    results, metadata_list = check_correctness(
+        SANDBOX_URL, INPUT_OUTPUT_SINGLE, CODE_RUNTIME_ERROR
+    )
     assert results == [-2]
     assert metadata_list[0]["status"] == "runtime_error"
     # More assertions can be added based on the actual API response, e.g., exit_code, stderr
@@ -117,7 +128,9 @@ def test_integration_runtime_error():
 def test_integration_runtime_timeout():
     """Integration test: Code causes runtime timeout"""
     test_timeout = 5  # Set a timeout shorter than the sleep time in CODE_TIMEOUT
-    results, metadata_list = check_correctness(SANDBOX_URL, INPUT_OUTPUT_SINGLE, CODE_TIMEOUT, timeout=test_timeout)
+    results, metadata_list = check_correctness(
+        SANDBOX_URL, INPUT_OUTPUT_SINGLE, CODE_TIMEOUT, timeout=test_timeout
+    )
     assert results == [-3]
     assert metadata_list[0]["status"] == "timeout"
     # More assertions can be added based on the actual API response, e.g., run_status
@@ -188,7 +201,9 @@ else:
     )
 
     # Verify results against the expected map
-    assert len(results) == concurrency_level, f"Expected {concurrency_level} results, got {len(results)}"
+    assert (
+        len(results) == concurrency_level
+    ), f"Expected {concurrency_level} results, got {len(results)}"
 
     correct_count = 0
     wrong_count = 0
@@ -210,35 +225,55 @@ else:
         f"Correct results (True): {correct_count}/"
         f"{concurrency_level - len(wrong_answer_indices) - len(timeout_indices)}"
     )
-    print(f"Expected wrong answers (False, correctly identified): {wrong_count}/{len(wrong_answer_indices)}")
-    print(f"Expected timeouts (-3, correctly identified): {timeout_count}/{len(timeout_indices)}")
+    print(
+        f"Expected wrong answers (False, correctly identified): {wrong_count}/{len(wrong_answer_indices)}"
+    )
+    print(
+        f"Expected timeouts (-3, correctly identified): {timeout_count}/{len(timeout_indices)}"
+    )
 
     if unexpected_results:
         print("Unexpected results found:")
-        for idx, res, expected_str in unexpected_results[:10]:  # Print first 10 unexpected
-            print(f"  Index {idx}: Got {res}, {expected_str}. Metadata: {metadata_list[idx]}")
+        for idx, res, expected_str in unexpected_results[
+            :10
+        ]:  # Print first 10 unexpected
+            print(
+                f"  Index {idx}: Got {res}, {expected_str}. Metadata: {metadata_list[idx]}"
+            )
         raise AssertionError(f"Found {len(unexpected_results)} unexpected results.")
 
-    assert correct_count == concurrency_level - len(wrong_answer_indices) - len(timeout_indices), (
-        "Incorrect number of successful results"
-    )
-    assert wrong_count == len(wrong_answer_indices), "Incorrect number of identified wrong answers"
-    assert timeout_count == len(timeout_indices), "Incorrect number of identified timeouts"
+    assert correct_count == concurrency_level - len(wrong_answer_indices) - len(
+        timeout_indices
+    ), "Incorrect number of successful results"
+    assert wrong_count == len(
+        wrong_answer_indices
+    ), "Incorrect number of identified wrong answers"
+    assert timeout_count == len(
+        timeout_indices
+    ), "Incorrect number of identified timeouts"
 
     # Verify metadata count and basic status of one of each type
     assert len(metadata_list) == concurrency_level
     # Find the first correct index
     first_correct_index = next(
-        i for i in range(concurrency_level) if i not in wrong_answer_indices and i not in timeout_indices
+        i
+        for i in range(concurrency_level)
+        if i not in wrong_answer_indices and i not in timeout_indices
     )
     assert metadata_list[first_correct_index]["status"] == "success"
-    assert metadata_list[first_correct_index]["stdout"] == f"output_{first_correct_index}\n"
+    assert (
+        metadata_list[first_correct_index]["stdout"]
+        == f"output_{first_correct_index}\n"
+    )
 
     # Check the status of the first intentionally wrong case
     first_wrong_index = min(wrong_answer_indices)
     assert metadata_list[first_wrong_index]["status"] == "wrong_answer"
     assert metadata_list[first_wrong_index]["stdout"] == f"output_{first_wrong_index}\n"
-    assert metadata_list[first_wrong_index]["expected_output"] == f"wrong_output_{first_wrong_index}\n"
+    assert (
+        metadata_list[first_wrong_index]["expected_output"]
+        == f"wrong_output_{first_wrong_index}\n"
+    )
 
     # Check the status of the first intentionally timeout case
     first_timeout_index = min(timeout_indices)
@@ -256,24 +291,48 @@ def test_unit_concurrency_order(mock_call_sandbox_api):
     generation = "print(input())"
     language = "python"
     timeout = 5
-    in_outs = {"inputs": ["input1", "input2", "input3"], "outputs": ["output1", "output2", "output3"]}
+    in_outs = {
+        "inputs": ["input1", "input2", "input3"],
+        "outputs": ["output1", "output2", "output3"],
+    }
 
     def side_effect(*args, **kwargs):
         stdin = kwargs.get("stdin")
         if stdin == "input1":
             return (
-                {"status": "Success", "run_result": {"status": "Finished", "stdout": "output1", "return_code": 0}},
+                {
+                    "status": "Success",
+                    "run_result": {
+                        "status": "Finished",
+                        "stdout": "output1",
+                        "return_code": 0,
+                    },
+                },
                 None,
             )
         elif stdin == "input2":
             time.sleep(0.1)
             return (
-                {"status": "Success", "run_result": {"status": "Finished", "stdout": "output2", "return_code": 0}},
+                {
+                    "status": "Success",
+                    "run_result": {
+                        "status": "Finished",
+                        "stdout": "output2",
+                        "return_code": 0,
+                    },
+                },
                 None,
             )
         elif stdin == "input3":
             return (
-                {"status": "Success", "run_result": {"status": "Finished", "stdout": "output3", "return_code": 0}},
+                {
+                    "status": "Success",
+                    "run_result": {
+                        "status": "Finished",
+                        "stdout": "output3",
+                        "return_code": 0,
+                    },
+                },
                 None,
             )
         else:
@@ -281,7 +340,9 @@ def test_unit_concurrency_order(mock_call_sandbox_api):
 
     mock_call_sandbox_api.side_effect = side_effect
 
-    results, metadata_list = check_correctness(sandbox_url, in_outs, generation, timeout, language)
+    results, metadata_list = check_correctness(
+        sandbox_url, in_outs, generation, timeout, language
+    )
 
     assert results == [True, True, True]
     assert len(metadata_list) == 3
@@ -300,7 +361,10 @@ def test_unit_api_timeout_error_concurrent(mock_call_sandbox_api):
     generation = "print(input())"
     language = "python"
     timeout = 5
-    in_outs = {"inputs": ["input1", "input2_timeout", "input3"], "outputs": ["output1", "output2", "output3"]}
+    in_outs = {
+        "inputs": ["input1", "input2_timeout", "input3"],
+        "outputs": ["output1", "output2", "output3"],
+    }
 
     api_error_message = "API Call Failed: Gateway Timeout (504) on attempt 3/3"
 
@@ -308,14 +372,28 @@ def test_unit_api_timeout_error_concurrent(mock_call_sandbox_api):
         stdin = kwargs.get("stdin")
         if stdin == "input1":
             return (
-                {"status": "Success", "run_result": {"status": "Finished", "stdout": "output1", "return_code": 0}},
+                {
+                    "status": "Success",
+                    "run_result": {
+                        "status": "Finished",
+                        "stdout": "output1",
+                        "return_code": 0,
+                    },
+                },
                 None,
             )
         elif stdin == "input2_timeout":
             return (None, api_error_message)
         elif stdin == "input3":
             return (
-                {"status": "Success", "run_result": {"status": "Finished", "stdout": "output3", "return_code": 0}},
+                {
+                    "status": "Success",
+                    "run_result": {
+                        "status": "Finished",
+                        "stdout": "output3",
+                        "return_code": 0,
+                    },
+                },
                 None,
             )
         else:
@@ -323,7 +401,9 @@ def test_unit_api_timeout_error_concurrent(mock_call_sandbox_api):
 
     mock_call_sandbox_api.side_effect = side_effect
 
-    results, metadata_list = check_correctness(sandbox_url, in_outs, generation, timeout, language)
+    results, metadata_list = check_correctness(
+        sandbox_url, in_outs, generation, timeout, language
+    )
 
     assert results == [True, -1, True]
     assert len(metadata_list) == 3
@@ -382,7 +462,11 @@ def _mock_api_call_for_concurrency_tracking(
     # Return a simulated successful API response
     return {
         "status": "Success",
-        "run_result": {"status": "Finished", "stdout": f"mock_output_for_{stdin}", "return_code": 0},
+        "run_result": {
+            "status": "Finished",
+            "stdout": f"mock_output_for_{stdin}",
+            "return_code": 0,
+        },
     }, None
 
 
@@ -401,20 +485,18 @@ def _process_pool_worker_for_concurrency_test(
     call_lock,
 ):
     # Corrected lambda to accept keyword arguments matching call_sandbox_api's usage
-    curried_mock_api_call = (
-        lambda sandbox_fusion_url, code, stdin, compile_timeout, run_timeout, memory_limit_mb, language: (
-            _mock_api_call_for_concurrency_tracking(
-                active_calls_counter,
-                max_calls_tracker,
-                call_lock,
-                sandbox_fusion_url,
-                code,
-                stdin,
-                compile_timeout,
-                run_timeout,
-                memory_limit_mb,
-                language,
-            )
+    curried_mock_api_call = lambda sandbox_fusion_url, code, stdin, compile_timeout, run_timeout, memory_limit_mb, language: (
+        _mock_api_call_for_concurrency_tracking(
+            active_calls_counter,
+            max_calls_tracker,
+            call_lock,
+            sandbox_fusion_url,
+            code,
+            stdin,
+            compile_timeout,
+            run_timeout,
+            memory_limit_mb,
+            language,
         )
     )
 
@@ -431,7 +513,8 @@ def _process_pool_worker_for_concurrency_test(
     # ---- END DEBUG PRINTS ----
 
     with patch(
-        "verl.utils.reward_score.sandbox_fusion.utils.call_sandbox_api", side_effect=curried_mock_api_call
+        "verl.utils.reward_score.sandbox_fusion.utils.call_sandbox_api",
+        side_effect=curried_mock_api_call,
     ) as mock_obj:
         # ---- START DEBUG PRINTS ----
         print(
@@ -464,7 +547,9 @@ def test_multiprocess_global_concurrency_limit_with_semaphore():
     """
     manager = multiprocessing.Manager()
     active_calls_counter = manager.Value("i", 0)  # Current active mock API calls
-    max_calls_tracker = manager.Value("i", 0)  # Observed maximum concurrent mock API calls
+    max_calls_tracker = manager.Value(
+        "i", 0
+    )  # Observed maximum concurrent mock API calls
     call_lock = manager.Lock()  # Lock to protect counters
 
     # Create a multiprocessing.Semaphore instance, this is the global semaphore we are testing.
@@ -472,7 +557,9 @@ def test_multiprocess_global_concurrency_limit_with_semaphore():
     global_mp_semaphore = manager.Semaphore(MAX_GLOBAL_CONCURRENCY_LIMIT_TEST)
 
     mock_sandbox_url = "mock_url_for_concurrency_test"
-    mock_generation = "pass"  # Specific code content is not important as API call is mocked
+    mock_generation = (
+        "pass"  # Specific code content is not important as API call is mocked
+    )
     mock_memory_limit_mb = 1024
     mock_language = "python"
     mock_timeout = 5  # Timeout setting, not critical for mock calls
@@ -513,9 +600,13 @@ def test_multiprocess_global_concurrency_limit_with_semaphore():
 
     # Print some test statistics for debugging and validation
     print("\n--- Global Concurrency Test Stats ---")
-    print(f"Semaphore Limit (MAX_GLOBAL_CONCURRENCY_LIMIT_TEST): {MAX_GLOBAL_CONCURRENCY_LIMIT_TEST}")
+    print(
+        f"Semaphore Limit (MAX_GLOBAL_CONCURRENCY_LIMIT_TEST): {MAX_GLOBAL_CONCURRENCY_LIMIT_TEST}"
+    )
     print(f"Number of Processes (NUM_PROCESSES_TEST): {NUM_PROCESSES_TEST}")
-    print(f"Tasks per Process (NUM_TASKS_PER_PROCESS_TEST): {NUM_TASKS_PER_PROCESS_TEST}")
+    print(
+        f"Tasks per Process (NUM_TASKS_PER_PROCESS_TEST): {NUM_TASKS_PER_PROCESS_TEST}"
+    )
     print(f"Total Tasks Submitted: {total_tasks_expected_to_run}")
     print(f"Simulated API Call Duration: {SIMULATED_API_CALL_DURATION_TEST}s")
     print(f"Total Test Execution Time: {total_execution_time:.2f}s")
@@ -523,12 +614,14 @@ def test_multiprocess_global_concurrency_limit_with_semaphore():
     # print(f"Tasks processed per worker: {num_tasks_processed_per_worker}")
 
     # Verify that all submitted tasks have been processed
-    assert sum(num_tasks_processed_per_worker) == total_tasks_expected_to_run, (
-        "Mismatch in the number of tasks processed."
-    )
+    assert (
+        sum(num_tasks_processed_per_worker) == total_tasks_expected_to_run
+    ), "Mismatch in the number of tasks processed."
 
     # Verify that the mock API was called at least once
-    assert max_calls_tracker.value > 0, "The mocked API call_sandbox_api was not called."
+    assert (
+        max_calls_tracker.value > 0
+    ), "The mocked API call_sandbox_api was not called."
 
     # Core assertion: Observed maximum concurrent calls should not exceed the semaphore's limit
     assert max_calls_tracker.value <= MAX_GLOBAL_CONCURRENCY_LIMIT_TEST, (
@@ -563,7 +656,9 @@ def test_unit_invalid_input_format():
     assert results == [-1]
     assert metadata_list[0]["error"] == "Invalid input/output data"
 
-    results, metadata_list = check_correctness(SANDBOX_URL, INPUT_OUTPUT_INVALID_MISSING_KEY, CODE_SUCCESS)
+    results, metadata_list = check_correctness(
+        SANDBOX_URL, INPUT_OUTPUT_INVALID_MISSING_KEY, CODE_SUCCESS
+    )
     assert results == [-1]
     assert metadata_list[0]["error"] == "Invalid input/output data"
 
@@ -571,7 +666,9 @@ def test_unit_invalid_input_format():
 @pytest.mark.skipif(skip_condition, reason=skip_reason)
 def test_unit_input_output_mismatch():
     """Unit test: Mismatch between the number of inputs and outputs"""
-    results, metadata_list = check_correctness(SANDBOX_URL, INPUT_OUTPUT_MISMATCH, CODE_SUCCESS)
+    results, metadata_list = check_correctness(
+        SANDBOX_URL, INPUT_OUTPUT_MISMATCH, CODE_SUCCESS
+    )
     assert results == [-1]
     assert len(metadata_list) == 1
     assert metadata_list[0]["error"] == "Input/output count mismatch"
@@ -608,13 +705,19 @@ if __name__ == "__main__":
     test_timeout = 10  # Set a timeout value
 
     start_time = time.time()
-    results, metadata_list = check_correctness(SANDBOX_URL, timeout_in_outs, code_infinite_loop, timeout=test_timeout)
+    results, metadata_list = check_correctness(
+        SANDBOX_URL, timeout_in_outs, code_infinite_loop, timeout=test_timeout
+    )
     end_time = time.time()
     duration = end_time - start_time
-    print(f"\nHigh concurrency all timeout test ({concurrency_level} cases) duration: {duration:.2f} seconds")
+    print(
+        f"\nHigh concurrency all timeout test ({concurrency_level} cases) duration: {duration:.2f} seconds"
+    )
 
     # Verify all results are -3 (timeout)
-    assert len(results) == concurrency_level, f"Expected {concurrency_level} results, got {len(results)}"
+    assert (
+        len(results) == concurrency_level
+    ), f"Expected {concurrency_level} results, got {len(results)}"
     all_timed_out = all(r == -3 for r in results)
     if not all_timed_out:
         non_timeout_indices = [i for i, r in enumerate(results) if r != -3]
@@ -622,7 +725,9 @@ if __name__ == "__main__":
         # Print metadata for the first few non-timeout cases for debugging
         for i in non_timeout_indices[:5]:
             print(f"Metadata for non-timeout case {i}: {metadata_list[i]}")
-    assert all_timed_out, f"Not all {concurrency_level} concurrent tests resulted in timeout (-3). Results: {results}"
+    assert (
+        all_timed_out
+    ), f"Not all {concurrency_level} concurrent tests resulted in timeout (-3). Results: {results}"
 
     # Verify metadata count and status of the first case
     assert len(metadata_list) == concurrency_level
@@ -657,7 +762,9 @@ class Solution:
     }
 
     # Use a short timeout for fast tests
-    results, metadata_list = check_correctness(SANDBOX_URL, in_outs, generation_code, timeout=5)
+    results, metadata_list = check_correctness(
+        SANDBOX_URL, in_outs, generation_code, timeout=5
+    )
     # from verl.utils.reward_score.prime_code import apps_check_correctness
     # results, metadata_list = apps_check_correctness(in_outs=in_outs, generation=generation_code,
     #                                                        timeout=50000, debug=True)

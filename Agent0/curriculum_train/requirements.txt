@@ -38,7 +38,6 @@ fastapi==0.115.12
 fastapi-cli==0.0.7
 fastrlock==0.8.3
 filelock==3.18.0
-flash_attn==2.7.4.post1
 Flask==3.1.1
 fonttools==4.58.2
 frozenlist==1.7.0

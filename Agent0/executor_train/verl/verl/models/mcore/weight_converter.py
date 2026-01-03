@@ -27,24 +27,37 @@ class McoreToHFWeightConverterBase:
         self.hf_config = hf_config
         self.mcore_config = mcore_config
 
-    def convert_param(self, name: str, params_one_group: list[torch.Tensor]) -> torch.Tensor:
+    def convert_param(
+        self, name: str, params_one_group: list[torch.Tensor]
+    ) -> torch.Tensor:
         raise NotImplementedError
 
 
 class McoreToHFWeightConverterDense(McoreToHFWeightConverterBase):
-    def _convert_attention_param(self, name: str, params: list[torch.Tensor]) -> tuple[list[str], list[torch.Tensor]]:
+    def _convert_attention_param(
+        self, name: str, params: list[torch.Tensor]
+    ) -> tuple[list[str], list[torch.Tensor]]:
         # 'decoder.layers.0.self_attention.linear_proj.weight'
         # 'decoder.layers.0.self_attention.linear_qkv.layer_norm_weight'
         # 'decoder.layers.0.self_attention.linear_qkv.weight'
         # 'decoder.layers.0.self_attention.linear_qkv.bias'
         layer_number = name.split(".")[2]
         convert_names = []
-        if "self_attention.linear_qkv.bias" in name or "self_attention.linear_qkv.weight" in name:
+        if (
+            "self_attention.linear_qkv.bias" in name
+            or "self_attention.linear_qkv.weight" in name
+        ):
             param_type = name.split(".")[-1]
             assert param_type == "bias" or param_type == "weight"
-            convert_names.append(f"model.layers.{layer_number}.self_attn.q_proj.{param_type}")
-            convert_names.append(f"model.layers.{layer_number}.self_attn.k_proj.{param_type}")
-            convert_names.append(f"model.layers.{layer_number}.self_attn.v_proj.{param_type}")
+            convert_names.append(
+                f"model.layers.{layer_number}.self_attn.q_proj.{param_type}"
+            )
+            convert_names.append(
+                f"model.layers.{layer_number}.self_attn.k_proj.{param_type}"
+            )
+            convert_names.append(
+                f"model.layers.{layer_number}.self_attn.v_proj.{param_type}"
+            )
             assert len(params) == 3
         elif "self_attention.linear_proj.weight" in name:
             convert_names.append(f"model.layers.{layer_number}.self_attn.o_proj.weight")
@@ -62,7 +75,9 @@ class McoreToHFWeightConverterDense(McoreToHFWeightConverterBase):
             raise NotImplementedError(f"Unsupported parameter name: {name}")
         return convert_names, params
 
-    def _convert_mlp_param(self, name: str, params: list[torch.Tensor]) -> tuple[list[str], list[torch.Tensor]]:
+    def _convert_mlp_param(
+        self, name: str, params: list[torch.Tensor]
+    ) -> tuple[list[str], list[torch.Tensor]]:
         # 'decoder.layers.0.mlp.linear_fc1.layer_norm_weight'
         # 'decoder.layers.0.mlp.linear_fc1.weight'
         # 'decoder.layers.0.mlp.linear_fc2.weight'
@@ -74,7 +89,9 @@ class McoreToHFWeightConverterDense(McoreToHFWeightConverterBase):
             convert_names.append(f"model.layers.{layer_number}.mlp.up_proj.weight")
             assert len(params) == 2
         elif "mlp.linear_fc1.layer_norm_weight" in name:
-            convert_names.append(f"model.layers.{layer_number}.post_attention_layernorm.weight")
+            convert_names.append(
+                f"model.layers.{layer_number}.post_attention_layernorm.weight"
+            )
             assert len(params) == 1
         elif "mlp.linear_fc2.weight" in name:
             convert_names.append(f"model.layers.{layer_number}.mlp.down_proj.weight")
@@ -83,7 +100,9 @@ class McoreToHFWeightConverterDense(McoreToHFWeightConverterBase):
             raise NotImplementedError(f"Unsupported parameter name: {name}")
         return convert_names, params
 
-    def convert_param(self, name: str, params_one_group: list[torch.Tensor]) -> tuple[list[str], list[torch.Tensor]]:
+    def convert_param(
+        self, name: str, params_one_group: list[torch.Tensor]
+    ) -> tuple[list[str], list[torch.Tensor]]:
         direct_name_mapping = {
             "embedding.word_embeddings.weight": "model.embed_tokens.weight",
             "decoder.final_layernorm.weight": "model.norm.weight",
@@ -101,7 +120,9 @@ class McoreToHFWeightConverterDense(McoreToHFWeightConverterBase):
 
 
 class McoreToHFWeightConverterQwen2Moe(McoreToHFWeightConverterDense):
-    def _convert_mlp_param(self, name: str, params: list[torch.Tensor]) -> tuple[list[str], list[torch.Tensor]]:
+    def _convert_mlp_param(
+        self, name: str, params: list[torch.Tensor]
+    ) -> tuple[list[str], list[torch.Tensor]]:
         # 'decoder.layers.0.pre_mlp_layernorm.weight',
         # 'decoder.layers.0.mlp.router.weight',
         # 'decoder.layers.0.mlp.shared_experts.gate_weight',
@@ -118,29 +139,45 @@ class McoreToHFWeightConverterQwen2Moe(McoreToHFWeightConverterDense):
         layer_number = name.split(".")[2]
         convert_names = []
         if "pre_mlp_layernorm" in name:
-            convert_names.append(f"model.layers.{layer_number}.post_attention_layernorm.weight")
+            convert_names.append(
+                f"model.layers.{layer_number}.post_attention_layernorm.weight"
+            )
             assert len(params) == 1
         elif "mlp.router.weight" in name:
             convert_names.append(f"model.layers.{layer_number}.mlp.gate.weight")
             assert len(params) == 1
         elif "shared_experts.gate_weight" in name:
-            convert_names.append(f"model.layers.{layer_number}.mlp.shared_expert_gate.weight")
+            convert_names.append(
+                f"model.layers.{layer_number}.mlp.shared_expert_gate.weight"
+            )
             assert len(params) == 1
         elif "shared_experts.linear_fc1.weight" in name:  # split gate_proj and up_proj
-            convert_names.append(f"model.layers.{layer_number}.mlp.shared_expert.gate_proj.weight")
-            convert_names.append(f"model.layers.{layer_number}.mlp.shared_expert.up_proj.weight")
+            convert_names.append(
+                f"model.layers.{layer_number}.mlp.shared_expert.gate_proj.weight"
+            )
+            convert_names.append(
+                f"model.layers.{layer_number}.mlp.shared_expert.up_proj.weight"
+            )
             assert len(params) == 2
         elif "shared_experts.linear_fc2.weight" in name:
-            convert_names.append(f"model.layers.{layer_number}.mlp.shared_expert.down_proj.weight")
+            convert_names.append(
+                f"model.layers.{layer_number}.mlp.shared_expert.down_proj.weight"
+            )
             assert len(params) == 1
         elif "mlp.experts.linear_fc1" in name:  # split gate_proj and up_proj
             expert_id = name.split("weight")[-1]
-            convert_names.append(f"model.layers.{layer_number}.mlp.experts.{expert_id}.gate_proj.weight")
-            convert_names.append(f"model.layers.{layer_number}.mlp.experts.{expert_id}.up_proj.weight")
+            convert_names.append(
+                f"model.layers.{layer_number}.mlp.experts.{expert_id}.gate_proj.weight"
+            )
+            convert_names.append(
+                f"model.layers.{layer_number}.mlp.experts.{expert_id}.up_proj.weight"
+            )
             assert len(params) == 2
         elif "mlp.experts.linear_fc2" in name:
             expert_id = name.split("weight")[-1]
-            convert_names.append(f"model.layers.{layer_number}.mlp.experts.{expert_id}.down_proj.weight")
+            convert_names.append(
+                f"model.layers.{layer_number}.mlp.experts.{expert_id}.down_proj.weight"
+            )
             assert len(params) == 1
         else:
             raise NotImplementedError(f"Unsupported parameter name: {name}")
@@ -148,7 +185,9 @@ class McoreToHFWeightConverterQwen2Moe(McoreToHFWeightConverterDense):
 
 
 class McoreToHFWeightConverterQwen2_5_VL(McoreToHFWeightConverterDense):
-    def convert_param(self, name: str, params_one_group: list[torch.Tensor]) -> tuple[list[str], list[torch.Tensor]]:
+    def convert_param(
+        self, name: str, params_one_group: list[torch.Tensor]
+    ) -> tuple[list[str], list[torch.Tensor]]:
         direct_name_mapping = {
             "language_model.embedding.word_embeddings.weight": "model.embed_tokens.weight",
             "language_model.decoder.final_layernorm.weight": "model.norm.weight",
@@ -170,7 +209,9 @@ class McoreToHFWeightConverterQwen2_5_VL(McoreToHFWeightConverterDense):
         else:
             raise NotImplementedError(f"Unsupported parameter name: {name}")
 
-    def _convert_attention_param(self, name: str, params: list[torch.Tensor]) -> tuple[list[str], list[torch.Tensor]]:
+    def _convert_attention_param(
+        self, name: str, params: list[torch.Tensor]
+    ) -> tuple[list[str], list[torch.Tensor]]:
         model_type, _, _, layer_number = name.split(".")[:4]
 
         convert_names = []
@@ -214,7 +255,9 @@ class McoreToHFWeightConverterQwen2_5_VL(McoreToHFWeightConverterDense):
                 if "bias" in name_after_layer:
                     convert_names.append(f"visual.blocks.{layer_number}.attn.qkv.bias")
                 else:
-                    convert_names.append(f"visual.blocks.{layer_number}.attn.qkv.weight")
+                    convert_names.append(
+                        f"visual.blocks.{layer_number}.attn.qkv.weight"
+                    )
             else:
                 assert len(params) == 1
                 convert_names.append(f"visual.blocks.{layer_number}.{mapped_name}")
@@ -222,7 +265,9 @@ class McoreToHFWeightConverterQwen2_5_VL(McoreToHFWeightConverterDense):
             raise NotImplementedError(f"Unsupported model type: {model_type}")
         return convert_names, params
 
-    def _convert_mlp_param(self, name: str, params: list[torch.Tensor]) -> tuple[list[str], list[torch.Tensor]]:
+    def _convert_mlp_param(
+        self, name: str, params: list[torch.Tensor]
+    ) -> tuple[list[str], list[torch.Tensor]]:
         model_type, _, _, layer_number = name.split(".")[:4]
 
         convert_names = []
@@ -267,7 +312,9 @@ class McoreToHFWeightConverterQwen2_5_VL(McoreToHFWeightConverterDense):
 
 
 class McoreToHFWeightConverterDpskv3(McoreToHFWeightConverterBase):
-    def _convert_attention_param(self, name: str, params: list[torch.Tensor]) -> tuple[list[str], list[torch.Tensor]]:
+    def _convert_attention_param(
+        self, name: str, params: list[torch.Tensor]
+    ) -> tuple[list[str], list[torch.Tensor]]:
         # mcore
         # 'decoder.layers.0.input_layernorm.weight'
         # 'decoder.layers.0.self_attention.linear_proj.weight'
@@ -303,10 +350,14 @@ class McoreToHFWeightConverterDpskv3(McoreToHFWeightConverterBase):
         convert_names = []
         layer_number = name.split(".")[2]
         name_after_layer = name.split(f".{layer_number}.")[1]
-        convert_names.append(f"model.layers.{layer_number}.{name_map_after_layer[name_after_layer]}")
+        convert_names.append(
+            f"model.layers.{layer_number}.{name_map_after_layer[name_after_layer]}"
+        )
         return convert_names, params
 
-    def _convert_mlp_param(self, name: str, params: list[torch.Tensor]) -> tuple[list[str], list[torch.Tensor]]:
+    def _convert_mlp_param(
+        self, name: str, params: list[torch.Tensor]
+    ) -> tuple[list[str], list[torch.Tensor]]:
         # mcore dense
         # 'decoder.layers.0.mlp.linear_fc1.layer_norm_weight'
         # 'decoder.layers.0.mlp.linear_fc2.weight'
@@ -367,20 +418,30 @@ class McoreToHFWeightConverterDpskv3(McoreToHFWeightConverterBase):
         else:
             if "mlp.experts.linear_fc1.weight" in name:
                 expert_id = name.split("weight")[-1]
-                convert_names.append(f"model.layers.{layer_number}.mlp.experts.{expert_id}.gate_proj.weight")
-                convert_names.append(f"model.layers.{layer_number}.mlp.experts.{expert_id}.up_proj.weight")
+                convert_names.append(
+                    f"model.layers.{layer_number}.mlp.experts.{expert_id}.gate_proj.weight"
+                )
+                convert_names.append(
+                    f"model.layers.{layer_number}.mlp.experts.{expert_id}.up_proj.weight"
+                )
                 assert len(params) == 2
             elif "mlp.experts.linear_fc2.weight" in name:
                 expert_id = name.split("weight")[-1]
-                convert_names.append(f"model.layers.{layer_number}.mlp.experts.{expert_id}.down_proj.weight")
+                convert_names.append(
+                    f"model.layers.{layer_number}.mlp.experts.{expert_id}.down_proj.weight"
+                )
                 assert len(params) == 1
             else:
                 raise NotImplementedError(f"Unsupported parameter name: {name}")
 
         return convert_names, params
 
-    def _convert_mtp_param(self, name: str, params: list[torch.Tensor]) -> tuple[list[str], list[torch.Tensor]]:
-        assert self.mcore_config.mtp_num_layers == 1, "only support one mtp layer for now"
+    def _convert_mtp_param(
+        self, name: str, params: list[torch.Tensor]
+    ) -> tuple[list[str], list[torch.Tensor]]:
+        assert (
+            self.mcore_config.mtp_num_layers == 1
+        ), "only support one mtp layer for now"
         assert self.mcore_config.num_layers == 61, "only support 61 layers for now"
         direct_name_mapping = {
             "mtp.layers.0.enorm.weight": "model.layers.61.enorm.weight",
@@ -390,7 +451,9 @@ class McoreToHFWeightConverterDpskv3(McoreToHFWeightConverterBase):
         }
         if name in direct_name_mapping:
             return [direct_name_mapping[name]], [params[0]]
-        assert "mtp.layers.0.transformer_layer" in name, "only support transformer layer for now"
+        assert (
+            "mtp.layers.0.transformer_layer" in name
+        ), "only support transformer layer for now"
         # use proxy name to convert
         proxy_name = name.replace("mtp.layers.0.transformer_layer", "decoder.layers.61")
         if "self_attention" in proxy_name or "input_layernorm.weight" in proxy_name:
@@ -401,7 +464,9 @@ class McoreToHFWeightConverterDpskv3(McoreToHFWeightConverterBase):
             raise NotImplementedError(f"Unsupported parameter name: {name}")
         return convert_names, params
 
-    def convert_param(self, name: str, params_one_group: list[torch.Tensor]) -> tuple[list[str], list[torch.Tensor]]:
+    def convert_param(
+        self, name: str, params_one_group: list[torch.Tensor]
+    ) -> tuple[list[str], list[torch.Tensor]]:
         direct_name_mapping = {
             "embedding.word_embeddings.weight": "model.embed_tokens.weight",
             "decoder.final_layernorm.weight": "model.norm.weight",
@@ -420,7 +485,9 @@ class McoreToHFWeightConverterDpskv3(McoreToHFWeightConverterBase):
 
 
 class McoreToHFWeightConverterMixtral(McoreToHFWeightConverterDense):
-    def _convert_mlp_param(self, name: str, params: list[torch.Tensor]) -> tuple[list[str], list[torch.Tensor]]:
+    def _convert_mlp_param(
+        self, name: str, params: list[torch.Tensor]
+    ) -> tuple[list[str], list[torch.Tensor]]:
         # decoder.layers.0.mlp.router.weight
         # decoder.layers.0.mlp.experts.linear_fc1.weight0 - weight7
         # decoder.layers.0.mlp.experts.linear_fc2.weight0 - weight7
@@ -428,23 +495,35 @@ class McoreToHFWeightConverterMixtral(McoreToHFWeightConverterDense):
         layer_number = name.split(".")[2]
         convert_names = []
         if "pre_mlp_layernorm" in name:
-            convert_names.append(f"model.layers.{layer_number}.post_attention_layernorm.weight")
+            convert_names.append(
+                f"model.layers.{layer_number}.post_attention_layernorm.weight"
+            )
         elif "mlp.router.weight" in name:
-            convert_names.append(f"model.layers.{layer_number}.block_sparse_moe.gate.weight")
+            convert_names.append(
+                f"model.layers.{layer_number}.block_sparse_moe.gate.weight"
+            )
         elif "mlp.experts.linear_fc1.weight" in name:
             expert_id = name.split("weight")[-1]
-            convert_names.append(f"model.layers.{layer_number}.block_sparse_moe.experts.{expert_id}.w1.weight")
-            convert_names.append(f"model.layers.{layer_number}.block_sparse_moe.experts.{expert_id}.w3.weight")
+            convert_names.append(
+                f"model.layers.{layer_number}.block_sparse_moe.experts.{expert_id}.w1.weight"
+            )
+            convert_names.append(
+                f"model.layers.{layer_number}.block_sparse_moe.experts.{expert_id}.w3.weight"
+            )
         elif "mlp.experts.linear_fc2.weight" in name:
             expert_id = name.split("weight")[-1]
-            convert_names.append(f"model.layers.{layer_number}.block_sparse_moe.experts.{expert_id}.w2.weight")
+            convert_names.append(
+                f"model.layers.{layer_number}.block_sparse_moe.experts.{expert_id}.w2.weight"
+            )
         else:
             raise NotImplementedError(f"Unsupported parameter name: {name}")
         return convert_names, params
 
 
 class McoreToHFWeightConverterQwen3Moe(McoreToHFWeightConverterDense):
-    def _convert_mlp_param(self, name: str, params: list[torch.Tensor]) -> tuple[list[str], list[torch.Tensor]]:
+    def _convert_mlp_param(
+        self, name: str, params: list[torch.Tensor]
+    ) -> tuple[list[str], list[torch.Tensor]]:
         # qwen3 moe no share expert
 
         # 'decoder.layers.0.pre_mlp_layernorm.weight',
@@ -460,19 +539,27 @@ class McoreToHFWeightConverterQwen3Moe(McoreToHFWeightConverterDense):
         layer_number = name.split(".")[2]
         convert_names = []
         if "pre_mlp_layernorm" in name:
-            convert_names.append(f"model.layers.{layer_number}.post_attention_layernorm.weight")
+            convert_names.append(
+                f"model.layers.{layer_number}.post_attention_layernorm.weight"
+            )
             assert len(params) == 1
         elif "mlp.router.weight" in name:
             convert_names.append(f"model.layers.{layer_number}.mlp.gate.weight")
             assert len(params) == 1
         elif "mlp.experts.linear_fc1" in name:  # split gate_proj and up_proj
             expert_id = name.split("weight")[-1]
-            convert_names.append(f"model.layers.{layer_number}.mlp.experts.{expert_id}.gate_proj.weight")
-            convert_names.append(f"model.layers.{layer_number}.mlp.experts.{expert_id}.up_proj.weight")
+            convert_names.append(
+                f"model.layers.{layer_number}.mlp.experts.{expert_id}.gate_proj.weight"
+            )
+            convert_names.append(
+                f"model.layers.{layer_number}.mlp.experts.{expert_id}.up_proj.weight"
+            )
             assert len(params) == 2
         elif "mlp.experts.linear_fc2" in name:
             expert_id = name.split("weight")[-1]
-            convert_names.append(f"model.layers.{layer_number}.mlp.experts.{expert_id}.down_proj.weight")
+            convert_names.append(
+                f"model.layers.{layer_number}.mlp.experts.{expert_id}.down_proj.weight"
+            )
             assert len(params) == 1
         else:
             raise NotImplementedError(f"Unsupported parameter name: {name}")

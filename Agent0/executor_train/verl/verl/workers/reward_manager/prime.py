@@ -26,11 +26,22 @@ from verl.utils.reward_score import default_compute_score
 from verl.workers.reward_manager import register
 
 
-async def single_compute_score(evaluation_func, completion, reference, task, task_extra_info, executor, timeout=300.0):
+async def single_compute_score(
+    evaluation_func,
+    completion,
+    reference,
+    task,
+    task_extra_info,
+    executor,
+    timeout=300.0,
+):
     loop = asyncio.get_running_loop()
     try:
         # Ensure process_completion is called properly
-        future = loop.run_in_executor(executor, partial(evaluation_func, task, completion, reference, task_extra_info))
+        future = loop.run_in_executor(
+            executor,
+            partial(evaluation_func, task, completion, reference, task_extra_info),
+        )
         return await asyncio.wait_for(future, timeout=timeout)
     except asyncio.TimeoutError:
         print(f"[Timeout] Task timeout: {completion}")
@@ -52,8 +63,12 @@ async def parallel_compute_score_async(
         try:
             # Create tasks for all rows
             tasks_async = [
-                single_compute_score(evaluation_func, c, r, t, ei, executor, timeout=300.0)
-                for c, r, t, ei in zip(completions, references, tasks, extra_info, strict=True)
+                single_compute_score(
+                    evaluation_func, c, r, t, ei, executor, timeout=300.0
+                )
+                for c, r, t, ei in zip(
+                    completions, references, tasks, extra_info, strict=True
+                )
             ]
             results = await asyncio.gather(*tasks_async, return_exceptions=False)
         except Exception as e:
@@ -75,7 +90,9 @@ async def parallel_compute_score_async(
             print(f"[Shutdown] {terminated_count} subprocess(es) terminated.")
 
     # Process results
-    for result, completion, reference, task in zip(results, completions, references, tasks, strict=True):
+    for result, completion, reference, task in zip(
+        results, completions, references, tasks, strict=True
+    ):
         if isinstance(result, Exception) or result is None:
             # Handle failed or timed-out tasks
             scores.append(0.0)
@@ -86,12 +103,21 @@ async def parallel_compute_score_async(
     return scores
 
 
-def run_reward_scoring(evaluation_func, completions, references, tasks, extra_info=None, num_processes=64):
+def run_reward_scoring(
+    evaluation_func, completions, references, tasks, extra_info=None, num_processes=64
+):
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     try:
         return loop.run_until_complete(
-            parallel_compute_score_async(evaluation_func, completions, references, tasks, extra_info, num_processes)
+            parallel_compute_score_async(
+                evaluation_func,
+                completions,
+                references,
+                tasks,
+                extra_info,
+                num_processes,
+            )
         )
     finally:
         loop.close()
@@ -123,8 +149,13 @@ class PrimeRewardManager:
         prompt_ids = data.batch["prompts"]
 
         response_ids = data.batch["responses"]
-        sequences_str = self.tokenizer.batch_decode(response_ids, skip_special_tokens=True)
-        ground_truth = [data_item.non_tensor_batch["reward_model"]["ground_truth"] for data_item in data]
+        sequences_str = self.tokenizer.batch_decode(
+            response_ids, skip_special_tokens=True
+        )
+        ground_truth = [
+            data_item.non_tensor_batch["reward_model"]["ground_truth"]
+            for data_item in data
+        ]
         data_sources = data.non_tensor_batch[self.reward_fn_key]
         extra_info = data.non_tensor_batch.get("extra_info", None)
 
@@ -144,7 +175,9 @@ class PrimeRewardManager:
         except Exception as e:
             print(f"[Error] Unexpected error during scoring. Setting all as 0. {e}")
             scores = [0.0 for _ in range(len(sequences_str))]
-        data.batch["acc"] = torch.tensor(scores, dtype=torch.float32, device=prompt_ids.device)
+        data.batch["acc"] = torch.tensor(
+            scores, dtype=torch.float32, device=prompt_ids.device
+        )
         return scores
 
     def __call__(self, data: DataProto, return_dict: bool = False):
@@ -163,8 +196,12 @@ class PrimeRewardManager:
         prompt_length = prompt_ids.shape[-1]
 
         response_ids = data.batch["responses"]
-        valid_response_length = data.batch["attention_mask"][:, prompt_length:].sum(dim=-1)
-        sequences_str = self.tokenizer.batch_decode(response_ids, skip_special_tokens=True)
+        valid_response_length = data.batch["attention_mask"][:, prompt_length:].sum(
+            dim=-1
+        )
+        sequences_str = self.tokenizer.batch_decode(
+            response_ids, skip_special_tokens=True
+        )
         data_sources = data.non_tensor_batch["data_source"]
 
         scores = self.verify(data)

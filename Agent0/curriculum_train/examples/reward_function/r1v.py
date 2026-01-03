@@ -27,7 +27,9 @@ def format_reward(predict: str) -> float:
 def accuracy_reward(predict: str, ground_truth: str) -> float:
     try:
         content_match = re.search(r"<answer>(.*?)</answer>", predict)
-        given_answer = content_match.group(1).strip() if content_match else predict.strip()
+        given_answer = (
+            content_match.group(1).strip() if content_match else predict.strip()
+        )
         if grade_answer(given_answer, ground_truth.strip()):
             return 1.0
 
@@ -37,7 +39,9 @@ def accuracy_reward(predict: str, ground_truth: str) -> float:
     return 0.0
 
 
-def compute_score(predict: str, ground_truth: str, format_weight: float = 0.5) -> Dict[str, float]:
+def compute_score(
+    predict: str, ground_truth: str, format_weight: float = 0.5
+) -> Dict[str, float]:
     format_score = format_reward(predict)
     accuracy_score = accuracy_reward(predict, ground_truth)
     return {

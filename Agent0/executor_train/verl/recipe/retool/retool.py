@@ -32,7 +32,9 @@ class CustomSandboxFusionTool(SandboxFusionTool):
         self.code_pattern = re.compile(r"```python(.*?)```", re.DOTALL)
 
     @rollout_trace_op
-    async def execute(self, instance_id: str, parameters: dict[str, Any], **kwargs) -> tuple[str, float, dict]:
+    async def execute(
+        self, instance_id: str, parameters: dict[str, Any], **kwargs
+    ) -> tuple[str, float, dict]:
         code = parameters["code"]
         matches = self.code_pattern.findall(code)
         if matches:
@@ -53,12 +55,16 @@ class CustomSandboxFusionTool(SandboxFusionTool):
         if not isinstance(code, str):
             code = str(code)
 
-        result = await self.execution_pool.execute.remote(self.execute_code, instance_id, code, timeout, language)
+        result = await self.execution_pool.execute.remote(
+            self.execute_code, instance_id, code, timeout, language
+        )
         # sandbox has no score or metrics, use Nones
         return result, None, None
 
 
-answer_format = """\nThe answer format must be: \\boxed{'The final answer goes here.'}"""
+answer_format = (
+    """\nThe answer format must be: \\boxed{'The final answer goes here.'}"""
+)
 
 
 class CustomRLHFDataset(RLHFDataset):
@@ -72,7 +78,9 @@ class CustomRLHFDataset(RLHFDataset):
             data_source = "/".join(parquet_file.split("/")[-2:])
             if data_source in ["Maxwell-Jia/AIME_2024", "yentinglin/aime_2025"]:
                 dataframe = dataframe.map(
-                    self.map_fn, fn_kwargs={"data_source": data_source}, remove_columns=dataframe.column_names
+                    self.map_fn,
+                    fn_kwargs={"data_source": data_source},
+                    remove_columns=dataframe.column_names,
                 )
             else:
                 dataframe = dataframe.map(self.map_fn2, num_proc=16)
