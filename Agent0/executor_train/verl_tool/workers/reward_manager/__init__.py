@@ -2,6 +2,8 @@ from verl.workers.reward_manager.registry import register, REWARD_MANAGER_REGIST
 from pathlib import Path
 
 error_loaded_reward_manager = {}
+
+
 def get_reward_manager_cls(name):
     """Get the reward manager class with a given name.
 
@@ -14,10 +16,13 @@ def get_reward_manager_cls(name):
     """
     if name not in REWARD_MANAGER_REGISTRY:
         if name in error_loaded_reward_manager:
-            print("Error loading reward manager:", name, "Please check your dependencies.")
+            print(
+                "Error loading reward manager:", name, "Please check your dependencies."
+            )
             raise error_loaded_reward_manager[name]
         raise ValueError(f"Unknown reward manager: {name}")
     return REWARD_MANAGER_REGISTRY[name]
+
 
 # search current directory for reward manager classes
 current_dir = Path(__file__).parent
@@ -26,7 +31,9 @@ for file in current_dir.glob("*.py"):
         continue
     try:
         # import
-        module = __import__(f"verl_tool.workers.reward_manager.{file.stem}", fromlist=[file.stem])
+        module = __import__(
+            f"verl_tool.workers.reward_manager.{file.stem}", fromlist=[file.stem]
+        )
     except ImportError as e:
         error_loaded_reward_manager[file.stem] = e
         pass

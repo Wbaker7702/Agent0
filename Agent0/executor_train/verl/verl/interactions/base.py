@@ -20,9 +20,13 @@ from uuid import uuid4
 class BaseInteraction:
     def __init__(self, config: dict[str, Any]):
         self.config = config
-        self.name: str = config.get("name", "interaction_agent")  # More general agent default role name
+        self.name: str = config.get(
+            "name", "interaction_agent"
+        )  # More general agent default role name
 
-    async def start_interaction(self, instance_id: Optional[str] = None, **kwargs) -> str:
+    async def start_interaction(
+        self, instance_id: Optional[str] = None, **kwargs
+    ) -> str:
         """Create a tool instance.
 
         Args:
@@ -38,7 +42,9 @@ class BaseInteraction:
 
     async def generate_response(
         self, instance_id: str, messages: list[dict[str, Any]], **kwargs
-    ) -> tuple[bool, str, float, dict[str, Any]]:  # More clear response generation method
+    ) -> tuple[
+        bool, str, float, dict[str, Any]
+    ]:  # More clear response generation method
         """
         Generates a response for the current turn of interaction.
         Returns a tuple containing:
@@ -51,7 +57,12 @@ class BaseInteraction:
         response_content: str = "Your current result seems acceptable."
         current_turn_score: float = 0.8
         additional_data: dict[str, Any] = {}
-        return should_terminate_sequence, response_content, current_turn_score, additional_data
+        return (
+            should_terminate_sequence,
+            response_content,
+            current_turn_score,
+            additional_data,
+        )
 
     async def calculate_score(self) -> float:  # More clear score calculation method
         """
@@ -63,7 +74,9 @@ class BaseInteraction:
         score = 0.0
         return score
 
-    async def finalize_interaction(self) -> None:  # More clear interaction end and resource release method
+    async def finalize_interaction(
+        self,
+    ) -> None:  # More clear interaction end and resource release method
         """
         Finalizes the interaction session and releases any associated state or resources.
         Simulates: release state

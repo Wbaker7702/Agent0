@@ -57,14 +57,20 @@ class AsyncServerBase(ABC):
 
             # There's no way to gracefully restart uvicorn server if port is already in use,
             # so we exit the process directly and let AsyncLLMServerManager restart it.
-            print("FastAPI shutdown, maybe address already in use, exit process immediately.")
+            print(
+                "FastAPI shutdown, maybe address already in use, exit process immediately."
+            )
             os._exit(-1)
 
         app = fastapi.FastAPI(lifespan=lifespan)
-        app.router.add_api_route("/v1/chat/completions", self.chat_completion, methods=["POST"])
+        app.router.add_api_route(
+            "/v1/chat/completions", self.chat_completion, methods=["POST"]
+        )
 
         self.port = _get_free_port()
-        config = uvicorn.Config(app, host=["::", "0.0.0.0"], port=self.port, log_level="warning")
+        config = uvicorn.Config(
+            app, host=["::", "0.0.0.0"], port=self.port, log_level="warning"
+        )
         server = uvicorn.Server(config)
         await server.serve()
 
@@ -82,7 +88,9 @@ class AsyncServerBase(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    async def generate(self, prompt_ids: list[int], sampling_params: dict[str, Any], request_id: str) -> list[int]:
+    async def generate(
+        self, prompt_ids: list[int], sampling_params: dict[str, Any], request_id: str
+    ) -> list[int]:
         """Generate response ids given prompt ids.
 
         Args:
@@ -128,7 +136,9 @@ class AsyncLLMServerManager:
         self.rollout_tp_size = self.config.rollout.tensor_model_parallel_size
         self.rollout_dp_size = self.worker_group.world_size // self.rollout_tp_size
 
-        register_center = ray.get_actor(f"{self.worker_group.name_prefix}_register_center")
+        register_center = ray.get_actor(
+            f"{self.worker_group.name_prefix}_register_center"
+        )
         workers_info = ray.get(register_center.get_worker_info.remote())
         assert len(workers_info) == self.worker_group.world_size
 
@@ -155,7 +165,12 @@ class AsyncLLMServerManager:
                         soft=False,
                     ),
                     name=f"async_llm_server_{rollout_dp_rank}",
-                ).remote(config, self.rollout_dp_size, rollout_dp_rank, self.worker_group.name_prefix)
+                ).remote(
+                    config,
+                    self.rollout_dp_size,
+                    rollout_dp_rank,
+                    self.worker_group.name_prefix,
+                )
                 for rollout_dp_rank in unready_dp_ranks
             }
 
@@ -167,7 +182,9 @@ class AsyncLLMServerManager:
                     unready_dp_ranks.remove(rollout_dp_rank)
                 except Exception:
                     ray.kill(server)
-                    print(f"rollout server {rollout_dp_rank} failed, maybe address already in use, restarting...")
+                    print(
+                        f"rollout server {rollout_dp_rank} failed, maybe address already in use, restarting..."
+                    )
 
         # All server instances are ready, init AsyncLLM engine.
         ray.get([server.init_engine.remote() for server in self.async_llm_servers])
@@ -177,7 +194,9 @@ class AsyncLLMServerManager:
         self.chat_scheduler_exception: Exception = None
         self.chat_scheduler_loop = None
         self.chat_scheduler_ready = threading.Event()
-        self.chat_scheduler_thread = threading.Thread(target=self._init_chat_scheduler, daemon=True)
+        self.chat_scheduler_thread = threading.Thread(
+            target=self._init_chat_scheduler, daemon=True
+        )
         self.chat_scheduler_thread.start()
         self.chat_scheduler_ready.wait()
 
@@ -233,13 +252,16 @@ class AsyncLLMServerManager:
         assert self.chat_scheduler is not None, "chat scheduler is not initialized."
 
         future = asyncio.run_coroutine_threadsafe(
-            self.chat_scheduler.generate_sequences(prompts, **sampling_params), self.chat_scheduler_loop
+            self.chat_scheduler.generate_sequences(prompts, **sampling_params),
+            self.chat_scheduler_loop,
         )
         return future.result()
 
 
 def async_server_class(
-    rollout_backend: str, rollout_backend_module: Optional[str] = None, rollout_backend_class: Optional[str] = None
+    rollout_backend: str,
+    rollout_backend_module: Optional[str] = None,
+    rollout_backend_class: Optional[str] = None,
 ) -> type[AsyncServerBase]:
     """Get async server class.
 
@@ -257,18 +279,26 @@ def async_server_class(
         # importlib.import_module and from ... import ... have subtle differences in ray
 
         if rollout_backend == "vllm":
-            from verl.workers.rollout.vllm_rollout.vllm_async_server import AsyncvLLMServer
+            from verl.workers.rollout.vllm_rollout.vllm_async_server import (
+                AsyncvLLMServer,
+            )
 
             return AsyncvLLMServer
         elif rollout_backend == "sglang":
-            from verl.workers.rollout.sglang_rollout.async_sglang_server import AsyncSglangServer
+            from verl.workers.rollout.sglang_rollout.async_sglang_server import (
+                AsyncSglangServer,
+            )
 
             return AsyncSglangServer
         else:
-            raise NotImplementedError(f"rollout backend {rollout_backend} is not supported")
+            raise NotImplementedError(
+                f"rollout backend {rollout_backend} is not supported"
+            )
 
     if rollout_backend_module is None or rollout_backend_class is None:
-        raise ValueError("rollout_backend_module and rollout_backend_class must be both provided for customization")
+        raise ValueError(
+            "rollout_backend_module and rollout_backend_class must be both provided for customization"
+        )
 
     from verl.utils.import_utils import load_extern_type
 

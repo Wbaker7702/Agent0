@@ -32,7 +32,9 @@ from verl.utils.fs import copy_local_path_from_hdfs
 
 def convert_nested_value_to_list_recursive(data_item):
     if isinstance(data_item, dict):
-        return {k: convert_nested_value_to_list_recursive(v) for k, v in data_item.items()}
+        return {
+            k: convert_nested_value_to_list_recursive(v) for k, v in data_item.items()
+        }
     elif isinstance(data_item, list):
         return [convert_nested_value_to_list_recursive(elem) for elem in data_item]
     elif isinstance(data_item, np.ndarray):
@@ -57,7 +59,9 @@ class MultiTurnSFTDataset(Dataset):
         multiturn_config = config.get("multiturn", {})
         self.messages_key = multiturn_config.get("messages_key", "messages")
         self.tools_key = multiturn_config.get("tools_key", "tools")
-        self.enable_thinking_key = multiturn_config.get("enable_thinking_key", "enable_thinking")
+        self.enable_thinking_key = multiturn_config.get(
+            "enable_thinking_key", "enable_thinking"
+        )
         assert self.truncation in ["error", "left", "right"]
 
         if not isinstance(parquet_files, list):
@@ -73,14 +77,19 @@ class MultiTurnSFTDataset(Dataset):
 
     def _download(self):
         for i, parquet_file in enumerate(self.parquet_files):
-            self.parquet_files[i] = copy_local_path_from_hdfs(parquet_file, verbose=True)
+            self.parquet_files[i] = copy_local_path_from_hdfs(
+                parquet_file, verbose=True
+            )
 
     def _read_files_and_process(self):
         def series_to_item(ls):
             import numpy
             import pandas
 
-            while isinstance(ls, pandas.core.series.Series | numpy.ndarray) and len(ls) == 1:
+            while (
+                isinstance(ls, pandas.core.series.Series | numpy.ndarray)
+                and len(ls) == 1
+            ):
                 ls = ls[0]
             return ls
 
@@ -95,7 +104,11 @@ class MultiTurnSFTDataset(Dataset):
 
         # Extract tools list from dataframe
         if self.tools_key in self.dataframe.columns:
-            self.tools = self.dataframe[self.tools_key].apply(convert_nested_value_to_list_recursive).tolist()
+            self.tools = (
+                self.dataframe[self.tools_key]
+                .apply(convert_nested_value_to_list_recursive)
+                .tolist()
+            )
         else:
             self.tools = None
         # Extract enable_thinking list from dataframe
@@ -138,12 +151,14 @@ class MultiTurnSFTDataset(Dataset):
                 tools=tools,
             )
             if is_assistant:
-                prev_applied_text_w_generation_prompt = self.tokenizer.apply_chat_template(
-                    messages[:start_idx],
-                    tokenize=False,
-                    add_generation_prompt=True,
-                    enable_thinking=enable_thinking,
-                    tools=tools,
+                prev_applied_text_w_generation_prompt = (
+                    self.tokenizer.apply_chat_template(
+                        messages[:start_idx],
+                        tokenize=False,
+                        add_generation_prompt=True,
+                        enable_thinking=enable_thinking,
+                        tools=tools,
+                    )
                 )
 
         else:
@@ -158,7 +173,9 @@ class MultiTurnSFTDataset(Dataset):
         )
         # Get tokens for the current message only
         if is_assistant:
-            generation_prompt_text = prev_applied_text_w_generation_prompt[len(prev_applied_text) :]
+            generation_prompt_text = prev_applied_text_w_generation_prompt[
+                len(prev_applied_text) :
+            ]
             generation_prompt_tokens = self.tokenizer.encode(
                 generation_prompt_text,
                 add_special_tokens=False,
@@ -228,7 +245,9 @@ class MultiTurnSFTDataset(Dataset):
         tokenizer = self.tokenizer
         messages = self.messages[item]
         tools = self.tools[item] if self.tools is not None else None
-        enable_thinking = self.enable_thinking[item] if self.enable_thinking is not None else None
+        enable_thinking = (
+            self.enable_thinking[item] if self.enable_thinking is not None else None
+        )
 
         if self.tools is not None:
             tools = json.loads(self.tools[item])
@@ -263,7 +282,12 @@ class MultiTurnSFTDataset(Dataset):
             if cur_messages["role"] == "assistant":
                 # Process assistant message
                 tokens, loss_mask, attention_mask = self._process_message_tokens(
-                    messages, i, i + 1, is_assistant=True, enable_thinking=enable_thinking, tools=tools
+                    messages,
+                    i,
+                    i + 1,
+                    is_assistant=True,
+                    enable_thinking=enable_thinking,
+                    tools=tools,
                 )
                 concat_tokens.extend(tokens)
                 concat_loss_mask.extend(loss_mask)
@@ -305,10 +329,22 @@ class MultiTurnSFTDataset(Dataset):
         sequence_length = input_ids.shape[0]
         if sequence_length < self.max_length:
             # Pad sequences
-            pad_token_id = self.tokenizer.pad_token_id if self.tokenizer.pad_token_id is not None else 0
-            padded_input_ids = torch.full((self.max_length - sequence_length,), pad_token_id, dtype=input_ids.dtype)
-            padded_attention_mask = torch.zeros((self.max_length - sequence_length,), dtype=attention_mask.dtype)
-            padded_loss_mask = torch.zeros((self.max_length - sequence_length,), dtype=loss_mask.dtype)
+            pad_token_id = (
+                self.tokenizer.pad_token_id
+                if self.tokenizer.pad_token_id is not None
+                else 0
+            )
+            padded_input_ids = torch.full(
+                (self.max_length - sequence_length,),
+                pad_token_id,
+                dtype=input_ids.dtype,
+            )
+            padded_attention_mask = torch.zeros(
+                (self.max_length - sequence_length,), dtype=attention_mask.dtype
+            )
+            padded_loss_mask = torch.zeros(
+                (self.max_length - sequence_length,), dtype=loss_mask.dtype
+            )
 
             input_ids = torch.cat((input_ids, padded_input_ids))
             attention_mask = torch.cat((attention_mask, padded_attention_mask))
@@ -323,7 +359,9 @@ class MultiTurnSFTDataset(Dataset):
                 attention_mask = attention_mask[: self.max_length]
                 loss_mask = loss_mask[: self.max_length]
             elif self.truncation == "error":
-                raise ValueError(f"{sequence_length=} is larger than {self.max_length=}")
+                raise ValueError(
+                    f"{sequence_length=} is larger than {self.max_length=}"
+                )
             else:
                 raise ValueError(f"Unknown truncation method {self.truncation}")
 

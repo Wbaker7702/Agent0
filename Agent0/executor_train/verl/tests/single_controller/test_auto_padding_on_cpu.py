@@ -20,7 +20,11 @@ from verl import DataProto
 from verl.protocol import DataProtoConfig
 from verl.single_controller.base import Worker
 from verl.single_controller.base.decorator import Dispatch, register
-from verl.single_controller.ray.base import RayClassWithInitArgs, RayResourcePool, RayWorkerGroup
+from verl.single_controller.ray.base import (
+    RayClassWithInitArgs,
+    RayResourcePool,
+    RayWorkerGroup,
+)
 
 # or set env var VERL_AUTO_PADDING = "1" / "true"
 DataProtoConfig.auto_padding = True
@@ -47,16 +51,24 @@ def test_auto_padding():
 
     # test locally first
     for test_size in range(4, 20):
-        local_data = DataProto.from_dict({"a": torch.zeros(test_size)}, {"na": np.zeros(test_size, dtype=object)})
+        local_data = DataProto.from_dict(
+            {"a": torch.zeros(test_size)}, {"na": np.zeros(test_size, dtype=object)}
+        )
         # print(f"before padding, local_data = {local_data}")
-        padding_size = (chunk_size - (test_size % chunk_size)) if (test_size % chunk_size > 0) else 0
+        padding_size = (
+            (chunk_size - (test_size % chunk_size))
+            if (test_size % chunk_size > 0)
+            else 0
+        )
         local_data.padding(padding_size)
         # print(f"after padding, local_data = {local_data}")
-        assert len(local_data) == len(local_data) + len(local_data) % chunk_size, (
-            f"expecting padded length to be {len(local_data) + len(local_data) % chunk_size}, but got {len(local_data)}"
-        )
+        assert (
+            len(local_data) == len(local_data) + len(local_data) % chunk_size
+        ), f"expecting padded length to be {len(local_data) + len(local_data) % chunk_size}, but got {len(local_data)}"
         chunked = local_data.chunk(chunk_size)
-        assert len(chunked) == chunk_size, f"during test_size = {test_size}, expecting {chunk_size}, got {chunked}"
+        assert (
+            len(chunked) == chunk_size
+        ), f"during test_size = {test_size}, expecting {chunk_size}, got {chunked}"
         for dp in chunked:
             assert len(dp) == test_size // chunk_size + bool(test_size % chunk_size), (
                 f"test size = {test_size}, expecting dp to be length of "
@@ -64,19 +76,28 @@ def test_auto_padding():
             )
 
     # test with RayWorkerGroup method decorated as dispatch_mode=Dispatch.DP_COMPUTE_PROTO
-    data = DataProto.from_dict({"a": torch.zeros(10)}, {"na": np.array([str(i) for i in range(10)], dtype=object)})
+    data = DataProto.from_dict(
+        {"a": torch.zeros(10)},
+        {"na": np.array([str(i) for i in range(10)], dtype=object)},
+    )
     output = actor_wg.add(data)
 
     print(output.batch["a"])
     assert len(output) == 10
 
-    data = DataProto.from_dict({"a": torch.zeros(1)}, {"na": np.array([str(i) for i in range(1)], dtype=object)})
+    data = DataProto.from_dict(
+        {"a": torch.zeros(1)},
+        {"na": np.array([str(i) for i in range(1)], dtype=object)},
+    )
     output = actor_wg.add(data)
 
     print(output.batch["a"])
     assert len(output) == 1
 
-    data = DataProto.from_dict({"a": torch.zeros(8)}, {"na": np.array([str(i) for i in range(8)], dtype=object)})
+    data = DataProto.from_dict(
+        {"a": torch.zeros(8)},
+        {"na": np.array([str(i) for i in range(8)], dtype=object)},
+    )
     output = actor_wg.add(data)
 
     print(output.batch["a"])
@@ -86,21 +107,26 @@ def test_auto_padding():
     DataProtoConfig.auto_padding = False
 
     data = DataProto.from_dict(
-        {"a": torch.zeros(10)}, {"na": np.array([str(i) for i in range(10)], dtype=object)}, auto_padding=True
+        {"a": torch.zeros(10)},
+        {"na": np.array([str(i) for i in range(10)], dtype=object)},
+        auto_padding=True,
     )
     output = actor_wg.add(data)
     print(output.batch["a"])
     assert len(output) == 10
 
     data = DataProto.from_single_dict(
-        {"a": torch.zeros(1), "na": np.array([str(i) for i in range(1)], dtype=object)}, auto_padding=True
+        {"a": torch.zeros(1), "na": np.array([str(i) for i in range(1)], dtype=object)},
+        auto_padding=True,
     )
     output = actor_wg.add(data)
 
     print(output.batch["a"])
     assert len(output) == 1
 
-    data = DataProto.from_single_dict({"a": torch.zeros(8), "na": np.array([str(i) for i in range(8)], dtype=object)})
+    data = DataProto.from_single_dict(
+        {"a": torch.zeros(8), "na": np.array([str(i) for i in range(8)], dtype=object)}
+    )
     output = actor_wg.add(data)
 
     print(output.batch["a"])

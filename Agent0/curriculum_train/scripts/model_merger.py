@@ -53,12 +53,21 @@ def upload_model_to_huggingface(local_path: str, remote_path: str):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--local_dir", required=True, type=str, help="The path for your saved model")
-    parser.add_argument("--hf_upload_path", default=False, type=str, help="The path of the huggingface repo to upload")
+    parser.add_argument(
+        "--local_dir", required=True, type=str, help="The path for your saved model"
+    )
+    parser.add_argument(
+        "--hf_upload_path",
+        default=False,
+        type=str,
+        help="The path of the huggingface repo to upload",
+    )
     args = parser.parse_args()
     local_dir: str = args.local_dir
 
-    assert not local_dir.endswith("huggingface"), "The local_dir should not end with huggingface."
+    assert not local_dir.endswith(
+        "huggingface"
+    ), "The local_dir should not end with huggingface."
 
     # copy rank zero to find the shape of (dp, fsdp)
     rank = 0
@@ -71,7 +80,9 @@ if __name__ == "__main__":
 
     assert world_size, "No model file with the proper format."
 
-    rank0_weight_path = os.path.join(local_dir, f"model_world_size_{world_size}_rank_{rank}.pt")
+    rank0_weight_path = os.path.join(
+        local_dir, f"model_world_size_{world_size}_rank_{rank}.pt"
+    )
     state_dict = torch.load(rank0_weight_path, map_location="cpu", weights_only=False)
     pivot_key = sorted(state_dict.keys())[0]
     weight = state_dict[pivot_key]
@@ -87,7 +98,10 @@ if __name__ == "__main__":
 
     print(f"Got device mesh {mesh}, mesh_dim_names {mesh_dim_names}")
 
-    assert mesh_dim_names in (("fsdp",), ("ddp", "fsdp")), f"Unsupported mesh_dim_names {mesh_dim_names}."
+    assert mesh_dim_names in (
+        ("fsdp",),
+        ("ddp", "fsdp"),
+    ), f"Unsupported mesh_dim_names {mesh_dim_names}."
 
     if "tp" in mesh_dim_names:
         # fsdp * tp
@@ -104,7 +118,9 @@ if __name__ == "__main__":
     model_state_dict_lst.extend([""] * (total_shards - 1))
 
     def process_one_shard(rank, model_state_dict_lst):
-        model_path = os.path.join(local_dir, f"model_world_size_{world_size}_rank_{rank}.pt")
+        model_path = os.path.join(
+            local_dir, f"model_world_size_{world_size}_rank_{rank}.pt"
+        )
         state_dict = torch.load(model_path, map_location="cpu", weights_only=False)
         model_state_dict_lst[rank] = state_dict
         return state_dict
@@ -174,7 +190,9 @@ if __name__ == "__main__":
         raise NotImplementedError(f"Unknown architecture {architectures}.")
 
     with torch.device("meta"):
-        model: PreTrainedModel = AutoClass.from_config(config, torch_dtype=torch.bfloat16)
+        model: PreTrainedModel = AutoClass.from_config(
+            config, torch_dtype=torch.bfloat16
+        )
 
     assert isinstance(model, PreTrainedModel)
     model.to_empty(device="cpu")

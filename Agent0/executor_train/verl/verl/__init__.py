@@ -37,7 +37,9 @@ __all__ = ["DataProto", "__version__"]
 
 if os.getenv("VERL_USE_MODELSCOPE", "False").lower() == "true":
     if importlib.util.find_spec("modelscope") is None:
-        raise ImportError("You are using the modelscope hub, please install modelscope by `pip install modelscope -U`")
+        raise ImportError(
+            "You are using the modelscope hub, please install modelscope by `pip install modelscope -U`"
+        )
     # Patch hub to download models from modelscope to speed up.
     from modelscope.utils.hf_util import patch_hub
 

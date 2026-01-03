@@ -32,7 +32,11 @@ from omegaconf import OmegaConf
 
 from verl import DataProto
 from verl.protocol import pad_dataproto_to_divisor, unpad_dataproto
-from verl.single_controller.ray import RayClassWithInitArgs, RayResourcePool, RayWorkerGroup
+from verl.single_controller.ray import (
+    RayClassWithInitArgs,
+    RayResourcePool,
+    RayWorkerGroup,
+)
 from verl.utils import hf_tokenizer
 from verl.utils.fs import copy_to_local
 from verl.utils.hdfs_io import makedirs
@@ -49,7 +53,9 @@ def run_generation(config) -> None:
     if not ray.is_initialized():
         # this is for local ray cluster
         ray.init(
-            runtime_env={"env_vars": {"TOKENIZERS_PARALLELISM": "true", "NCCL_DEBUG": "WARN"}},
+            runtime_env={
+                "env_vars": {"TOKENIZERS_PARALLELISM": "true", "NCCL_DEBUG": "WARN"}
+            },
             num_cpus=config.ray_init.num_cpus,
         )
 
@@ -58,7 +64,9 @@ def run_generation(config) -> None:
 
 @ray.remote(num_cpus=1)
 def main_task(config):
-    pprint(OmegaConf.to_container(config, resolve=True))  # resolve=True will eval symbol values
+    pprint(
+        OmegaConf.to_container(config, resolve=True)
+    )  # resolve=True will eval symbol values
     OmegaConf.resolve(config)
 
     local_path = copy_to_local(config.model.path)
@@ -79,8 +87,12 @@ def main_task(config):
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
-    ray_cls_with_init = RayClassWithInitArgs(cls=ray.remote(ActorRolloutRefWorker), config=config, role="rollout")
-    resource_pool = RayResourcePool(process_on_nodes=[config.trainer.n_gpus_per_node] * config.trainer.nnodes)
+    ray_cls_with_init = RayClassWithInitArgs(
+        cls=ray.remote(ActorRolloutRefWorker), config=config, role="rollout"
+    )
+    resource_pool = RayResourcePool(
+        process_on_nodes=[config.trainer.n_gpus_per_node] * config.trainer.nnodes
+    )
     wg = RayWorkerGroup(
         resource_pool=resource_pool,
         ray_cls_with_init=ray_cls_with_init,
@@ -95,7 +107,9 @@ def main_task(config):
 
     for batch_idx in range(num_batch):
         print(f"[{batch_idx + 1}/{num_batch}] Start to process.")
-        batch_chat_lst = chat_lst[batch_idx * config_batch_size : (batch_idx + 1) * config_batch_size]
+        batch_chat_lst = chat_lst[
+            batch_idx * config_batch_size : (batch_idx + 1) * config_batch_size
+        ]
         inputs = tokenizer.apply_chat_template(
             batch_chat_lst,
             add_generation_prompt=True,
@@ -109,7 +123,11 @@ def main_task(config):
         input_ids = inputs["input_ids"]
         attention_mask = inputs["attention_mask"]
         position_ids = compute_position_id_with_mask(attention_mask)
-        batch_dict = {"input_ids": input_ids, "attention_mask": attention_mask, "position_ids": position_ids}
+        batch_dict = {
+            "input_ids": input_ids,
+            "attention_mask": attention_mask,
+            "position_ids": position_ids,
+        }
 
         data = DataProto.from_dict(batch_dict)
         data_padded, pad_size = pad_dataproto_to_divisor(data, wg.world_size)
@@ -124,9 +142,15 @@ def main_task(config):
             for i in range(len(output)):
                 data_item = output[i]
                 prompt_length = data_item.batch["prompts"].shape[-1]
-                valid_response_length = data_item.batch["attention_mask"][prompt_length:].sum()
-                valid_response_ids = data_item.batch["responses"][:valid_response_length]
-                response_str = tokenizer.decode(valid_response_ids, skip_special_tokens=True)
+                valid_response_length = data_item.batch["attention_mask"][
+                    prompt_length:
+                ].sum()
+                valid_response_ids = data_item.batch["responses"][
+                    :valid_response_length
+                ]
+                response_str = tokenizer.decode(
+                    valid_response_ids, skip_special_tokens=True
+                )
                 output_texts.append(response_str)
 
             output_lst[n_sample].extend(output_texts)

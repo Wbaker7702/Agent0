@@ -84,7 +84,9 @@ def test_load_extern_type_invalid_module():
     # Create a temporary file with syntax errors
     import tempfile
 
-    with tempfile.NamedTemporaryFile(suffix=".py", mode="w+", delete=False) as temp_file:
+    with tempfile.NamedTemporaryFile(
+        suffix=".py", mode="w+", delete=False
+    ) as temp_file:
         temp_file.write("This is not valid Python syntax :")
         temp_path = temp_file.name
 

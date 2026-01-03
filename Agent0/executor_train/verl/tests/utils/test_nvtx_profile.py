@@ -42,8 +42,12 @@ class TestProfilerConfig(unittest.TestCase):
             assert isinstance(profiler_config, ProfilerConfig)
             with self.assertRaises(AttributeError):
                 _ = profiler_config.non_existing_key
-            assert config.get("non_existing_key") == profiler_config.get("non_existing_key")
-            assert config.get("non_existing_key", 1) == profiler_config.get("non_existing_key", 1)
+            assert config.get("non_existing_key") == profiler_config.get(
+                "non_existing_key"
+            )
+            assert config.get("non_existing_key", 1) == profiler_config.get(
+                "non_existing_key", 1
+            )
             assert config["discrete"] == profiler_config["discrete"]
             from dataclasses import FrozenInstanceError
 
@@ -73,7 +77,10 @@ class TestNsightSystemsProfiler(unittest.TestCase):
         self.assertEqual(self.profiler.discrete, False)
 
     def test_start_stop_profiling(self):
-        with patch("torch.cuda.profiler.start") as mock_start, patch("torch.cuda.profiler.stop") as mock_stop:
+        with (
+            patch("torch.cuda.profiler.start") as mock_start,
+            patch("torch.cuda.profiler.stop") as mock_stop,
+        ):
             # Test start
             self.profiler.start()
             self.assertTrue(self.profiler.this_step)
@@ -88,7 +95,10 @@ class TestNsightSystemsProfiler(unittest.TestCase):
         discrete_config = ProfilerConfig(discrete=True, all_ranks=True)
         profiler = NsightSystemsProfiler(self.rank, discrete_config)
 
-        with patch("torch.cuda.profiler.start") as mock_start, patch("torch.cuda.profiler.stop") as mock_stop:
+        with (
+            patch("torch.cuda.profiler.start") as mock_start,
+            patch("torch.cuda.profiler.stop") as mock_stop,
+        ):
             profiler.start()
             self.assertTrue(profiler.this_step)
             mock_start.assert_not_called()  # Shouldn't start immediately in discrete mode
@@ -109,7 +119,9 @@ class TestNsightSystemsProfiler(unittest.TestCase):
         with (
             patch("torch.cuda.profiler.start") as mock_start,
             patch("torch.cuda.profiler.stop") as mock_stop,
-            patch("verl.utils.profiler.nvtx_profile.mark_start_range") as mock_start_range,
+            patch(
+                "verl.utils.profiler.nvtx_profile.mark_start_range"
+            ) as mock_start_range,
             patch("verl.utils.profiler.nvtx_profile.mark_end_range") as mock_end_range,
         ):
             result = test_func(mock_self)
@@ -133,7 +145,9 @@ class TestNsightSystemsProfiler(unittest.TestCase):
         with (
             patch("torch.cuda.profiler.start") as mock_start,
             patch("torch.cuda.profiler.stop") as mock_stop,
-            patch("verl.utils.profiler.nvtx_profile.mark_start_range") as mock_start_range,
+            patch(
+                "verl.utils.profiler.nvtx_profile.mark_start_range"
+            ) as mock_start_range,
             patch("verl.utils.profiler.nvtx_profile.mark_end_range") as mock_end_range,
         ):
             result = test_func(mock_self)

@@ -29,14 +29,25 @@ class MemoryBuffer:
     memory. It must have a unique type to support this behavior.
     """
 
-    def __init__(self, numel: int, numel_padded: int, dtype: torch.dtype, source: Optional[torch.Tensor] = None):
+    def __init__(
+        self,
+        numel: int,
+        numel_padded: int,
+        dtype: torch.dtype,
+        source: Optional[torch.Tensor] = None,
+    ):
         self.numel = numel
         self.numel_padded = numel_padded
         self.dtype = dtype
         if source is not None:
             self.data = source
         else:
-            self.data = torch.zeros(self.numel_padded, dtype=self.dtype, device=get_device_name(), requires_grad=False)
+            self.data = torch.zeros(
+                self.numel_padded,
+                dtype=self.dtype,
+                device=get_device_name(),
+                requires_grad=False,
+            )
 
     def zero(self):
         """Reset the buffer to zero."""
@@ -69,7 +80,9 @@ def get_weight_buffer_meta_from_module(module: nn.Module) -> dict[str, dict]:
     return weight_buffer_meta
 
 
-def build_memory_buffer(weight_buffer_meta: dict[str, dict]) -> dict[torch.dtype, MemoryBuffer]:
+def build_memory_buffer(
+    weight_buffer_meta: dict[str, dict],
+) -> dict[torch.dtype, MemoryBuffer]:
     """Build the memory buffer given weight_buffer_meta
 
     Args:
@@ -99,14 +112,18 @@ def build_memory_buffer(weight_buffer_meta: dict[str, dict]) -> dict[torch.dtype
 
 
 def build_memory_reference_from_module(
-    module: torch.nn.Module, memory_buffers: dict[torch.dtype, MemoryBuffer], maintain_weight=True
+    module: torch.nn.Module,
+    memory_buffers: dict[torch.dtype, MemoryBuffer],
+    maintain_weight=True,
 ):
     start_index = {}
     for dtype in memory_buffers:
         start_index[dtype] = 0
     for name, param in sorted(module.named_parameters()):
         memory_buffer = memory_buffers[param.dtype]
-        buffer = memory_buffer.get(shape=param.shape, start_index=start_index[param.dtype])
+        buffer = memory_buffer.get(
+            shape=param.shape, start_index=start_index[param.dtype]
+        )
         # need to increment start_index
         start_index[param.dtype] += calc_padded_numel(param.shape, param.dtype)
         if maintain_weight:
@@ -114,7 +131,9 @@ def build_memory_reference_from_module(
         param.data = buffer
 
 
-def build_memory_reference(weight_buffer_meta: dict[str, dict], memory_buffers: dict[torch.dtype, MemoryBuffer]):
+def build_memory_reference(
+    weight_buffer_meta: dict[str, dict], memory_buffers: dict[torch.dtype, MemoryBuffer]
+):
     """Build the memory references. The memory buffers are built using the build_memory_buffer API.
     This API will allocate a weight buffer pointer to the memory buffer according to the weight_buffer_meta.
 
@@ -202,7 +221,9 @@ class MegatronMemoryBufferForRollout:
 
     def build_memory_reference(self):
         for i, weight_buffer_meta in enumerate(self.weight_buffer_meta_pp):
-            self._weight_buffers[i] = build_memory_reference(weight_buffer_meta, self._memory_buffers[i])
+            self._weight_buffers[i] = build_memory_reference(
+                weight_buffer_meta, self._memory_buffers[i]
+            )
         self._named_parameters = self.transform_memory_param_fn(self._weight_buffers)
 
     @property

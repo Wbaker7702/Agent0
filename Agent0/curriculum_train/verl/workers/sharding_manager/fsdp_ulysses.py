@@ -18,7 +18,10 @@ Contains a resharding manager that binds weights from FSDP zero3 to XPerfGPT
 from torch.distributed.device_mesh import DeviceMesh
 
 from ...protocol import DataProto, all_gather_data_proto
-from ...utils.ulysses import get_ulysses_sequence_parallel_group, set_ulysses_sequence_parallel_group
+from ...utils.ulysses import (
+    get_ulysses_sequence_parallel_group,
+    set_ulysses_sequence_parallel_group,
+)
 from .base import BaseShardingManager
 
 

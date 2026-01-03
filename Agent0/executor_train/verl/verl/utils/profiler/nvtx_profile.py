@@ -41,7 +41,9 @@ def mark_start_range(
         category (str, optional):
             The category of the range. Defaults to None.
     """
-    return nvtx.start_range(message=message, color=color, domain=domain, category=category)
+    return nvtx.start_range(
+        message=message, color=color, domain=domain, category=category
+    )
 
 
 def mark_end_range(range_id: str) -> None:
@@ -75,7 +77,9 @@ def mark_annotate(
 
     def decorator(func):
         profile_message = message or func.__name__
-        return nvtx.annotate(profile_message, color=color, domain=domain, category=category)(func)
+        return nvtx.annotate(
+            profile_message, color=color, domain=domain, category=category
+        )(func)
 
     return decorator
 
@@ -103,7 +107,9 @@ def marked_timer(
     Yields:
         None: This is a context manager that yields control back to the code block.
     """
-    mark_range = mark_start_range(message=name, color=color, domain=domain, category=category)
+    mark_range = mark_start_range(
+        message=name, color=color, domain=domain, category=category
+    )
     from .performance import _timer
 
     yield from _timer(name, timing_raw)
@@ -175,7 +181,12 @@ class NsightSystemsProfiler(DistProfiler):
                 if self.profiler.this_step:
                     if self.profiler.discrete:
                         torch.cuda.profiler.start()
-                    mark_range = mark_start_range(message=profile_name, color=color, domain=domain, category=category)
+                    mark_range = mark_start_range(
+                        message=profile_name,
+                        color=color,
+                        domain=domain,
+                        category=category,
+                    )
 
                 result = func(self, *args, **kwargs)
 

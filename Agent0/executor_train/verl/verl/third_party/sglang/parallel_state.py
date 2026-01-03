@@ -57,7 +57,9 @@ def initialize_parallel_state(
     # Use the world_size set by TORCHRUN
     world_size = int(os.getenv("WORLD_SIZE", "-1"))
     assert world_size != -1, "The world_size is set to -1, not initialized by TORCHRUN"
-    init_distributed_environment(world_size, rank, distributed_init_method, local_rank, backend)
+    init_distributed_environment(
+        world_size, rank, distributed_init_method, local_rank, backend
+    )
     if torch.distributed.get_world_size() > 1:
         # NOTE: build a separate inference group with infer tp & micro dp
         initialize_model_parallel_for_sglang(
@@ -65,7 +67,9 @@ def initialize_parallel_state(
             num_tensor_model_parallel_groups_per_train_tp=num_tp_per_train_tp,
         )
     else:
-        initialize_model_parallel(tensor_model_parallel_size, pipeline_model_parallel_size, backend)
+        initialize_model_parallel(
+            tensor_model_parallel_size, pipeline_model_parallel_size, backend
+        )
 
 
 # NOTE(linjunrong): After init SGLang rollout using class EngineFragment, user should always remember to call
@@ -86,7 +90,9 @@ def ensure_model_parallel_initialized(
     # get the backend of _DEVICE_WORLD_GROUP
     backend = backend or torch.distributed.get_backend(get_world_group().device_group)
     if not model_parallel_is_initialized():
-        initialize_model_parallel(tensor_model_parallel_size, pipeline_model_parallel_size, backend)
+        initialize_model_parallel(
+            tensor_model_parallel_size, pipeline_model_parallel_size, backend
+        )
         return
 
     assert get_tensor_model_parallel_world_size() == tensor_model_parallel_size, (
@@ -140,7 +146,9 @@ def initialize_model_parallel_for_sglang(
         assert _TP is None, "tensor model parallel group is already initialized"
         group_ranks = []
         for i in range(num_tensor_model_parallel_groups):
-            ranks = range(i * tensor_model_parallel_size, (i + 1) * tensor_model_parallel_size)
+            ranks = range(
+                i * tensor_model_parallel_size, (i + 1) * tensor_model_parallel_size
+            )
             group_ranks.append(ranks)
         _TP = init_model_parallel_group(
             group_ranks=group_ranks,
@@ -158,15 +166,22 @@ def initialize_model_parallel_for_sglang(
 
         # Build the inference tp groups
         # train_tp = train_tensor_parallel_size
-        train_tp = num_tensor_model_parallel_groups_per_train_tp * tensor_model_parallel_size
+        train_tp = (
+            num_tensor_model_parallel_groups_per_train_tp * tensor_model_parallel_size
+        )
         # num_tensor_model_parallel_groups_per_train_tp = train_tp // tensor_model_parallel_size
         assert _TP is None, "tensor model parallel group is already initialized"
         group_ranks = []
-        for i in range(num_tensor_model_parallel_groups // num_tensor_model_parallel_groups_per_train_tp):
+        for i in range(
+            num_tensor_model_parallel_groups
+            // num_tensor_model_parallel_groups_per_train_tp
+        ):
             start = train_tp * i
             end = train_tp * (i + 1)
             for j in range(num_tensor_model_parallel_groups_per_train_tp):
-                ranks = list(range(start, end, num_tensor_model_parallel_groups_per_train_tp))
+                ranks = list(
+                    range(start, end, num_tensor_model_parallel_groups_per_train_tp)
+                )
                 for i in range(len(ranks)):
                     ranks[i] += j
                 group_ranks.append(ranks)
@@ -197,7 +212,9 @@ def initialize_model_parallel_for_sglang(
         ranks = list(range(i, world_size, num_pipeline_model_parallel_groups))
         group_ranks.append(ranks)
     # pipeline parallel does not need custom allreduce
-    _PP = init_model_parallel_group(group_ranks, get_world_group().local_rank, backend, use_custom_allreduce=False)
+    _PP = init_model_parallel_group(
+        group_ranks, get_world_group().local_rank, backend, use_custom_allreduce=False
+    )
     ps._PP = _PP  # for verl
 
 
@@ -234,7 +251,9 @@ def initialize_model_parallel(
     # Get world size and rank. Ensure some consistencies.
     assert torch.distributed.is_initialized()
     world_size: int = torch.distributed.get_world_size()
-    backend = backend or torch.distributed.get_backend(ps.get_world_group().device_group)
+    backend = backend or torch.distributed.get_backend(
+        ps.get_world_group().device_group
+    )
 
     # NOTE(sgm) we don't assert world_size == tp * pp
     # DP is not managed by vllm but by the VeRL WorkerGroup
@@ -251,7 +270,9 @@ def initialize_model_parallel(
     assert _TP is None, "tensor model parallel group is already initialized"
     group_ranks = []
     for i in range(num_tensor_model_parallel_groups):
-        ranks = list(range(i * tensor_model_parallel_size, (i + 1) * tensor_model_parallel_size))
+        ranks = list(
+            range(i * tensor_model_parallel_size, (i + 1) * tensor_model_parallel_size)
+        )
         group_ranks.append(ranks)
 
     # message queue broadcaster is only used in tensor model parallel group
@@ -280,7 +301,12 @@ def initialize_model_parallel(
     if ps._TP is not None:
         _PP = ps._TP
     else:
-        _PP = init_model_parallel_group(group_ranks, get_world_group().local_rank, backend, use_custom_allreduce=False)
+        _PP = init_model_parallel_group(
+            group_ranks,
+            get_world_group().local_rank,
+            backend,
+            use_custom_allreduce=False,
+        )
         ps._PP = _PP
 
 

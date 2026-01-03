@@ -71,7 +71,9 @@ def test_fused_workers():
     hybrid_cls_with_init = RayClassWithInitArgs(cls=HybridWorker)
     hybrid_cls_with_init.fused_worker_used = True
 
-    fused_wg = RayWorkerGroup(resource_pool=resource_pool, ray_cls_with_init=hybrid_cls_with_init)
+    fused_wg = RayWorkerGroup(
+        resource_pool=resource_pool, ray_cls_with_init=hybrid_cls_with_init
+    )
     fused_wg.fuse(cls_dict.keys())
 
     x = fused_wg.actor.add(0.1)

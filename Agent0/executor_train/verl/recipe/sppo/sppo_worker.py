@@ -45,7 +45,9 @@ class SPPOActorRolloutRefWorker(ActorRolloutRefWorker):
 
         from omegaconf import OmegaConf
 
-        override_model_config = OmegaConf.to_container(self.config.model.get("override_config", OmegaConf.create()))
+        override_model_config = OmegaConf.to_container(
+            self.config.model.get("override_config", OmegaConf.create())
+        )
 
         use_remove_padding = self.config.model.get("use_remove_padding", False)
         use_fused_kernels = self.config.model.get("use_fused_kernels", False)
@@ -58,19 +60,24 @@ class SPPOActorRolloutRefWorker(ActorRolloutRefWorker):
             else:
                 optim_config = None
                 fsdp_config = OmegaConf.create()
-            self.actor_module_fsdp, self.actor_optimizer, self.actor_lr_scheduler, self.actor_model_config = (
-                self._build_model_optimizer(
-                    model_path=self.config.model.path,
-                    fsdp_config=fsdp_config,
-                    optim_config=optim_config,
-                    override_model_config=override_model_config,
-                    use_remove_padding=use_remove_padding,
-                    use_fused_kernels=use_fused_kernels,
-                    enable_gradient_checkpointing=self.config.model.get("enable_gradient_checkpointing", False),
-                    trust_remote_code=self.config.model.get("trust_remote_code", False),
-                    use_liger=self.config.model.get("use_liger", False),
-                    role="actor",
-                )
+            (
+                self.actor_module_fsdp,
+                self.actor_optimizer,
+                self.actor_lr_scheduler,
+                self.actor_model_config,
+            ) = self._build_model_optimizer(
+                model_path=self.config.model.path,
+                fsdp_config=fsdp_config,
+                optim_config=optim_config,
+                override_model_config=override_model_config,
+                use_remove_padding=use_remove_padding,
+                use_fused_kernels=use_fused_kernels,
+                enable_gradient_checkpointing=self.config.model.get(
+                    "enable_gradient_checkpointing", False
+                ),
+                trust_remote_code=self.config.model.get("trust_remote_code", False),
+                use_liger=self.config.model.get("use_liger", False),
+                role="actor",
             )
 
             # get the original unwrapped module
@@ -78,11 +85,15 @@ class SPPOActorRolloutRefWorker(ActorRolloutRefWorker):
 
             if self._is_offload_param:
                 offload_fsdp_model_to_cpu(self.actor_module_fsdp)
-                log_gpu_memory_usage("After offload actor model during init", logger=logger)
+                log_gpu_memory_usage(
+                    "After offload actor model during init", logger=logger
+                )
 
             if self._is_offload_optimizer:
                 offload_fsdp_optimizer(optimizer=self.actor_optimizer)
-                log_gpu_memory_usage("After offload actor optimizer during init", logger=logger)
+                log_gpu_memory_usage(
+                    "After offload actor optimizer during init", logger=logger
+                )
         # load from checkpoint
         if self._is_actor:
             OmegaConf.set_struct(self.config.actor, True)
@@ -90,7 +101,9 @@ class SPPOActorRolloutRefWorker(ActorRolloutRefWorker):
                 self.config.actor.use_remove_padding = use_remove_padding
                 self.config.actor.use_fused_kernels = use_fused_kernels
             self.actor = DataParallelSPPOActor(
-                config=self.config.actor, actor_module=self.actor_module_fsdp, actor_optimizer=self.actor_optimizer
+                config=self.config.actor,
+                actor_module=self.actor_module_fsdp,
+                actor_optimizer=self.actor_optimizer,
             )
 
         if self._is_rollout:
@@ -114,7 +127,9 @@ class SPPOActorRolloutRefWorker(ActorRolloutRefWorker):
             with open_dict(self.config.ref):
                 self.config.ref.use_remove_padding = use_remove_padding
                 self.config.ref.use_fused_kernels = use_fused_kernels
-            self.ref_policy = DataParallelSPPOActor(config=self.config.ref, actor_module=self.ref_module_fsdp)
+            self.ref_policy = DataParallelSPPOActor(
+                config=self.config.ref, actor_module=self.ref_module_fsdp
+            )
 
         if self._is_actor:
             self.flops_counter = FlopsCounter(self.actor_model_config)
@@ -122,6 +137,8 @@ class SPPOActorRolloutRefWorker(ActorRolloutRefWorker):
                 model=self.actor_module_fsdp,
                 optimizer=self.actor.actor_optimizer,
                 lr_scheduler=self.actor_lr_scheduler,
-                processing_class=self.processor if self.processor is not None else self.tokenizer,
+                processing_class=(
+                    self.processor if self.processor is not None else self.tokenizer
+                ),
                 checkpoint_config=self.config.actor.checkpoint,
             )

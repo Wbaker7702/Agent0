@@ -43,7 +43,9 @@ def repeat_kv(hidden_states: torch.Tensor, n_rep: int) -> torch.Tensor:
     batch, slen, num_key_value_heads, head_dim = hidden_states.shape
     if n_rep == 1:
         return hidden_states
-    hidden_states = hidden_states[:, :, :, None, :].expand(batch, slen, num_key_value_heads, n_rep, head_dim)
+    hidden_states = hidden_states[:, :, :, None, :].expand(
+        batch, slen, num_key_value_heads, n_rep, head_dim
+    )
     return hidden_states.reshape(batch, slen, num_key_value_heads * n_rep, head_dim)
 
 
@@ -71,7 +73,9 @@ def _ulysses_flash_attention_forward(
 
     ########## AlltoAll for Ulysses ##########
     if ulysses_sp_size > 1:
-        assert position_ids is not None, "position_ids is required for Ulysses sequence parallelism"
+        assert (
+            position_ids is not None
+        ), "position_ids is required for Ulysses sequence parallelism"
 
         # NOTE: repeat kv heads to be divided by sequence parallel. Instead of repeating nheads_q//nheads_k,
         # we choose to repeat sp_size//nheads_k, since flash_attention supports MQA/GQA.
@@ -93,13 +97,22 @@ def _ulysses_flash_attention_forward(
         # https://github.com/huggingface/transformers/pull/33932
 
         # (bsz, seq_len/n) -> (bsz, seq_len)
-        position_ids_list = [torch.empty_like(position_ids) for _ in range(ulysses_sp_size)]
-        torch.distributed.all_gather(position_ids_list, position_ids, group=get_ulysses_sequence_parallel_group())
+        position_ids_list = [
+            torch.empty_like(position_ids) for _ in range(ulysses_sp_size)
+        ]
+        torch.distributed.all_gather(
+            position_ids_list, position_ids, group=get_ulysses_sequence_parallel_group()
+        )
         position_ids = torch.concat(position_ids_list, dim=-1)
 
     # (bsz, seq_len, n_head/n, head_dim)
     attn_output = _flash_attention_forward(
-        query_states, key_states, value_states, *args, position_ids=position_ids, **kwargs
+        query_states,
+        key_states,
+        value_states,
+        *args,
+        position_ids=position_ids,
+        **kwargs,
     )
 
     ########## AlltoAll for Ulysses ##########
@@ -129,7 +142,9 @@ def patch_vlm_for_ulysses_input_slicing(model_class: type):
                 and getattr(self, "_needs_initial_slice", True)
             )
             if slice_now:
-                call_kwargs["inputs_embeds"] = slice_input_tensor(inputs_embeds, dim=1, padding=False)
+                call_kwargs["inputs_embeds"] = slice_input_tensor(
+                    inputs_embeds, dim=1, padding=False
+                )
                 self._needs_initial_slice = False
             try:
                 return original_forward(self, *args, **call_kwargs)
@@ -167,17 +182,26 @@ def patch_forward_with_backends(
     forward_with_torch_backend_function = model.__class__.forward
     forward_with_triton_backend_function = model.__class__.forward
     if model.config.model_type == "qwen2_5_vl":
-        from verl.models.transformers.qwen2_5_vl import forward_with_torch_backend, forward_with_triton_backend
+        from verl.models.transformers.qwen2_5_vl import (
+            forward_with_torch_backend,
+            forward_with_triton_backend,
+        )
 
         forward_with_torch_backend_function = forward_with_torch_backend
         forward_with_triton_backend_function = forward_with_triton_backend
     elif model.config.model_type == "qwen2_vl":
-        from verl.models.transformers.qwen2_vl import forward_with_torch_backend, forward_with_triton_backend
+        from verl.models.transformers.qwen2_vl import (
+            forward_with_torch_backend,
+            forward_with_triton_backend,
+        )
 
         forward_with_torch_backend_function = forward_with_torch_backend
         forward_with_triton_backend_function = forward_with_triton_backend
     else:
-        from verl.models.transformers.dense_common import forward_with_torch_backend, forward_with_triton_backend
+        from verl.models.transformers.dense_common import (
+            forward_with_torch_backend,
+            forward_with_triton_backend,
+        )
 
         forward_with_torch_backend_function = forward_with_torch_backend
         forward_with_triton_backend_function = forward_with_triton_backend
@@ -189,7 +213,9 @@ def patch_forward_with_backends(
         model.__class__.forward = forward_with_torch_backend_function
         print(f"Using Torch backend for fused kernels in {model.__class__.__name__}")
     else:
-        raise ValueError(f"Unsupported fused_kernels_backend: {fused_kernels_backend}. Choose 'triton' or 'torch'.")
+        raise ValueError(
+            f"Unsupported fused_kernels_backend: {fused_kernels_backend}. Choose 'triton' or 'torch'."
+        )
 
 
 def apply_monkey_patch(
@@ -210,17 +236,23 @@ def apply_monkey_patch(
     module = sys.modules[model.__module__]
 
     try:
-        num_attention_heads, num_key_value_heads = model.config.num_attention_heads, model.config.num_key_value_heads
+        num_attention_heads, num_key_value_heads = (
+            model.config.num_attention_heads,
+            model.config.num_key_value_heads,
+        )
     except AttributeError:
         num_attention_heads, num_key_value_heads = (
             model.config.text_config.num_attention_heads,
             model.config.text_config.num_key_value_heads,
         )
 
-    assert num_attention_heads % ulysses_sp_size == 0, (
-        f"num_attention_heads {num_attention_heads} must be divisible by ulysses_sp_size {ulysses_sp_size}"
-    )
-    assert num_key_value_heads % ulysses_sp_size == 0 or ulysses_sp_size % num_key_value_heads == 0, (
+    assert (
+        num_attention_heads % ulysses_sp_size == 0
+    ), f"num_attention_heads {num_attention_heads} must be divisible by ulysses_sp_size {ulysses_sp_size}"
+    assert (
+        num_key_value_heads % ulysses_sp_size == 0
+        or ulysses_sp_size % num_key_value_heads == 0
+    ), (
         f"num_key_value_heads {num_key_value_heads} must be divisible by ulysses_sp_size "
         f"{ulysses_sp_size}or vise versa. Upon ulysses_sp_size % num_key_value_heads == 0,"
         f"kv heads are repeated to ensure correctness."
@@ -238,7 +270,9 @@ def apply_monkey_patch(
     # TODO: VLM models only, unify monkey patch to LLM models.
     if model.config.model_type == "qwen2_5_vl":
         if is_transformers_version_in_range(min_version="4.53.0"):
-            from transformers.models.qwen2_5_vl.modeling_qwen2_5_vl import Qwen2_5_VLAttention
+            from transformers.models.qwen2_5_vl.modeling_qwen2_5_vl import (
+                Qwen2_5_VLAttention,
+            )
 
             # TODO: Support transformers 4.53
             raise ValueError("Transformers 4.53 is not supported")
@@ -255,11 +289,15 @@ def apply_monkey_patch(
 
         if ulysses_sp_size > 1:
             if is_transformers_version_in_range(min_version="4.52.0"):
-                from transformers.models.qwen2_5_vl.modeling_qwen2_5_vl import Qwen2_5_VLTextModel
+                from transformers.models.qwen2_5_vl.modeling_qwen2_5_vl import (
+                    Qwen2_5_VLTextModel,
+                )
 
                 patch_vlm_for_ulysses_input_slicing(Qwen2_5_VLTextModel)
             else:
-                from transformers.models.qwen2_5_vl.modeling_qwen2_5_vl import Qwen2_5_VLModel
+                from transformers.models.qwen2_5_vl.modeling_qwen2_5_vl import (
+                    Qwen2_5_VLModel,
+                )
 
                 patch_vlm_for_ulysses_input_slicing(Qwen2_5_VLModel)
 
@@ -270,7 +308,9 @@ def apply_monkey_patch(
             # TODO: Support transformers 4.53
             raise ValueError("Transformers 4.53 is not supported")
         else:
-            from transformers.models.qwen2_vl.modeling_qwen2_vl import Qwen2VLFlashAttention2 as Qwen2VLAttention
+            from transformers.models.qwen2_vl.modeling_qwen2_vl import (
+                Qwen2VLFlashAttention2 as Qwen2VLAttention,
+            )
 
         if use_remove_padding or ulysses_sp_size > 1:
             from verl.models.transformers.qwen2_vl import ulysses_flash_attn_forward
@@ -280,7 +320,9 @@ def apply_monkey_patch(
 
         if ulysses_sp_size > 1:
             if is_transformers_version_in_range(min_version="4.52.0"):
-                from transformers.models.qwen2_vl.modeling_qwen2_vl import Qwen2VLTextModel
+                from transformers.models.qwen2_vl.modeling_qwen2_vl import (
+                    Qwen2VLTextModel,
+                )
 
                 patch_vlm_for_ulysses_input_slicing(Qwen2VLTextModel)
             else:
@@ -314,13 +356,21 @@ def apply_monkey_patch(
             from transformers.integrations import flash_attention
 
             flash_attention._flash_attention_forward = _ulysses_flash_attention_forward
-            print(f"Monkey patch _flash_attention_forward in {flash_attention.__name__}")
+            print(
+                f"Monkey patch _flash_attention_forward in {flash_attention.__name__}"
+            )
 
-    patch_forward_with_backends(model, use_fused_kernels=use_fused_kernels, fused_kernels_backend=fused_kernels_backend)
+    patch_forward_with_backends(
+        model,
+        use_fused_kernels=use_fused_kernels,
+        fused_kernels_backend=fused_kernels_backend,
+    )
 
 
 @lru_cache
-def is_transformers_version_in_range(min_version: Optional[str] = None, max_version: Optional[str] = None) -> bool:
+def is_transformers_version_in_range(
+    min_version: Optional[str] = None, max_version: Optional[str] = None
+) -> bool:
     try:
         # Get the installed version of the transformers library
         transformers_version_str = importlib.metadata.version("transformers")

@@ -48,7 +48,9 @@ from verl.utils.profiler.performance import simple_timer
 from verl.utils.tracking import ValidationGenerationsLogger
 
 
-def softmean(x: torch.Tensor, beta: float, dim: int = -1, keepdim: bool = False) -> torch.Tensor:
+def softmean(
+    x: torch.Tensor, beta: float, dim: int = -1, keepdim: bool = False
+) -> torch.Tensor:
     """
     Compute SoftMean_β(x) = (1/β) * log( (1/n) * Σ exp(β * x_i) )
     Falls back to arithmetic mean when β=0.
@@ -107,7 +109,9 @@ class RaySPPOTrainer(RayPPOTrainer):
         assert self.hybrid_engine, "Currently, only support hybrid engine"
 
         if self.hybrid_engine:
-            assert Role.ActorRollout in role_worker_mapping, f"{role_worker_mapping.keys()=}"
+            assert (
+                Role.ActorRollout in role_worker_mapping
+            ), f"{role_worker_mapping.keys()=}"
 
         self.role_worker_mapping = role_worker_mapping
         self.resource_pool_manager = resource_pool_manager
@@ -120,7 +124,9 @@ class RaySPPOTrainer(RayPPOTrainer):
         # define in-reward KL control
         # kl loss control currently not supported
         if config.algorithm.use_kl_in_reward:
-            self.kl_ctrl_in_reward = core_algos.get_kl_controller(config.algorithm.kl_ctrl)
+            self.kl_ctrl_in_reward = core_algos.get_kl_controller(
+                config.algorithm.kl_ctrl
+            )
 
         self.use_critic = False
 
@@ -152,7 +158,9 @@ class RaySPPOTrainer(RayPPOTrainer):
 
         # perform validation before training
         # currently, we only support validation using the reward_function.
-        if self.val_reward_fn is not None and self.config.trainer.get("val_before_train", True):
+        if self.val_reward_fn is not None and self.config.trainer.get(
+            "val_before_train", True
+        ):
             val_metrics = self._validate()
             pprint(f"Initial validation metrics: {val_metrics}")
             logger.log(data=val_metrics, step=self.global_steps)
@@ -160,7 +168,11 @@ class RaySPPOTrainer(RayPPOTrainer):
                 return
 
         # add tqdm
-        progress_bar = tqdm(total=self.total_training_steps, initial=self.global_steps, desc="Training Progress")
+        progress_bar = tqdm(
+            total=self.total_training_steps,
+            initial=self.global_steps,
+            desc="Training Progress",
+        )
 
         # we start from step 1
         self.global_steps += 1
@@ -185,7 +197,10 @@ class RaySPPOTrainer(RayPPOTrainer):
                     batch_keys=batch_keys_to_pop,
                     non_tensor_batch_keys=non_tensor_batch_keys_to_pop,
                 )
-                gen_batch = gen_batch.repeat(repeat_times=self.config.actor_rollout_ref.rollout.n, interleave=True)
+                gen_batch = gen_batch.repeat(
+                    repeat_times=self.config.actor_rollout_ref.rollout.n,
+                    interleave=True,
+                )
 
                 is_last_step = self.global_steps >= self.total_training_steps
 
@@ -193,9 +208,13 @@ class RaySPPOTrainer(RayPPOTrainer):
                     # generate a batch
                     with simple_timer("gen", timing_raw):
                         if not self.async_rollout_mode:
-                            gen_batch_output = self.actor_rollout_wg.generate_sequences(gen_batch)
+                            gen_batch_output = self.actor_rollout_wg.generate_sequences(
+                                gen_batch
+                            )
                         else:
-                            gen_batch_output = self.async_rollout_manager.generate_sequences(gen_batch)
+                            gen_batch_output = (
+                                self.async_rollout_manager.generate_sequences(gen_batch)
+                            )
                         timing_raw.update(gen_batch_output.meta_info["timing"])
                         gen_batch_output.meta_info.pop("timing", None)
 
@@ -203,7 +222,11 @@ class RaySPPOTrainer(RayPPOTrainer):
                         with simple_timer("gen_max", timing_raw):
                             gen_baseline_batch = deepcopy(gen_batch)
                             gen_baseline_batch.meta_info["do_sample"] = False
-                            gen_baseline_output = self.actor_rollout_wg.generate_sequences(gen_baseline_batch)
+                            gen_baseline_output = (
+                                self.actor_rollout_wg.generate_sequences(
+                                    gen_baseline_batch
+                                )
+                            )
 
                             batch = batch.union(gen_baseline_output)
                             reward_baseline_tensor = self.reward_fn(batch)
@@ -216,10 +239,14 @@ class RaySPPOTrainer(RayPPOTrainer):
                             del gen_baseline_batch, gen_baseline_output
 
                     batch.non_tensor_batch["uid"] = np.array(
-                        [str(uuid.uuid4()) for _ in range(len(batch.batch))], dtype=object
+                        [str(uuid.uuid4()) for _ in range(len(batch.batch))],
+                        dtype=object,
                     )
                     # repeat to align with repeated responses in rollout
-                    batch = batch.repeat(repeat_times=self.config.actor_rollout_ref.rollout.n, interleave=True)
+                    batch = batch.repeat(
+                        repeat_times=self.config.actor_rollout_ref.rollout.n,
+                        interleave=True,
+                    )
                     batch = batch.union(gen_batch_output)
 
                     batch.batch["response_mask"] = compute_response_mask(batch)
@@ -232,7 +259,9 @@ class RaySPPOTrainer(RayPPOTrainer):
                         self._balance_batch(batch, metrics=metrics)
 
                     # compute global_valid tokens
-                    batch.meta_info["global_token_num"] = torch.sum(batch.batch["attention_mask"], dim=-1).tolist()
+                    batch.meta_info["global_token_num"] = torch.sum(
+                        batch.batch["attention_mask"], dim=-1
+                    ).tolist()
 
                 with simple_timer("reward", timing_raw):
                     # compute reward model score
@@ -241,9 +270,13 @@ class RaySPPOTrainer(RayPPOTrainer):
                         batch = batch.union(reward_tensor)
 
                     if self.config.reward_model.launch_reward_fn_async:
-                        future_reward = compute_reward_async.remote(batch, self.config, self.tokenizer)
+                        future_reward = compute_reward_async.remote(
+                            batch, self.config, self.tokenizer
+                        )
                     else:
-                        reward_tensor, reward_extra_infos_dict = compute_reward(batch, self.reward_fn)
+                        reward_tensor, reward_extra_infos_dict = compute_reward(
+                            batch, self.reward_fn
+                        )
 
                 # recompute old_log_probs
                 with simple_timer("old_log_prob", timing_raw):
@@ -251,8 +284,14 @@ class RaySPPOTrainer(RayPPOTrainer):
                     entropys = old_log_prob.batch["entropys"]
                     response_masks = batch.batch["response_mask"]
                     loss_agg_mode = self.config.actor_rollout_ref.actor.loss_agg_mode
-                    entropy_agg = agg_loss(loss_mat=entropys, loss_mask=response_masks, loss_agg_mode=loss_agg_mode)
-                    old_log_prob_metrics = {"actor/entropy": entropy_agg.detach().item()}
+                    entropy_agg = agg_loss(
+                        loss_mat=entropys,
+                        loss_mask=response_masks,
+                        loss_agg_mode=loss_agg_mode,
+                    )
+                    old_log_prob_metrics = {
+                        "actor/entropy": entropy_agg.detach().item()
+                    }
                     metrics.update(old_log_prob_metrics)
                     old_log_prob.batch.pop("entropys")
                     batch = batch.union(old_log_prob)
@@ -277,17 +316,25 @@ class RaySPPOTrainer(RayPPOTrainer):
                     batch.batch["token_level_scores"] = reward_tensor
 
                     if reward_extra_infos_dict:
-                        batch.non_tensor_batch.update({k: np.array(v) for k, v in reward_extra_infos_dict.items()})
+                        batch.non_tensor_batch.update(
+                            {k: np.array(v) for k, v in reward_extra_infos_dict.items()}
+                        )
 
                     # compute rewards. apply_kl_penalty if available
                     if self.config.algorithm.use_kl_in_reward:
                         batch, kl_metrics = apply_kl_penalty(
-                            batch, kl_ctrl=self.kl_ctrl_in_reward, kl_penalty=self.config.algorithm.kl_penalty
+                            batch,
+                            kl_ctrl=self.kl_ctrl_in_reward,
+                            kl_penalty=self.config.algorithm.kl_penalty,
                         )
                         metrics.update(kl_metrics)
                     else:
-                        batch.batch["token_level_rewards"] = batch.batch["token_level_scores"]
-                        batch.batch["seq_level_rewards"] = batch.batch["token_level_scores"]
+                        batch.batch["token_level_rewards"] = batch.batch[
+                            "token_level_scores"
+                        ]
+                        batch.batch["seq_level_rewards"] = batch.batch[
+                            "token_level_scores"
+                        ]
 
                     beta = self.config.algorithm.sppo_eta
                     batch = compute_advantage(batch, beta=beta)
@@ -296,16 +343,22 @@ class RaySPPOTrainer(RayPPOTrainer):
                 if self.use_critic:
                     with simple_timer("update_critic", timing_raw):
                         critic_output = self.critic_wg.update_critic(batch)
-                    critic_output_metrics = reduce_metrics(critic_output.meta_info["metrics"])
+                    critic_output_metrics = reduce_metrics(
+                        critic_output.meta_info["metrics"]
+                    )
                     metrics.update(critic_output_metrics)
 
                 # implement critic warmup
                 if self.config.trainer.critic_warmup <= self.global_steps:
                     # update actor
                     with simple_timer("update_actor", timing_raw):
-                        batch.meta_info["multi_turn"] = self.config.actor_rollout_ref.rollout.multi_turn.enable
+                        batch.meta_info["multi_turn"] = (
+                            self.config.actor_rollout_ref.rollout.multi_turn.enable
+                        )
                         actor_output = self.actor_rollout_wg.update_actor(batch)
-                    actor_output_metrics = reduce_metrics(actor_output.meta_info["metrics"])
+                    actor_output_metrics = reduce_metrics(
+                        actor_output.meta_info["metrics"]
+                    )
                     metrics.update(actor_output_metrics)
 
                 # Log rollout generations if enabled
@@ -313,9 +366,15 @@ class RaySPPOTrainer(RayPPOTrainer):
                 if rollout_data_dir:
                     with simple_timer("dump_rollout_generations", timing_raw):
                         print(batch.batch.keys())
-                        inputs = self.tokenizer.batch_decode(batch.batch["prompts"], skip_special_tokens=True)
-                        outputs = self.tokenizer.batch_decode(batch.batch["responses"], skip_special_tokens=True)
-                        scores = batch.batch["token_level_scores"].sum(-1).cpu().tolist()
+                        inputs = self.tokenizer.batch_decode(
+                            batch.batch["prompts"], skip_special_tokens=True
+                        )
+                        outputs = self.tokenizer.batch_decode(
+                            batch.batch["responses"], skip_special_tokens=True
+                        )
+                        scores = (
+                            batch.batch["token_level_scores"].sum(-1).cpu().tolist()
+                        )
                         self._dump_generations(
                             inputs=inputs,
                             outputs=outputs,
@@ -328,7 +387,10 @@ class RaySPPOTrainer(RayPPOTrainer):
                 if (
                     self.val_reward_fn is not None
                     and self.config.trainer.test_freq > 0
-                    and (is_last_step or self.global_steps % self.config.trainer.test_freq == 0)
+                    and (
+                        is_last_step
+                        or self.global_steps % self.config.trainer.test_freq == 0
+                    )
                 ):
                     with simple_timer("testing", timing_raw):
                         val_metrics: dict = self._validate()
@@ -337,7 +399,8 @@ class RaySPPOTrainer(RayPPOTrainer):
                     metrics.update(val_metrics)
 
                 if self.config.trainer.save_freq > 0 and (
-                    is_last_step or self.global_steps % self.config.trainer.save_freq == 0
+                    is_last_step
+                    or self.global_steps % self.config.trainer.save_freq == 0
                 ):
                     with simple_timer("save_checkpoint", timing_raw):
                         self._save_checkpoint()

@@ -46,7 +46,11 @@ MAX_TEST_CASES = os.environ.get("MAX_TEST_CASES", 5)
 
 
 def run_torch_entropy(
-    hidden: torch.Tensor, weight: torch.Tensor, labels: torch.Tensor, temperature: float, reduction="none"
+    hidden: torch.Tensor,
+    weight: torch.Tensor,
+    labels: torch.Tensor,
+    temperature: float,
+    reduction="none",
 ) -> list[torch.Tensor]:
     hidden = hidden.squeeze(0).to(torch.float32)
     weight = weight.transpose(0, 1).to(torch.float32)
@@ -56,7 +60,9 @@ def run_torch_entropy(
     entropy_a = torch.logsumexp(logits, dim=-1)  # [num_tokens]
     entropy_b = torch.sum(pd * logits, dim=-1)  # [num_tokens]
     entropy = entropy_a - entropy_b
-    logprobs = torch.nn.functional.cross_entropy(logits, labels.squeeze(0), reduction=reduction)  # [num_tokens]
+    logprobs = torch.nn.functional.cross_entropy(
+        logits, labels.squeeze(0), reduction=reduction
+    )  # [num_tokens]
     logprobs = torch.neg(logprobs)
     return logprobs, entropy
 
@@ -74,7 +80,9 @@ def run_verl_original_entropy(
     # compute entropy
     entropy = compute_entropy_from_logits(logits)  # ((total_nnz / sp) + pad)
     # if use_sp: ((total_nnz / sp) + pad) ; if not use_sp: (batch, seqlen)
-    logprobs = logprobs_from_logits(logits=logits, labels=labels, inplace_backward=False)
+    logprobs = logprobs_from_logits(
+        logits=logits, labels=labels, inplace_backward=False
+    )
     return logprobs, entropy
 
 
@@ -144,21 +152,33 @@ class TestLinearCrossEntropy:
 
     def generate_forward_inputs(self):
         hidden = (
-            torch.empty((self.batch_size, self.num_tokens, self.hidden_size), dtype=self.dtype, device="cuda")
+            torch.empty(
+                (self.batch_size, self.num_tokens, self.hidden_size),
+                dtype=self.dtype,
+                device="cuda",
+            )
             .uniform_(-0.5, 0.5)
             .requires_grad_()
         )
         weight = (
-            torch.empty((self.vocab_size, self.hidden_size), dtype=self.dtype, device="cuda")
+            torch.empty(
+                (self.vocab_size, self.hidden_size), dtype=self.dtype, device="cuda"
+            )
             .uniform_(-0.5, 0.5)
             .requires_grad_()
         )
-        labels = torch.randint(0, self.vocab_size, (self.batch_size, self.num_tokens), device="cuda")
+        labels = torch.randint(
+            0, self.vocab_size, (self.batch_size, self.num_tokens), device="cuda"
+        )
         return hidden, weight, labels
 
     def generate_backward_inputs(self):
-        g_entropy = torch.empty((self.num_tokens,), dtype=self.dtype, device="cuda").uniform_(-0.5, 0.5)
-        g_logprobs = torch.empty((self.num_tokens,), dtype=self.dtype, device="cuda").uniform_(-1, 1)
+        g_entropy = torch.empty(
+            (self.num_tokens,), dtype=self.dtype, device="cuda"
+        ).uniform_(-0.5, 0.5)
+        g_logprobs = torch.empty(
+            (self.num_tokens,), dtype=self.dtype, device="cuda"
+        ).uniform_(-1, 1)
         return g_entropy, g_logprobs
 
     def verify_correctness(self, iterations=5):
@@ -182,13 +202,17 @@ class TestLinearCrossEntropy:
             hidden, weight, labels = self.generate_forward_inputs()
 
             start_event.record()
-            (torch_logprobs, torch_entropy) = run_torch_entropy(hidden, weight, labels, self.temperature)
+            (torch_logprobs, torch_entropy) = run_torch_entropy(
+                hidden, weight, labels, self.temperature
+            )
             end_event.record()
             torch.cuda.synchronize()
             torch_forward_latency.append(start_event.elapsed_time(end_event))
 
             start_event.record()
-            (verl_logprobs, verl_entropy) = run_verl_original_entropy(hidden, weight, labels, self.temperature)
+            (verl_logprobs, verl_entropy) = run_verl_original_entropy(
+                hidden, weight, labels, self.temperature
+            )
             end_event.record()
             torch.cuda.synchronize()
             verl_forward_latency.append(start_event.elapsed_time(end_event))
@@ -202,32 +226,61 @@ class TestLinearCrossEntropy:
             verl_fused_forward_latency.append(start_event.elapsed_time(end_event))
 
             start_event.record()
-            (kernel_logprobs, kernel_entropy) = linear_cross_entropy(hidden, weight, labels, self.temperature)
+            (kernel_logprobs, kernel_entropy) = linear_cross_entropy(
+                hidden, weight, labels, self.temperature
+            )
             end_event.record()
             torch.cuda.synchronize()
             kernel_forward_latency.append(start_event.elapsed_time(end_event))
 
-            torch.testing.assert_close(torch_logprobs, verl_logprobs, atol=1e-4, rtol=1e-4)
-            torch.testing.assert_close(torch_entropy, verl_entropy, atol=1e-4, rtol=1e-4)
+            torch.testing.assert_close(
+                torch_logprobs, verl_logprobs, atol=1e-4, rtol=1e-4
+            )
+            torch.testing.assert_close(
+                torch_entropy, verl_entropy, atol=1e-4, rtol=1e-4
+            )
 
-            torch.testing.assert_close(torch_logprobs, verl_fused_logprobs, atol=1e-4, rtol=1e-4)
-            torch.testing.assert_close(torch_entropy, verl_fused_entropy, atol=1e-4, rtol=1e-4)
-            torch.testing.assert_close(verl_logprobs, verl_fused_logprobs, atol=1e-4, rtol=1e-4)
-            torch.testing.assert_close(verl_entropy, verl_fused_entropy, atol=1e-4, rtol=1e-4)
+            torch.testing.assert_close(
+                torch_logprobs, verl_fused_logprobs, atol=1e-4, rtol=1e-4
+            )
+            torch.testing.assert_close(
+                torch_entropy, verl_fused_entropy, atol=1e-4, rtol=1e-4
+            )
+            torch.testing.assert_close(
+                verl_logprobs, verl_fused_logprobs, atol=1e-4, rtol=1e-4
+            )
+            torch.testing.assert_close(
+                verl_entropy, verl_fused_entropy, atol=1e-4, rtol=1e-4
+            )
 
-            torch.testing.assert_close(torch_logprobs, kernel_logprobs, atol=1e-3, rtol=2e-4)
-            torch.testing.assert_close(torch_entropy, kernel_entropy, atol=5e-3, rtol=5e-4)
-            torch.testing.assert_close(verl_logprobs, kernel_logprobs, atol=1e-3, rtol=2e-4)
-            torch.testing.assert_close(verl_entropy, kernel_entropy, atol=5e-3, rtol=5e-4)
-            torch.testing.assert_close(verl_fused_logprobs, kernel_logprobs, atol=1e-3, rtol=2e-4)
-            torch.testing.assert_close(verl_fused_entropy, kernel_entropy, atol=5e-3, rtol=5e-4)
+            torch.testing.assert_close(
+                torch_logprobs, kernel_logprobs, atol=1e-3, rtol=2e-4
+            )
+            torch.testing.assert_close(
+                torch_entropy, kernel_entropy, atol=5e-3, rtol=5e-4
+            )
+            torch.testing.assert_close(
+                verl_logprobs, kernel_logprobs, atol=1e-3, rtol=2e-4
+            )
+            torch.testing.assert_close(
+                verl_entropy, kernel_entropy, atol=5e-3, rtol=5e-4
+            )
+            torch.testing.assert_close(
+                verl_fused_logprobs, kernel_logprobs, atol=1e-3, rtol=2e-4
+            )
+            torch.testing.assert_close(
+                verl_fused_entropy, kernel_entropy, atol=5e-3, rtol=5e-4
+            )
 
             # backward
             g_entropy, g_logprobs = self.generate_backward_inputs()
 
             start_event.record()
             (d_torch_hidden, d_torch_weight) = torch.autograd.grad(
-                (torch_entropy, torch_logprobs), (hidden, weight), (g_entropy, g_logprobs), retain_graph=False
+                (torch_entropy, torch_logprobs),
+                (hidden, weight),
+                (g_entropy, g_logprobs),
+                retain_graph=False,
             )
             end_event.record()
             torch.cuda.synchronize()
@@ -235,7 +288,10 @@ class TestLinearCrossEntropy:
 
             start_event.record()
             (d_verl_hidden, d_verl_weight) = torch.autograd.grad(
-                (verl_entropy, verl_logprobs), (hidden, weight), (g_entropy, g_logprobs), retain_graph=False
+                (verl_entropy, verl_logprobs),
+                (hidden, weight),
+                (g_entropy, g_logprobs),
+                retain_graph=False,
             )
             end_event.record()
             torch.cuda.synchronize()
@@ -243,7 +299,10 @@ class TestLinearCrossEntropy:
 
             start_event.record()
             (d_verl_fused_hidden, d_verl_fused_weight) = torch.autograd.grad(
-                (verl_fused_entropy, verl_fused_logprobs), (hidden, weight), (g_entropy, g_logprobs), retain_graph=False
+                (verl_fused_entropy, verl_fused_logprobs),
+                (hidden, weight),
+                (g_entropy, g_logprobs),
+                retain_graph=False,
             )
             end_event.record()
             torch.cuda.synchronize()
@@ -251,28 +310,59 @@ class TestLinearCrossEntropy:
 
             start_event.record()
             (d_kernel_hidden, d_kernel_weight) = torch.autograd.grad(
-                (kernel_entropy, kernel_logprobs), (hidden, weight), (g_entropy, g_logprobs), retain_graph=False
+                (kernel_entropy, kernel_logprobs),
+                (hidden, weight),
+                (g_entropy, g_logprobs),
+                retain_graph=False,
             )
             end_event.record()
             torch.cuda.synchronize()
             kernel_backward_latency.append(start_event.elapsed_time(end_event))
 
-            torch.testing.assert_close(d_torch_hidden, d_verl_hidden, atol=1e-2, rtol=1e-4)
-            torch.testing.assert_close(d_torch_weight, d_verl_weight, atol=1e-2, rtol=1e-4)
+            torch.testing.assert_close(
+                d_torch_hidden, d_verl_hidden, atol=1e-2, rtol=1e-4
+            )
+            torch.testing.assert_close(
+                d_torch_weight, d_verl_weight, atol=1e-2, rtol=1e-4
+            )
 
-            torch.testing.assert_close(d_torch_hidden, d_verl_fused_hidden, atol=1e-2, rtol=1e-4)
-            torch.testing.assert_close(d_torch_weight, d_verl_fused_weight, atol=1e-2, rtol=1e-4)
-            torch.testing.assert_close(d_verl_hidden, d_verl_fused_hidden, atol=1e-2, rtol=1e-4)
-            torch.testing.assert_close(d_verl_weight, d_verl_fused_weight, atol=1e-2, rtol=1e-4)
-            torch.testing.assert_close(d_torch_hidden, d_verl_hidden, atol=1e-2, rtol=1e-4)
-            torch.testing.assert_close(d_torch_weight, d_verl_weight, atol=1e-2, rtol=1e-4)
+            torch.testing.assert_close(
+                d_torch_hidden, d_verl_fused_hidden, atol=1e-2, rtol=1e-4
+            )
+            torch.testing.assert_close(
+                d_torch_weight, d_verl_fused_weight, atol=1e-2, rtol=1e-4
+            )
+            torch.testing.assert_close(
+                d_verl_hidden, d_verl_fused_hidden, atol=1e-2, rtol=1e-4
+            )
+            torch.testing.assert_close(
+                d_verl_weight, d_verl_fused_weight, atol=1e-2, rtol=1e-4
+            )
+            torch.testing.assert_close(
+                d_torch_hidden, d_verl_hidden, atol=1e-2, rtol=1e-4
+            )
+            torch.testing.assert_close(
+                d_torch_weight, d_verl_weight, atol=1e-2, rtol=1e-4
+            )
 
-            torch.testing.assert_close(d_torch_hidden, d_kernel_hidden, atol=2e-2, rtol=4e-2)
-            torch.testing.assert_close(d_torch_weight, d_kernel_weight, atol=2e-2, rtol=4e-2)
-            torch.testing.assert_close(d_verl_hidden, d_kernel_hidden, atol=2e-2, rtol=4e-2)
-            torch.testing.assert_close(d_verl_weight, d_kernel_weight, atol=2e-2, rtol=4e-2)
-            torch.testing.assert_close(d_verl_fused_hidden, d_kernel_hidden, atol=2e-2, rtol=4e-2)
-            torch.testing.assert_close(d_verl_fused_weight, d_kernel_weight, atol=2e-2, rtol=4e-2)
+            torch.testing.assert_close(
+                d_torch_hidden, d_kernel_hidden, atol=2e-2, rtol=4e-2
+            )
+            torch.testing.assert_close(
+                d_torch_weight, d_kernel_weight, atol=2e-2, rtol=4e-2
+            )
+            torch.testing.assert_close(
+                d_verl_hidden, d_kernel_hidden, atol=2e-2, rtol=4e-2
+            )
+            torch.testing.assert_close(
+                d_verl_weight, d_kernel_weight, atol=2e-2, rtol=4e-2
+            )
+            torch.testing.assert_close(
+                d_verl_fused_hidden, d_kernel_hidden, atol=2e-2, rtol=4e-2
+            )
+            torch.testing.assert_close(
+                d_verl_fused_weight, d_kernel_weight, atol=2e-2, rtol=4e-2
+            )
 
         # remove first latency
         torch_forward_latency = torch_forward_latency[1:]
@@ -329,17 +419,24 @@ class TestLinearCrossEntropy:
         (logprobs, entropy) = run_forward(hidden, weight, labels, self.temperature)
         torch.cuda.synchronize()
         torch_max_memory = torch.cuda.max_memory_allocated() / 1024 / 1024
-        print(f"[INFO]: {method_name} Forward pass peak memory: {torch_max_memory:.2f} MB")
+        print(
+            f"[INFO]: {method_name} Forward pass peak memory: {torch_max_memory:.2f} MB"
+        )
 
         g_entropy, g_logprobs = self.generate_backward_inputs()
 
         torch.cuda.reset_peak_memory_stats()
         (d_torch_hidden, d_torch_weight) = torch.autograd.grad(
-            (entropy, logprobs), (hidden, weight), (g_entropy, g_logprobs), retain_graph=False
+            (entropy, logprobs),
+            (hidden, weight),
+            (g_entropy, g_logprobs),
+            retain_graph=False,
         )
         torch.cuda.synchronize()
         torch_backward_max_memory = torch.cuda.max_memory_allocated() / 1024 / 1024
-        print(f"[INFO]: {method_name} Backward pass peak memory: {torch_backward_max_memory:.2f} MB")
+        print(
+            f"[INFO]: {method_name} Backward pass peak memory: {torch_backward_max_memory:.2f} MB"
+        )
 
     def check_storage_all(self):
         self.check_storage("Torch", run_torch_entropy)

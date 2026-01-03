@@ -20,7 +20,9 @@ import ray
 
 from verl import DataProto
 from verl.utils.reward_score import default_compute_score
-from verl_tool.workers.reward_manager import get_reward_manager_cls # added by verl-tool
+from verl_tool.workers.reward_manager import (
+    get_reward_manager_cls,
+)  # added by verl-tool
 
 
 def get_custom_reward_fn(config):
@@ -45,7 +47,9 @@ def get_custom_reward_fn(config):
 
     function_name = reward_fn_config.get("name")
     if not hasattr(module, function_name):
-        raise AttributeError(f"Reward function '{function_name}' not found in '{file_path}'.")
+        raise AttributeError(
+            f"Reward function '{function_name}' not found in '{file_path}'."
+        )
 
     print(f"using customized reward function '{function_name}' from '{file_path}'")
     raw_fn = getattr(module, function_name)
@@ -93,8 +97,14 @@ def load_reward_manager(config, tokenizer, num_examine, **reward_kwargs):
         if sandbox_url:
             sandbox_manager = multiprocessing.Manager()
             # Create a semaphore to control concurrent access to the sandbox
-            _concurrent_semaphore = sandbox_manager.Semaphore(sandbox_config.get("max_concurrent", 64))
-            final_compute_score = partial(default_compute_score, sandbox_fusion_url=sandbox_url, concurrent_semaphore=_concurrent_semaphore)
+            _concurrent_semaphore = sandbox_manager.Semaphore(
+                sandbox_config.get("max_concurrent", 64)
+            )
+            final_compute_score = partial(
+                default_compute_score,
+                sandbox_fusion_url=sandbox_url,
+                concurrent_semaphore=_concurrent_semaphore,
+            )
         else:
             final_compute_score = default_compute_score
 
@@ -138,5 +148,7 @@ def compute_reward_async(data: DataProto, config, tokenizer):
     Load the reward manager and compute the reward for a batch of data.
     This is meant to be run in a separate Ray worker.
     """
-    reward_fn = load_reward_manager(config, tokenizer, num_examine=0, **config.reward_model.get("reward_kwargs", {}))
+    reward_fn = load_reward_manager(
+        config, tokenizer, num_examine=0, **config.reward_model.get("reward_kwargs", {})
+    )
     return compute_reward(data, reward_fn)

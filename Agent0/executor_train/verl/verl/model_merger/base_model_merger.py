@@ -33,13 +33,24 @@ from verl.utils import hf_processor, hf_tokenizer
 
 def parse_args():
     parser = argparse.ArgumentParser(description="verl model merger")
-    subparsers = parser.add_subparsers(dest="operation", required=True, help="Specify 'merge' or 'test' operation.")
+    subparsers = parser.add_subparsers(
+        dest="operation", required=True, help="Specify 'merge' or 'test' operation."
+    )
 
     base_op_parser = argparse.ArgumentParser(add_help=False)
     base_op_parser.add_argument(
-        "--backend", type=str, required=True, choices=["fsdp", "megatron"], help="The backend of the model"
+        "--backend",
+        type=str,
+        required=True,
+        choices=["fsdp", "megatron"],
+        help="The backend of the model",
     )
-    base_op_parser.add_argument("--local_dir", type=str, default=None, help="Path to the saved model checkpoints.")
+    base_op_parser.add_argument(
+        "--local_dir",
+        type=str,
+        default=None,
+        help="Path to the saved model checkpoints.",
+    )
     base_op_parser.add_argument(
         "--tie-word-embedding",
         action="store_true",
@@ -57,22 +68,37 @@ def parse_args():
         "fit into GPU memory during initialization.",
     )
 
-    merge_parser = subparsers.add_parser("merge", parents=[base_op_parser], help="Merge model checkpoints and save.")
-    merge_parser.add_argument(
-        "--target_dir", default="tmp", type=str, help="Directory to save the merged huggingface model"
+    merge_parser = subparsers.add_parser(
+        "merge", parents=[base_op_parser], help="Merge model checkpoints and save."
     )
     merge_parser.add_argument(
-        "--hf_upload_path", default=None, type=str, help="Hugging Face repository ID to upload the model"
+        "--target_dir",
+        default="tmp",
+        type=str,
+        help="Directory to save the merged huggingface model",
     )
     merge_parser.add_argument(
-        "--private", action="store_true", help="Whether to upload the model to a private Hugging Face repository"
+        "--hf_upload_path",
+        default=None,
+        type=str,
+        help="Hugging Face repository ID to upload the model",
+    )
+    merge_parser.add_argument(
+        "--private",
+        action="store_true",
+        help="Whether to upload the model to a private Hugging Face repository",
     )
 
     test_parser = subparsers.add_parser(
-        "test", parents=[base_op_parser], help="Test merged model against a reference Hugging Face model"
+        "test",
+        parents=[base_op_parser],
+        help="Test merged model against a reference Hugging Face model",
     )
     test_parser.add_argument(
-        "--test_hf_dir", type=str, required=True, help="Path to the reference Hugging Face model directory for testing"
+        "--test_hf_dir",
+        type=str,
+        required=True,
+        help="Path to the reference Hugging Face model directory for testing",
     )
 
     args = parser.parse_args()
@@ -171,7 +197,9 @@ class BaseModelMerger(ABC):
         elif "ForConditionalGeneration" in self.model_config.architectures[0]:
             return AutoModelForVision2Seq
 
-        raise NotImplementedError(f"Unknown architecture {self.model_config.architectures}")
+        raise NotImplementedError(
+            f"Unknown architecture {self.model_config.architectures}"
+        )
 
     def patch_model_generation_config(self, model):
         """
@@ -182,7 +210,9 @@ class BaseModelMerger(ABC):
         """
         if model.can_generate():
             try:
-                model.generation_config = GenerationConfig.from_pretrained(self.hf_model_config_path)
+                model.generation_config = GenerationConfig.from_pretrained(
+                    self.hf_model_config_path
+                )
             except OSError:
                 print(
                     f"Warning: Generation config file not found in {self.hf_model_config_path}, using a "
@@ -227,13 +257,19 @@ class BaseModelMerger(ABC):
             "target_modules": list(target_modules),
         }
         peft_config = peft.LoraConfig(**peft_dict).to_dict()
-        peft_config["task_type"] = peft_config["task_type"].value if peft_config["task_type"] else None
-        peft_config["peft_type"] = peft_config["peft_type"].value if peft_config["peft_type"] else None
+        peft_config["task_type"] = (
+            peft_config["task_type"].value if peft_config["task_type"] else None
+        )
+        peft_config["peft_type"] = (
+            peft_config["peft_type"].value if peft_config["peft_type"] else None
+        )
         peft_config["target_modules"] = list(peft_config["target_modules"])
 
         lora_path = os.path.join(self.config.target_dir, "lora_adapter")
         os.makedirs(lora_path, exist_ok=True)
-        with open(os.path.join(lora_path, "adapter_config.json"), "w", encoding="utf-8") as f:
+        with open(
+            os.path.join(lora_path, "adapter_config.json"), "w", encoding="utf-8"
+        ) as f:
             json.dump(peft_config, f, ensure_ascii=False, indent=4)
         save_file(lora_params, os.path.join(lora_path, "adapter_model.safetensors"))
 
@@ -250,7 +286,9 @@ class BaseModelMerger(ABC):
     def save_hf_model_and_tokenizer(self, state_dict: dict[str, torch.Tensor]):
         auto_model_class = self.get_transformers_auto_model_class()
         with init_empty_weights():
-            model = auto_model_class.from_config(self.model_config, torch_dtype=torch.bfloat16)
+            model = auto_model_class.from_config(
+                self.model_config, torch_dtype=torch.bfloat16
+            )
         model.to_empty(device="cpu")
         model = self.patch_model_generation_config(model)
 
@@ -280,7 +318,11 @@ class BaseModelMerger(ABC):
         api = HfApi()
         try:
             # Attempt to create repository
-            api.create_repo(repo_id=self.config.hf_upload_path, private=self.config.private, exist_ok=True)
+            api.create_repo(
+                repo_id=self.config.hf_upload_path,
+                private=self.config.private,
+                exist_ok=True,
+            )
         except HfHubHTTPError as e:
             # Handle authentication/API errors
             if e.response.status_code == 401:
@@ -288,24 +330,42 @@ class BaseModelMerger(ABC):
                     "Hugging Face authentication failed. Verify your token is valid and has write permissions."
                 ) from e
             elif e.response.status_code == 404:
-                raise RepositoryNotFoundError(f"Repository path not found: {self.config.hf_upload_path}") from e
+                raise RepositoryNotFoundError(
+                    f"Repository path not found: {self.config.hf_upload_path}"
+                ) from e
             else:
-                raise ConnectionError(f"Failed to create repository ({e.response.status_code}): {e}") from e
+                raise ConnectionError(
+                    f"Failed to create repository ({e.response.status_code}): {e}"
+                ) from e
         except requests.exceptions.ConnectionError as e:
-            raise ConnectionError("Network connection failed. Check your internet connection.") from e
+            raise ConnectionError(
+                "Network connection failed. Check your internet connection."
+            ) from e
 
         try:
             # Attempt folder upload
-            api.upload_folder(folder_path=self.config.target_dir, repo_id=self.config.hf_upload_path, repo_type="model")
+            api.upload_folder(
+                folder_path=self.config.target_dir,
+                repo_id=self.config.hf_upload_path,
+                repo_type="model",
+            )
         except HfHubHTTPError as e:
             if e.response.status_code == 401:
-                raise PermissionError("Authentication failed during upload. Token may have expired.") from e
+                raise PermissionError(
+                    "Authentication failed during upload. Token may have expired."
+                ) from e
             else:
-                raise RuntimeError(f"Upload failed ({e.response.status_code}): {e}") from e
+                raise RuntimeError(
+                    f"Upload failed ({e.response.status_code}): {e}"
+                ) from e
         except requests.exceptions.ConnectionError as e:
-            raise ConnectionError("Network interruption during upload. Try again with stable connection.") from e
+            raise ConnectionError(
+                "Network interruption during upload. Try again with stable connection."
+            ) from e
         except OSError as e:
-            raise FileNotFoundError(f"Local folder error: {self.config.target_dir} - {str(e)}") from e
+            raise FileNotFoundError(
+                f"Local folder error: {self.config.target_dir} - {str(e)}"
+            ) from e
         except Exception as e:
             raise RuntimeError(f"Unexpected error during upload: {str(e)}") from e
 
@@ -315,4 +375,6 @@ class BaseModelMerger(ABC):
 
     @abstractmethod
     def cleanup(self):
-        raise NotImplementedError("Subclasses should implement this method to clean up resources if needed")
+        raise NotImplementedError(
+            "Subclasses should implement this method to clean up resources if needed"
+        )

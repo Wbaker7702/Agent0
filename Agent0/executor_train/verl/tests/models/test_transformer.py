@@ -45,10 +45,14 @@ def test_hf_casual_models():
         # config = AutoConfig.from_pretrained(test_case)
         with torch.device("cuda"):
             model = AutoModelForCausalLM.from_config(
-                config=config, torch_dtype=torch.bfloat16, attn_implementation="flash_attention_2"
+                config=config,
+                torch_dtype=torch.bfloat16,
+                attn_implementation="flash_attention_2",
             )
             model = model.to(device="cuda")
-        input_ids = torch.randint(low=0, high=config.vocab_size, size=(batch_size, seqlen), device="cuda")
+        input_ids = torch.randint(
+            low=0, high=config.vocab_size, size=(batch_size, seqlen), device="cuda"
+        )
         attention_mask = create_random_mask(
             input_ids=input_ids,
             max_ratio_of_left_padding=0.1,
@@ -75,9 +79,14 @@ def test_hf_casual_models():
         ).logits  # (1, total_nnz, vocab_size)
 
         origin_logits = model(
-            input_ids=input_ids, attention_mask=attention_mask, position_ids=position_ids, use_cache=False
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            position_ids=position_ids,
+            use_cache=False,
         ).logits
-        origin_logits_rmpad, origin_logits_indices, *_ = unpad_input(origin_logits, attention_mask)
+        origin_logits_rmpad, origin_logits_indices, *_ = unpad_input(
+            origin_logits, attention_mask
+        )
 
         logits_rmpad = logits_rmpad.squeeze(0)
         log_probs = log_probs_from_logits_all_rmpad(
@@ -117,10 +126,14 @@ def test_hf_value_models():
         config.hidden_dropout = 0
         with torch.device("cuda"):
             model = AutoModelForTokenClassification.from_config(
-                config=config, torch_dtype=torch.bfloat16, attn_implementation="flash_attention_2"
+                config=config,
+                torch_dtype=torch.bfloat16,
+                attn_implementation="flash_attention_2",
             )
             model = model.to(device="cuda")
-        input_ids = torch.randint(low=0, high=config.vocab_size, size=(batch_size, seqlen), device="cuda")
+        input_ids = torch.randint(
+            low=0, high=config.vocab_size, size=(batch_size, seqlen), device="cuda"
+        )
         attention_mask = create_random_mask(
             input_ids=input_ids,
             max_ratio_of_left_padding=0.1,
@@ -142,7 +155,10 @@ def test_hf_value_models():
         ).transpose(0, 1)
 
         origin_logits = model(
-            input_ids=input_ids, attention_mask=attention_mask, position_ids=position_ids, use_cache=False
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            position_ids=position_ids,
+            use_cache=False,
         ).logits
 
         # input with input_ids_rmpad and postition_ids to enable flash attention varlen

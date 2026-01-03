@@ -93,7 +93,9 @@ def count_answer_tags(text):
     return opening_tags, closing_tags
 
 
-def compute_score(solution_str, ground_truth, method="strict", format_score=0.0, score=1.0):
+def compute_score(
+    solution_str, ground_truth, method="strict", format_score=0.0, score=1.0
+):
     """The scoring function for exact match (EM).
 
     Args:
@@ -128,7 +130,9 @@ def compute_score(solution_str, ground_truth, method="strict", format_score=0.0,
             return format_score
 
 
-def compute_score_subem(solution_str, ground_truth, method="strict", format_score=0.0, score=1.0):
+def compute_score_subem(
+    solution_str, ground_truth, method="strict", format_score=0.0, score=1.0
+):
     """The scoring function for substring exact match (EM).
 
     Args:

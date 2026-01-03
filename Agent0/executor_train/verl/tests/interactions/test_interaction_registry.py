@@ -35,7 +35,9 @@ class TestInteractionRegistry:
         assert base_cls == BaseInteraction
 
         # Test getting gsm8k interaction class
-        gsm8k_cls = get_interaction_class("verl.interactions.gsm8k_interaction.Gsm8kInteraction")
+        gsm8k_cls = get_interaction_class(
+            "verl.interactions.gsm8k_interaction.Gsm8kInteraction"
+        )
         assert gsm8k_cls == Gsm8kInteraction
 
     def test_initialize_single_interaction_from_config(self):
@@ -104,14 +106,21 @@ class TestInteractionRegistry:
             assert interaction_map["base_agent"].name == "base_agent"
 
             # Check custom config was passed
-            assert interaction_map["base_agent"].config.get("custom_param") == "test_value"
+            assert (
+                interaction_map["base_agent"].config.get("custom_param") == "test_value"
+            )
         finally:
             os.unlink(temp_config_path)
 
     def test_initialize_interaction_without_explicit_name(self):
         """Test that interaction name is derived from class name when not specified."""
         config_content = {
-            "interaction": [{"class_name": "verl.interactions.gsm8k_interaction.Gsm8kInteraction", "config": {}}]
+            "interaction": [
+                {
+                    "class_name": "verl.interactions.gsm8k_interaction.Gsm8kInteraction",
+                    "config": {},
+                }
+            ]
         }
 
         with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
@@ -123,7 +132,9 @@ class TestInteractionRegistry:
 
             # Check that interaction name was derived from class name
             assert len(interaction_map) == 1
-            assert "gsm8k" in interaction_map  # Should be "gsm8k" after removing "interaction" suffix
+            assert (
+                "gsm8k" in interaction_map
+            )  # Should be "gsm8k" after removing "interaction" suffix
             assert isinstance(interaction_map["gsm8k"], Gsm8kInteraction)
             assert interaction_map["gsm8k"].name == "gsm8k"
         finally:
@@ -146,7 +157,13 @@ class TestInteractionRegistry:
     def test_invalid_class_name(self):
         """Test handling of invalid class name."""
         config_content = {
-            "interaction": [{"name": "invalid", "class_name": "invalid.module.InvalidClass", "config": {}}]
+            "interaction": [
+                {
+                    "name": "invalid",
+                    "class_name": "invalid.module.InvalidClass",
+                    "config": {},
+                }
+            ]
         }
 
         with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
@@ -163,7 +180,11 @@ class TestInteractionRegistry:
         """Test handling of duplicate interaction names."""
         config_content = {
             "interaction": [
-                {"name": "duplicate", "class_name": "verl.interactions.base.BaseInteraction", "config": {}},
+                {
+                    "name": "duplicate",
+                    "class_name": "verl.interactions.base.BaseInteraction",
+                    "config": {},
+                },
                 {
                     "name": "duplicate",
                     "class_name": "verl.interactions.gsm8k_interaction.Gsm8kInteraction",
@@ -177,7 +198,9 @@ class TestInteractionRegistry:
             temp_config_path = f.name
 
         try:
-            with pytest.raises(ValueError, match="Duplicate interaction name 'duplicate' found"):
+            with pytest.raises(
+                ValueError, match="Duplicate interaction name 'duplicate' found"
+            ):
                 initialize_interactions_from_config(temp_config_path)
         finally:
             os.unlink(temp_config_path)
@@ -187,7 +210,10 @@ class TestInteractionRegistry:
         config_content = {
             "interaction": [
                 {"class_name": "verl.interactions.base.BaseInteraction", "config": {}},
-                {"class_name": "verl.interactions.gsm8k_interaction.Gsm8kInteraction", "config": {}},
+                {
+                    "class_name": "verl.interactions.gsm8k_interaction.Gsm8kInteraction",
+                    "config": {},
+                },
             ]
         }
 

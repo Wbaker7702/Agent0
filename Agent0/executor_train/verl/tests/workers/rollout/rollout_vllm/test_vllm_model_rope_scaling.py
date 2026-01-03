@@ -61,12 +61,16 @@ def test_vllm_rollout_with_yarn_position_embeddings():
         }
     )
 
-    tokenizer = AutoTokenizer.from_pretrained(config.model_path, trust_remote_code=True, padding_side="left")
+    tokenizer = AutoTokenizer.from_pretrained(
+        config.model_path, trust_remote_code=True, padding_side="left"
+    )
     tokenizer.pad_token = tokenizer.eos_token
     model_hf_config = AutoConfig.from_pretrained(config.model_path)
 
     # do_sample=False for temperate=0 deterministic
-    input_dataproto = prepare_input_dataproto(tokenizer, config, validate=True, do_sample=False)
+    input_dataproto = prepare_input_dataproto(
+        tokenizer, config, validate=True, do_sample=False
+    )
 
     vllm_rollout = vLLMRollout(
         model_path=config.model_path,
@@ -80,11 +84,15 @@ def test_vllm_rollout_with_yarn_position_embeddings():
     )
     if rank == 0:
         print("VLLM Rollout Outputs:")
-        print(tokenizer.batch_decode(rollout_response.batch["responses"][:], skip_special_tokens=False))
-        for response in rollout_response.batch["responses"]:
-            assert "<|im_end|>" in tokenizer.decode(response, skip_special_tokens=False), (
-                "Response should contain <|im_end|> token"
+        print(
+            tokenizer.batch_decode(
+                rollout_response.batch["responses"][:], skip_special_tokens=False
             )
+        )
+        for response in rollout_response.batch["responses"]:
+            assert "<|im_end|>" in tokenizer.decode(
+                response, skip_special_tokens=False
+            ), "Response should contain <|im_end|> token"
     print("Checks passed.")
 
     del vllm_rollout
@@ -99,15 +107,27 @@ def prepare_input_dataproto(tokenizer, config, validate, do_sample=False):
     base_phrase = "Roses are red, sky is blue. " * 4096
     preencode_prompts = [
         # 32810 tokens > 32768 tokens
-        [{"role": "user", "content": base_phrase + "Who won the Champions League in 2019?"}],
+        [
+            {
+                "role": "user",
+                "content": base_phrase + "Who won the Champions League in 2019?",
+            }
+        ],
         [{"role": "user", "content": base_phrase + "The founder of Apple is"}],
         [{"role": "user", "content": base_phrase + "What's your name"}],
     ]
     formatted_prompts = [
-        tokenizer.apply_chat_template(conversation, tokenize=False, add_generation_prompt=True)
+        tokenizer.apply_chat_template(
+            conversation, tokenize=False, add_generation_prompt=True
+        )
         for conversation in preencode_prompts
     ]
-    prompts = tokenizer(formatted_prompts, return_tensors="pt", padding="max_length", max_length=config.prompt_length)
+    prompts = tokenizer(
+        formatted_prompts,
+        return_tensors="pt",
+        padding="max_length",
+        max_length=config.prompt_length,
+    )
     input_dataproto = DataProto.from_dict(
         {
             "input_ids": prompts["input_ids"],

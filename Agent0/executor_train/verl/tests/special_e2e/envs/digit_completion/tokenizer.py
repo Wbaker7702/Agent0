@@ -27,7 +27,9 @@ from transformers.tokenization_utils import AddedToken, PreTrainedTokenizer
 
 
 class CharTokenizer(PreTrainedTokenizer):
-    def __init__(self, characters: Sequence[str], model_max_length: int, chat_template, **kwargs):
+    def __init__(
+        self, characters: Sequence[str], model_max_length: int, chat_template, **kwargs
+    ):
         """Character tokenizer for Hugging Face transformers.
 
         Args:

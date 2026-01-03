@@ -25,7 +25,9 @@ from verl.workers.rollout.schemas import (
 )
 
 
-def _test_add_tool_response_messages_image_delta(processor, image_list, description_list, resize_image=False):
+def _test_add_tool_response_messages_image_delta(
+    processor, image_list, description_list, resize_image=False
+):
     assert len(image_list) == len(description_list)
     # Get the smallest dimensions across all images
     processed_images = []
@@ -45,9 +47,7 @@ def _test_add_tool_response_messages_image_delta(processor, image_list, descript
         processed_images = processed_images_resized
 
     # Initial message history
-    system_prompt = (
-        "You will be provided with an image. Describe this image and then generate a new image for the next round"
-    )
+    system_prompt = "You will be provided with an image. Describe this image and then generate a new image for the next round"
     messages = [
         {
             "role": "system",
@@ -109,7 +109,10 @@ def _test_add_tool_response_messages_image_delta(processor, image_list, descript
         _ = req.get_generation_prompt_ids(processor)
         req.add_assistant_message(processor, content=description_list[idx - 1])
         before_tool_call_len = req.input_ids.shape[-1]
-        req.add_tool_response_messages(processor, [{"image": [img], "text": "Here is the new image you requested: "}])
+        req.add_tool_response_messages(
+            processor,
+            [{"image": [img], "text": "Here is the new image you requested: "}],
+        )
         after_tool_call_len = req.input_ids.shape[-1]
         if prev_generated_len == 0:
             prev_generated_len = after_tool_call_len - before_tool_call_len
@@ -122,7 +125,9 @@ def _test_add_tool_response_messages_image_delta(processor, image_list, descript
     req.add_assistant_message(processor, content=description_list[-1])
 
     messages = [msg.model_dump() for msg in req.messages]
-    tools = [tool.model_dump() for tool in req.tool_schemas] if req.tool_schemas else None
+    tools = (
+        [tool.model_dump() for tool in req.tool_schemas] if req.tool_schemas else None
+    )
     full_prompt_info = req._handle_apply_chat_template(
         processor,
         messages,
@@ -146,16 +151,21 @@ def _test_add_tool_response_messages_image_delta(processor, image_list, descript
 
 
 @pytest.mark.skipif(
-    hf_processor("Qwen/Qwen2.5-VL-3B-Instruct") is None, reason="Processor not available for Qwen/Qwen2.5-VL-B-Instruct"
+    hf_processor("Qwen/Qwen2.5-VL-3B-Instruct") is None,
+    reason="Processor not available for Qwen/Qwen2.5-VL-B-Instruct",
 )
 def test_add_tool_response_messages_image_delta():
     processor = hf_processor("Qwen/Qwen2.5-VL-3B-Instruct")
 
     # From Qwen2.5-VL-3B-Instruct HF example
-    img_1_url = {"image": "https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen-VL/assets/demo.jpeg"}
+    img_1_url = {
+        "image": "https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen-VL/assets/demo.jpeg"
+    }
     img_1_description = "A woman sits on the beach at sunset, smiling as she shares a high five with her large dog."
     # GitHub Logo
-    img_2_url = {"image": "https://github.githubassets.com/assets/GitHub-Mark-ea2971cee799.png"}
+    img_2_url = {
+        "image": "https://github.githubassets.com/assets/GitHub-Mark-ea2971cee799.png"
+    }
     img_2_description = "A GitHub Logo image"
     # Octocat
     img_3_url = {"image": "https://octodex.github.com/images/orderedlistocat.png"}
@@ -163,20 +173,27 @@ def test_add_tool_response_messages_image_delta():
 
     image_list = [img_1_url, img_2_url, img_3_url]
     description_list = [img_1_description, img_2_description, img_3_description]
-    _test_add_tool_response_messages_image_delta(processor, image_list, description_list, resize_image=False)
+    _test_add_tool_response_messages_image_delta(
+        processor, image_list, description_list, resize_image=False
+    )
 
 
 @pytest.mark.skipif(
-    hf_processor("Qwen/Qwen2.5-VL-3B-Instruct") is None, reason="Processor not available for Qwen/Qwen2.5-VL-B-Instruct"
+    hf_processor("Qwen/Qwen2.5-VL-3B-Instruct") is None,
+    reason="Processor not available for Qwen/Qwen2.5-VL-B-Instruct",
 )
 def test_add_tool_response_messages_image_delta_resize_image():
     processor = hf_processor("Qwen/Qwen2.5-VL-3B-Instruct")
 
     # From Qwen2.5-VL-3B-Instruct HF example
-    img_1_url = {"image": "https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen-VL/assets/demo.jpeg"}
+    img_1_url = {
+        "image": "https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen-VL/assets/demo.jpeg"
+    }
     img_1_description = "A woman sits on the beach at sunset, smiling as she shares a high five with her large dog."
     # GitHub Logo
-    img_2_url = {"image": "https://github.githubassets.com/assets/GitHub-Mark-ea2971cee799.png"}
+    img_2_url = {
+        "image": "https://github.githubassets.com/assets/GitHub-Mark-ea2971cee799.png"
+    }
     img_2_description = "A GitHub Logo image"
     # Octocat
     img_3_url = {"image": "https://octodex.github.com/images/orderedlistocat.png"}
@@ -184,4 +201,6 @@ def test_add_tool_response_messages_image_delta_resize_image():
 
     image_list = [img_1_url, img_2_url, img_3_url]
     description_list = [img_1_description, img_2_description, img_3_description]
-    _test_add_tool_response_messages_image_delta(processor, image_list, description_list, resize_image=True)
+    _test_add_tool_response_messages_image_delta(
+        processor, image_list, description_list, resize_image=True
+    )

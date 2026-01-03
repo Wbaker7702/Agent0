@@ -42,7 +42,10 @@ class MCPClientManager:
         for server_name in servers.keys():
             server = servers[server_name]
             if "auth_token" in server:
-                transport = SSETransport(url=server["url"], headers={"Authorization": f"Bearer {server['auth_token']}"})
+                transport = SSETransport(
+                    url=server["url"],
+                    headers={"Authorization": f"Bearer {server['auth_token']}"},
+                )
                 client = Client(transport)
                 self.clients.append(client)
             else:

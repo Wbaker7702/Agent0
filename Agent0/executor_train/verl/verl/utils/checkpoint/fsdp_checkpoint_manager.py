@@ -24,12 +24,20 @@ import torch.distributed
 from accelerate import init_empty_weights
 from omegaconf import DictConfig
 from torch.distributed.fsdp import FullyShardedDataParallel as FSDP
-from torch.distributed.fsdp import ShardedOptimStateDictConfig, ShardedStateDictConfig, StateDictType
+from torch.distributed.fsdp import (
+    ShardedOptimStateDictConfig,
+    ShardedStateDictConfig,
+    StateDictType,
+)
 from transformers import GenerationConfig, PreTrainedTokenizer, ProcessorMixin
 
 from verl.utils.device import is_cuda_available
 from verl.utils.fs import copy_to_local, is_non_local, local_mkdir_safe
-from verl.utils.fsdp_utils import fsdp_version, get_fsdp_full_state_dict, get_fsdp_state_ctx
+from verl.utils.fsdp_utils import (
+    fsdp_version,
+    get_fsdp_full_state_dict,
+    get_fsdp_state_ctx,
+)
 from verl.utils.logger import log_with_rank
 
 from .checkpoint_manager import BaseCheckpointManager
@@ -80,7 +88,9 @@ class FSDPCheckpointManager(BaseCheckpointManager):
         if processing_class is None:
             assert "tokenizer" in kwargs, "tokenizer or processor must be provided"
             warnings.warn(
-                "`tokenizer` is deprecated. use `processing_class` instead.", DeprecationWarning, stacklevel=2
+                "`tokenizer` is deprecated. use `processing_class` instead.",
+                DeprecationWarning,
+                stacklevel=2,
             )
             processing_class = kwargs.pop("tokenizer")
 
@@ -92,7 +102,9 @@ class FSDPCheckpointManager(BaseCheckpointManager):
             checkpoint_config=checkpoint_config,
         )
 
-    def load_checkpoint(self, local_path: str, hdfs_path: str = None, del_local_after_load=False):
+    def load_checkpoint(
+        self, local_path: str, hdfs_path: str = None, del_local_after_load=False
+    ):
         """
         Load an FSDP checkpoint for this rank.
 
@@ -110,11 +122,13 @@ class FSDPCheckpointManager(BaseCheckpointManager):
 
         # check if the checkpoint_load_contents is valid
         if self.should_load_model:
-            assert self.model is not None, "model must be provided when checkpoint_contents.load includes ['model']"
+            assert (
+                self.model is not None
+            ), "model must be provided when checkpoint_contents.load includes ['model']"
         if self.should_load_optimizer:
-            assert self.optimizer is not None, (
-                "optimizer must be provided when checkpoint_contents.load includes ['optimizer']"
-            )
+            assert (
+                self.optimizer is not None
+            ), "optimizer must be provided when checkpoint_contents.load includes ['optimizer']"
 
         # every rank download its own checkpoint
         state_dict_cfg = (
@@ -123,28 +137,47 @@ class FSDPCheckpointManager(BaseCheckpointManager):
             else None
         )
         optim_cfg = (
-            ShardedOptimStateDictConfig(offload_to_cpu=True if is_cuda_available else False)
+            ShardedOptimStateDictConfig(
+                offload_to_cpu=True if is_cuda_available else False
+            )
             if self.should_load_optimizer
             else None
         )
-        with get_fsdp_state_ctx(self.model, StateDictType.SHARDED_STATE_DICT, state_dict_cfg, optim_cfg):
+        with get_fsdp_state_ctx(
+            self.model, StateDictType.SHARDED_STATE_DICT, state_dict_cfg, optim_cfg
+        ):
             if self.should_load_model:
-                remote_model_path = os.path.join(local_path, f"model_world_size_{self.world_size}_rank_{self.rank}.pt")
+                remote_model_path = os.path.join(
+                    local_path,
+                    f"model_world_size_{self.world_size}_rank_{self.rank}.pt",
+                )
                 local_model_path = copy_to_local(remote_model_path)
                 model_state_dict = torch.load(local_model_path, weights_only=False)
                 self.model.load_state_dict(model_state_dict)
-                log_with_rank(f"Loaded model from {remote_model_path}", rank=self.rank, logger=logger)
+                log_with_rank(
+                    f"Loaded model from {remote_model_path}",
+                    rank=self.rank,
+                    logger=logger,
+                )
 
             if self.should_load_optimizer:
-                remote_optim_path = os.path.join(local_path, f"optim_world_size_{self.world_size}_rank_{self.rank}.pt")
+                remote_optim_path = os.path.join(
+                    local_path,
+                    f"optim_world_size_{self.world_size}_rank_{self.rank}.pt",
+                )
                 local_optim_path = copy_to_local(remote_optim_path)
                 optimizer_state_dict = torch.load(local_optim_path, weights_only=False)
                 self.optimizer.load_state_dict(optimizer_state_dict)
-                log_with_rank(f"Loaded optimizer from {remote_optim_path}", rank=self.rank, logger=logger)
+                log_with_rank(
+                    f"Loaded optimizer from {remote_optim_path}",
+                    rank=self.rank,
+                    logger=logger,
+                )
 
         if self.should_load_extra:
             remote_extra_state_path = os.path.join(
-                local_path, f"extra_state_world_size_{self.world_size}_rank_{self.rank}.pt"
+                local_path,
+                f"extra_state_world_size_{self.world_size}_rank_{self.rank}.pt",
             )
             local_extra_state_path = copy_to_local(remote_extra_state_path)
             extra_state_dict = torch.load(local_extra_state_path, weights_only=False)
@@ -152,18 +185,30 @@ class FSDPCheckpointManager(BaseCheckpointManager):
             if "rng" in extra_state_dict:
                 # 'rng' may not exist for backward compatibility
                 self.load_rng_state(extra_state_dict["rng"])
-                log_with_rank(f"Loaded rng from {remote_extra_state_path}", rank=self.rank, logger=logger)
+                log_with_rank(
+                    f"Loaded rng from {remote_extra_state_path}",
+                    rank=self.rank,
+                    logger=logger,
+                )
 
             lr_scheduler_state_dict = extra_state_dict["lr_scheduler"]
             if lr_scheduler_state_dict is not None and self.lr_scheduler is not None:
                 self.lr_scheduler.load_state_dict(lr_scheduler_state_dict)
-                log_with_rank(f"Loaded lr_scheduler from {remote_extra_state_path}", rank=self.rank, logger=logger)
+                log_with_rank(
+                    f"Loaded lr_scheduler from {remote_extra_state_path}",
+                    rank=self.rank,
+                    logger=logger,
+                )
 
         if self.rank == 0 and del_local_after_load:
             try:
                 os.remove(local_model_path) if is_non_local(local_model_path) else None
                 os.remove(local_optim_path) if is_non_local(local_optim_path) else None
-                os.remove(local_extra_state_path) if is_non_local(local_extra_state_path) else None
+                (
+                    os.remove(local_extra_state_path)
+                    if is_non_local(local_extra_state_path)
+                    else None
+                )
             except Exception as e:
                 log_with_rank(
                     f"remove local resume ckpt file after loading failed, exception {e} will be ignored",
@@ -174,7 +219,13 @@ class FSDPCheckpointManager(BaseCheckpointManager):
         # wait for everyone to load checkpoints
         torch.distributed.barrier()
 
-    def save_checkpoint(self, local_path: str, hdfs_path: str = None, global_step: int = 0, max_ckpt_to_keep=None):
+    def save_checkpoint(
+        self,
+        local_path: str,
+        hdfs_path: str = None,
+        global_step: int = 0,
+        max_ckpt_to_keep=None,
+    ):
         """
         Save an FSDP checkpoint for this rank.
 
@@ -215,40 +266,73 @@ class FSDPCheckpointManager(BaseCheckpointManager):
 
         # check if the checkpoint_save_contents is valid
         if self.should_save_model:
-            assert self.model is not None, "model must be provided when checkpoint_contents.save includes ['model']"
+            assert (
+                self.model is not None
+            ), "model must be provided when checkpoint_contents.save includes ['model']"
         if self.should_save_optimizer:
-            assert self.optimizer is not None, (
-                "optimizer must be provided when checkpoint_contents.save includes ['optimizer']"
-            )
+            assert (
+                self.optimizer is not None
+            ), "optimizer must be provided when checkpoint_contents.save includes ['optimizer']"
 
         # every rank will save its own model and optim shard
-        state_dict_cfg = ShardedStateDictConfig(offload_to_cpu=True if is_cuda_available else False)
-        optim_cfg = ShardedOptimStateDictConfig(offload_to_cpu=True if is_cuda_available else False)
+        state_dict_cfg = ShardedStateDictConfig(
+            offload_to_cpu=True if is_cuda_available else False
+        )
+        optim_cfg = ShardedOptimStateDictConfig(
+            offload_to_cpu=True if is_cuda_available else False
+        )
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            with get_fsdp_state_ctx(self.model, StateDictType.SHARDED_STATE_DICT, state_dict_cfg, optim_cfg):
-                model_path = os.path.join(local_path, f"model_world_size_{self.world_size}_rank_{self.rank}.pt")
-                optim_path = os.path.join(local_path, f"optim_world_size_{self.world_size}_rank_{self.rank}.pt")
-                extra_path = os.path.join(local_path, f"extra_state_world_size_{self.world_size}_rank_{self.rank}.pt")
+            with get_fsdp_state_ctx(
+                self.model, StateDictType.SHARDED_STATE_DICT, state_dict_cfg, optim_cfg
+            ):
+                model_path = os.path.join(
+                    local_path,
+                    f"model_world_size_{self.world_size}_rank_{self.rank}.pt",
+                )
+                optim_path = os.path.join(
+                    local_path,
+                    f"optim_world_size_{self.world_size}_rank_{self.rank}.pt",
+                )
+                extra_path = os.path.join(
+                    local_path,
+                    f"extra_state_world_size_{self.world_size}_rank_{self.rank}.pt",
+                )
 
                 if self.should_save_model:
                     model_state_dict = self.model.state_dict()
                     torch.save(model_state_dict, model_path)
-                    log_with_rank(f"Saved model to {os.path.abspath(model_path)}", rank=self.rank, logger=logger)
+                    log_with_rank(
+                        f"Saved model to {os.path.abspath(model_path)}",
+                        rank=self.rank,
+                        logger=logger,
+                    )
 
                 if self.should_save_optimizer:
                     optimizer_state_dict = self.optimizer.state_dict()
                     torch.save(optimizer_state_dict, optim_path)
-                    log_with_rank(f"Saved optim to {os.path.abspath(optim_path)}", rank=self.rank, logger=logger)
+                    log_with_rank(
+                        f"Saved optim to {os.path.abspath(optim_path)}",
+                        rank=self.rank,
+                        logger=logger,
+                    )
 
                 if self.should_save_extra:
-                    lr_scheduler_state_dict = self.lr_scheduler.state_dict() if self.lr_scheduler is not None else None
+                    lr_scheduler_state_dict = (
+                        self.lr_scheduler.state_dict()
+                        if self.lr_scheduler is not None
+                        else None
+                    )
                     extra_state_dict = {
                         "lr_scheduler": lr_scheduler_state_dict,
                         "rng": self.get_rng_state(),
                     }
                     torch.save(extra_state_dict, extra_path)
-                    log_with_rank(f"Saved extra_state to {os.path.abspath(extra_path)}", rank=self.rank, logger=logger)
+                    log_with_rank(
+                        f"Saved extra_state to {os.path.abspath(extra_path)}",
+                        rank=self.rank,
+                        logger=logger,
+                    )
 
         if self.rank == 0:
             # Save HF tokenizer/processor and model config on rank 0 to huggingface/ directory, no matter whether
@@ -262,10 +346,16 @@ class FSDPCheckpointManager(BaseCheckpointManager):
             hf_config_tokenizer_path = os.path.join(local_path, "huggingface")
             local_mkdir_safe(hf_config_tokenizer_path)
             model_config = unwrap_model.config
-            if unwrap_model.can_generate() and hasattr(model_config, "name_or_path") and model_config.name_or_path:
+            if (
+                unwrap_model.can_generate()
+                and hasattr(model_config, "name_or_path")
+                and model_config.name_or_path
+            ):
                 # Some model's name_or_path is empty if not initialized from pretrained,
                 # in this cases, we don't save generation config.
-                generation_config = GenerationConfig.from_pretrained(model_config.name_or_path)
+                generation_config = GenerationConfig.from_pretrained(
+                    model_config.name_or_path
+                )
                 generation_config.save_pretrained(hf_config_tokenizer_path)
             else:
                 generation_config = None
@@ -294,7 +384,9 @@ class FSDPCheckpointManager(BaseCheckpointManager):
         if self.should_save_hf_model:
             # Only rank 0 will save hf model and,
             # offload to cpu to save LLMs which may be too large to fit in one GPU
-            state_dict = get_fsdp_full_state_dict(self.model, offload_to_cpu=True, rank0_only=True)
+            state_dict = get_fsdp_full_state_dict(
+                self.model, offload_to_cpu=True, rank0_only=True
+            )
 
             if self.rank == 0:
                 hf_local_path = os.path.join(local_path, "huggingface")
@@ -313,10 +405,14 @@ class FSDPCheckpointManager(BaseCheckpointManager):
 
                     auto_model_cls = AutoModelForVision2Seq
                 else:
-                    raise NotImplementedError(f"Unknown architecture {model_config['architectures']}")
+                    raise NotImplementedError(
+                        f"Unknown architecture {model_config['architectures']}"
+                    )
 
                 with init_empty_weights():
-                    save_model = auto_model_cls.from_config(model_config, torch_dtype=torch.bfloat16)
+                    save_model = auto_model_cls.from_config(
+                        model_config, torch_dtype=torch.bfloat16
+                    )
                 save_model.to_empty(device="cpu")
 
                 if save_model.can_generate():

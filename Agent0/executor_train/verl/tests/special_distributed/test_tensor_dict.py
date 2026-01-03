@@ -25,15 +25,23 @@ from verl.utils.distributed import initialize_global_process_group
 
 
 def test_all_gather_data_proto():
-    device_mesh = torch.distributed.device_mesh.init_device_mesh("cuda", mesh_shape=[2, 2], mesh_dim_names=["dp", "tp"])
+    device_mesh = torch.distributed.device_mesh.init_device_mesh(
+        "cuda", mesh_shape=[2, 2], mesh_dim_names=["dp", "tp"]
+    )
 
     global_rank = torch.distributed.get_rank()
 
-    obs = torch.tensor([[1 * global_rank, 2 * global_rank + 1], [3 * global_rank, 4 * global_rank + 1]])
+    obs = torch.tensor(
+        [[1 * global_rank, 2 * global_rank + 1], [3 * global_rank, 4 * global_rank + 1]]
+    )
 
     labels = ["a", "b"] if global_rank % 2 == 0 else ["b", "a"]
     labels = np.array(labels, dtype=object)
-    data = DataProto.from_dict(tensors={"obs": obs}, non_tensors={"labels": labels}, meta_info={"info": "test_info"})
+    data = DataProto.from_dict(
+        tensors={"obs": obs},
+        non_tensors={"labels": labels},
+        meta_info={"info": "test_info"},
+    )
 
     all_gather_data_proto(data=data, process_group=device_mesh.get_group("dp"))
 
@@ -63,22 +71,36 @@ def test_vocab_parallel_entropy():
     from verl.utils.torch_functional import entropy_from_logits
 
     mpu.initialize_model_parallel(
-        tensor_model_parallel_size=2, pipeline_model_parallel_size=1, virtual_pipeline_model_parallel_size=None
+        tensor_model_parallel_size=2,
+        pipeline_model_parallel_size=1,
+        virtual_pipeline_model_parallel_size=None,
     )
 
     batch_size = 2
     seqlen = 128
     vocab_size = 155136
 
-    logits = torch.randn(batch_size * seqlen, vocab_size, device="cuda", requires_grad=True)
-    target = torch.randint(low=0, high=vocab_size, size=(batch_size * seqlen,), device="cuda", dtype=torch.int64)
+    logits = torch.randn(
+        batch_size * seqlen, vocab_size, device="cuda", requires_grad=True
+    )
+    target = torch.randint(
+        low=0,
+        high=vocab_size,
+        size=(batch_size * seqlen,),
+        device="cuda",
+        dtype=torch.int64,
+    )
 
     # broadcast across tp
     torch.distributed.broadcast(
-        logits, mpu.get_tensor_model_parallel_src_rank(), group=mpu.get_tensor_model_parallel_group()
+        logits,
+        mpu.get_tensor_model_parallel_src_rank(),
+        group=mpu.get_tensor_model_parallel_group(),
     )
     torch.distributed.broadcast(
-        target, mpu.get_tensor_model_parallel_src_rank(), group=mpu.get_tensor_model_parallel_group()
+        target,
+        mpu.get_tensor_model_parallel_src_rank(),
+        group=mpu.get_tensor_model_parallel_group(),
     )
 
     tp_rank = mpu.get_tensor_model_parallel_rank()
@@ -86,7 +108,9 @@ def test_vocab_parallel_entropy():
 
     # get the local logits of each tp
     vocab_parallel_logits = (
-        logits.clone().detach()[:, tp_rank * vocab_size_per_tp : (tp_rank + 1) * vocab_size_per_tp].requires_grad_()
+        logits.clone()
+        .detach()[:, tp_rank * vocab_size_per_tp : (tp_rank + 1) * vocab_size_per_tp]
+        .requires_grad_()
     )
     logits.grad = None
     vocab_parallel_logits.grad = None
@@ -102,11 +126,13 @@ def test_vocab_parallel_entropy():
     torch.testing.assert_close(output_entropy, target_entropy)
     target_entropy.backward(grad_output)
     torch.testing.assert_close(
-        logits.grad[:, tp_rank * vocab_size_per_tp : (tp_rank + 1) * vocab_size_per_tp], vocab_parallel_logits.grad
+        logits.grad[:, tp_rank * vocab_size_per_tp : (tp_rank + 1) * vocab_size_per_tp],
+        vocab_parallel_logits.grad,
     )
     # make sure logits is not altered
     torch.testing.assert_close(
-        logits[:, tp_rank * vocab_size_per_tp : (tp_rank + 1) * vocab_size_per_tp], vocab_parallel_logits
+        logits[:, tp_rank * vocab_size_per_tp : (tp_rank + 1) * vocab_size_per_tp],
+        vocab_parallel_logits,
     )
 
     if mpu.get_tensor_model_parallel_rank() == 0:

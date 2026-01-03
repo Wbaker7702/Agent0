@@ -54,7 +54,10 @@ def main():
                     "content": "Quantum computing is a type of computing that uses quantum-mechanical phenomena, "
                     "such as superposition and entanglement, to perform operations on data.",
                 },
-                {"role": "user", "content": "How is it different from classical computing?"},
+                {
+                    "role": "user",
+                    "content": "How is it different from classical computing?",
+                },
                 {
                     "role": "assistant",
                     "content": "Classical computing uses bits that are either 0 or 1, while quantum computing uses "
@@ -69,7 +72,10 @@ def main():
         {
             "messages": [
                 {"role": "system", "content": "You are a helpful assistant."},
-                {"role": "user", "content": "Write a simple Python function to calculate factorial."},
+                {
+                    "role": "user",
+                    "content": "Write a simple Python function to calculate factorial.",
+                },
                 {
                     "role": "assistant",
                     "content": (

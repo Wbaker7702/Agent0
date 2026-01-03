@@ -27,10 +27,14 @@ def test_union_tensor_dict():
     obs = torch.randn(100, 10)
 
     data1 = TensorDict({"obs": obs, "act": torch.randn(100, 3)}, batch_size=[100])
-    data2 = TensorDict({"obs": obs, "next_obs": torch.randn(100, 10), "rew": torch.randn(100)}, batch_size=[100])
+    data2 = TensorDict(
+        {"obs": obs, "next_obs": torch.randn(100, 10), "rew": torch.randn(100)},
+        batch_size=[100],
+    )
 
     data_with_copied_obs = TensorDict(
-        {"obs": obs.clone(), "next_obs": torch.randn(100, 10), "rew": torch.randn(100)}, batch_size=[100]
+        {"obs": obs.clone(), "next_obs": torch.randn(100, 10), "rew": torch.randn(100)},
+        batch_size=[100],
     )
 
     data = union_tensor_dict(data1, data2)
@@ -87,7 +91,9 @@ def test_tensor_dict_make_iterator():
             print(data1.batch["obs"])
             print(data2.batch["obs"])
             raise AssertionError()
-        non_tensor_result = np.all(np.equal(data1.non_tensor_batch["labels"], data2.non_tensor_batch["labels"]))
+        non_tensor_result = np.all(
+            np.equal(data1.non_tensor_batch["labels"], data2.non_tensor_batch["labels"])
+        )
         if not non_tensor_result.item():
             print(data1.non_tensor_batch["labels"])
             print(data2.non_tensor_batch["labels"])
@@ -96,18 +102,28 @@ def test_tensor_dict_make_iterator():
 def test_reorder():
     obs = torch.tensor([1, 2, 3, 4, 5, 6])
     labels = ["a", "b", "c", "d", "e", "f"]
-    data = DataProto.from_dict(tensors={"obs": obs}, non_tensors={"labels": labels}, meta_info={"name": "abdce"})
+    data = DataProto.from_dict(
+        tensors={"obs": obs},
+        non_tensors={"labels": labels},
+        meta_info={"name": "abdce"},
+    )
     data.reorder(torch.tensor([3, 4, 2, 0, 1, 5]))
 
     assert torch.all(torch.eq(data.batch["obs"], torch.tensor([4, 5, 3, 1, 2, 6])))
-    assert np.all(data.non_tensor_batch["labels"] == np.array(["d", "e", "c", "a", "b", "f"]))
+    assert np.all(
+        data.non_tensor_batch["labels"] == np.array(["d", "e", "c", "a", "b", "f"])
+    )
     assert data.meta_info == {"name": "abdce"}
 
 
 def test_chunk_concat():
     obs = torch.tensor([1, 2, 3, 4, 5, 6])
     labels = ["a", "b", "c", "d", "e", "f"]
-    data = DataProto.from_dict(tensors={"obs": obs}, non_tensors={"labels": labels}, meta_info={"name": "abdce"})
+    data = DataProto.from_dict(
+        tensors={"obs": obs},
+        non_tensors={"labels": labels},
+        meta_info={"name": "abdce"},
+    )
 
     with pytest.raises(AssertionError):
         data.chunk(5)
@@ -124,7 +140,9 @@ def test_chunk_concat():
 
     concat_data = DataProto.concat(data_split)
     assert torch.all(torch.eq(concat_data.batch["obs"], data.batch["obs"]))
-    assert np.all(concat_data.non_tensor_batch["labels"] == data.non_tensor_batch["labels"])
+    assert np.all(
+        concat_data.non_tensor_batch["labels"] == data.non_tensor_batch["labels"]
+    )
     assert concat_data.meta_info == data.meta_info
 
 
@@ -145,31 +163,53 @@ def test_repeat():
     # Create a DataProto object with some batch and non-tensor data
     obs = torch.tensor([[1, 2], [3, 4], [5, 6]])
     labels = ["a", "b", "c"]
-    data = DataProto.from_dict(tensors={"obs": obs}, non_tensors={"labels": labels}, meta_info={"info": "test_info"})
+    data = DataProto.from_dict(
+        tensors={"obs": obs},
+        non_tensors={"labels": labels},
+        meta_info={"info": "test_info"},
+    )
 
     # Test interleave=True
     repeated_data_interleave = data.repeat(repeat_times=2, interleave=True)
-    expected_obs_interleave = torch.tensor([[1, 2], [1, 2], [3, 4], [3, 4], [5, 6], [5, 6]])
+    expected_obs_interleave = torch.tensor(
+        [[1, 2], [1, 2], [3, 4], [3, 4], [5, 6], [5, 6]]
+    )
     expected_labels_interleave = ["a", "a", "b", "b", "c", "c"]
 
-    assert torch.all(torch.eq(repeated_data_interleave.batch["obs"], expected_obs_interleave))
-    assert (repeated_data_interleave.non_tensor_batch["labels"] == expected_labels_interleave).all()
+    assert torch.all(
+        torch.eq(repeated_data_interleave.batch["obs"], expected_obs_interleave)
+    )
+    assert (
+        repeated_data_interleave.non_tensor_batch["labels"]
+        == expected_labels_interleave
+    ).all()
     assert repeated_data_interleave.meta_info == {"info": "test_info"}
 
     # Test interleave=False
     repeated_data_no_interleave = data.repeat(repeat_times=2, interleave=False)
-    expected_obs_no_interleave = torch.tensor([[1, 2], [3, 4], [5, 6], [1, 2], [3, 4], [5, 6]])
+    expected_obs_no_interleave = torch.tensor(
+        [[1, 2], [3, 4], [5, 6], [1, 2], [3, 4], [5, 6]]
+    )
     expected_labels_no_interleave = ["a", "b", "c", "a", "b", "c"]
 
-    assert torch.all(torch.eq(repeated_data_no_interleave.batch["obs"], expected_obs_no_interleave))
-    assert (repeated_data_no_interleave.non_tensor_batch["labels"] == expected_labels_no_interleave).all()
+    assert torch.all(
+        torch.eq(repeated_data_no_interleave.batch["obs"], expected_obs_no_interleave)
+    )
+    assert (
+        repeated_data_no_interleave.non_tensor_batch["labels"]
+        == expected_labels_no_interleave
+    ).all()
     assert repeated_data_no_interleave.meta_info == {"info": "test_info"}
 
 
 def test_dataproto_pad_unpad():
     obs = torch.tensor([[1, 2], [3, 4], [5, 6]])
     labels = ["a", "b", "c"]
-    data = DataProto.from_dict(tensors={"obs": obs}, non_tensors={"labels": labels}, meta_info={"info": "test_info"})
+    data = DataProto.from_dict(
+        tensors={"obs": obs},
+        non_tensors={"labels": labels},
+        meta_info={"info": "test_info"},
+    )
 
     from verl.protocol import pad_dataproto_to_divisor, unpad_dataproto
 
@@ -206,7 +246,9 @@ def test_dataproto_pad_unpad():
     padded_data, pad_size = pad_dataproto_to_divisor(data, size_divisor=7)
     assert pad_size == 4
 
-    expected_obs = torch.tensor([[1, 2], [3, 4], [5, 6], [1, 2], [3, 4], [5, 6], [1, 2]])
+    expected_obs = torch.tensor(
+        [[1, 2], [3, 4], [5, 6], [1, 2], [3, 4], [5, 6], [1, 2]]
+    )
     expected_labels = ["a", "b", "c", "a", "b", "c", "a"]
     assert torch.all(torch.eq(padded_data.batch["obs"], expected_obs))
     assert (padded_data.non_tensor_batch["labels"] == expected_labels).all()
@@ -223,20 +265,32 @@ def test_dataproto_fold_unfold():
 
     obs = torch.tensor([[1, 2], [3, 4], [5, 6]])
     labels = ["a", "b", "c"]
-    data = DataProto.from_dict(tensors={"obs": obs}, non_tensors={"labels": labels}, meta_info={"info": "test_info"})
+    data = DataProto.from_dict(
+        tensors={"obs": obs},
+        non_tensors={"labels": labels},
+        meta_info={"info": "test_info"},
+    )
 
     data1 = data.repeat(repeat_times=2, interleave=True)
 
     data2 = fold_batch_dim(data1, new_batch_size=3)
 
-    torch.testing.assert_close(data2.batch["obs"], torch.tensor([[[1, 2], [1, 2]], [[3, 4], [3, 4]], [[5, 6], [5, 6]]]))
-    assert (data2.non_tensor_batch["labels"] == [["a", "a"], ["b", "b"], ["c", "c"]]).all()
+    torch.testing.assert_close(
+        data2.batch["obs"],
+        torch.tensor([[[1, 2], [1, 2]], [[3, 4], [3, 4]], [[5, 6], [5, 6]]]),
+    )
+    assert (
+        data2.non_tensor_batch["labels"] == [["a", "a"], ["b", "b"], ["c", "c"]]
+    ).all()
 
     data2.reorder(indices=torch.tensor([1, 2, 0]))
 
     data3 = unfold_batch_dim(data2, batch_dims=2)
 
-    torch.testing.assert_close(data3.batch["obs"], torch.tensor([[3, 4], [3, 4], [5, 6], [5, 6], [1, 2], [1, 2]]))
+    torch.testing.assert_close(
+        data3.batch["obs"],
+        torch.tensor([[3, 4], [3, 4], [5, 6], [5, 6], [1, 2], [1, 2]]),
+    )
     assert (data3.non_tensor_batch["labels"] == ["b", "b", "c", "c", "a", "a"]).all()
     assert data3.meta_info == {"info": "test_info"}
 
@@ -244,12 +298,18 @@ def test_dataproto_fold_unfold():
 def test_torch_save_data_proto():
     obs = torch.tensor([[1, 2], [3, 4], [5, 6]])
     labels = ["a", "b", "c"]
-    data = DataProto.from_dict(tensors={"obs": obs}, non_tensors={"labels": labels}, meta_info={"info": "test_info"})
+    data = DataProto.from_dict(
+        tensors={"obs": obs},
+        non_tensors={"labels": labels},
+        meta_info={"info": "test_info"},
+    )
     data.save_to_disk("test_data.pt")
     loaded_data = DataProto.load_from_disk("test_data.pt")
 
     assert torch.all(torch.eq(loaded_data.batch["obs"], data.batch["obs"]))
-    assert (loaded_data.non_tensor_batch["labels"] == data.non_tensor_batch["labels"]).all()
+    assert (
+        loaded_data.non_tensor_batch["labels"] == data.non_tensor_batch["labels"]
+    ).all()
     assert loaded_data.meta_info == data.meta_info
 
     import os
@@ -260,11 +320,17 @@ def test_torch_save_data_proto():
 def test_len():
     obs = torch.tensor([[1, 2], [3, 4], [5, 6]])
     labels = np.array(["a", "b", "c"], dtype=object)
-    data = DataProto.from_dict(tensors={"obs": obs}, non_tensors={"labels": labels}, meta_info={"info": "test_info"})
+    data = DataProto.from_dict(
+        tensors={"obs": obs},
+        non_tensors={"labels": labels},
+        meta_info={"info": "test_info"},
+    )
 
     assert len(data) == 3
 
-    data = DataProto(batch=None, non_tensor_batch={"labels": labels}, meta_info={"info": "test_info"})
+    data = DataProto(
+        batch=None, non_tensor_batch={"labels": labels}, meta_info={"info": "test_info"}
+    )
 
     assert len(data) == 3
 
@@ -292,8 +358,12 @@ def test_dataproto_index():
     assert result_np_int.non_tensor_batch.keys() == data.non_tensor_batch.keys()
     assert result_np_int.batch["obs"].shape[0] == idx_num
     assert result_np_int.non_tensor_batch["labels"].shape[0] == idx_num
-    assert np.array_equal(result_np_int.batch["obs"].cpu().numpy(), obs[idx_np_int].numpy())
-    assert np.array_equal(result_np_int.non_tensor_batch["labels"], labels_np[idx_np_int])
+    assert np.array_equal(
+        result_np_int.batch["obs"].cpu().numpy(), obs[idx_np_int].numpy()
+    )
+    assert np.array_equal(
+        result_np_int.non_tensor_batch["labels"], labels_np[idx_np_int]
+    )
 
     idx_torch_int = torch.randint(0, data_len, size=(idx_num,))
     result_torch_int = data[idx_torch_int]
@@ -301,8 +371,13 @@ def test_dataproto_index():
     assert result_torch_int.non_tensor_batch.keys() == data.non_tensor_batch.keys()
     assert result_torch_int.batch["obs"].shape[0] == idx_num
     assert result_torch_int.non_tensor_batch["labels"].shape[0] == idx_num
-    assert np.array_equal(result_torch_int.batch["obs"].cpu().numpy(), obs[idx_torch_int].cpu().numpy())
-    assert np.array_equal(result_torch_int.non_tensor_batch["labels"], labels_np[idx_torch_int.cpu().numpy()])
+    assert np.array_equal(
+        result_torch_int.batch["obs"].cpu().numpy(), obs[idx_torch_int].cpu().numpy()
+    )
+    assert np.array_equal(
+        result_torch_int.non_tensor_batch["labels"],
+        labels_np[idx_torch_int.cpu().numpy()],
+    )
 
     idx_list_int = [np.random.randint(0, data_len) for _ in range(idx_num)]
     result_list_int = data[idx_list_int]
@@ -310,8 +385,12 @@ def test_dataproto_index():
     assert result_list_int.non_tensor_batch.keys() == data.non_tensor_batch.keys()
     assert result_list_int.batch["obs"].shape[0] == idx_num
     assert result_list_int.non_tensor_batch["labels"].shape[0] == idx_num
-    assert np.array_equal(result_list_int.batch["obs"].cpu().numpy(), obs[idx_list_int].cpu().numpy())
-    assert np.array_equal(result_list_int.non_tensor_batch["labels"], labels_np[idx_list_int])
+    assert np.array_equal(
+        result_list_int.batch["obs"].cpu().numpy(), obs[idx_list_int].cpu().numpy()
+    )
+    assert np.array_equal(
+        result_list_int.non_tensor_batch["labels"], labels_np[idx_list_int]
+    )
 
     idx_np_bool = np.random.randint(0, 2, size=(data_len,), dtype=bool)
     result_np_bool = data[idx_np_bool]
@@ -319,17 +398,28 @@ def test_dataproto_index():
     assert result_np_bool.non_tensor_batch.keys() == data.non_tensor_batch.keys()
     assert result_np_bool.batch["obs"].shape[0] == idx_np_bool.sum()
     assert result_np_bool.non_tensor_batch["labels"].shape[0] == idx_np_bool.sum()
-    assert np.array_equal(result_np_bool.batch["obs"].cpu().numpy(), obs[idx_np_bool].cpu().numpy())
-    assert np.array_equal(result_np_bool.non_tensor_batch["labels"], labels_np[idx_np_bool])
+    assert np.array_equal(
+        result_np_bool.batch["obs"].cpu().numpy(), obs[idx_np_bool].cpu().numpy()
+    )
+    assert np.array_equal(
+        result_np_bool.non_tensor_batch["labels"], labels_np[idx_np_bool]
+    )
 
     idx_torch_bool = torch.randint(0, 2, size=(data_len,), dtype=torch.bool)
     result_torch_bool = data[idx_torch_bool]
     assert result_torch_bool.batch.keys() == data.batch.keys()
     assert result_torch_bool.non_tensor_batch.keys() == data.non_tensor_batch.keys()
     assert result_torch_bool.batch["obs"].shape[0] == idx_torch_bool.sum().item()
-    assert result_torch_bool.non_tensor_batch["labels"].shape[0] == idx_torch_bool.sum().item()
-    assert np.array_equal(result_torch_bool.batch["obs"].cpu().numpy(), obs[idx_torch_bool].cpu().numpy())
-    assert np.array_equal(result_torch_bool.non_tensor_batch["labels"], labels_np[idx_torch_bool])
+    assert (
+        result_torch_bool.non_tensor_batch["labels"].shape[0]
+        == idx_torch_bool.sum().item()
+    )
+    assert np.array_equal(
+        result_torch_bool.batch["obs"].cpu().numpy(), obs[idx_torch_bool].cpu().numpy()
+    )
+    assert np.array_equal(
+        result_torch_bool.non_tensor_batch["labels"], labels_np[idx_torch_bool]
+    )
 
     idx_list_bool = [np.random.randint(0, 2, dtype=bool) for _ in range(data_len)]
     result_list_bool = data[idx_list_bool]
@@ -337,8 +427,12 @@ def test_dataproto_index():
     assert result_list_bool.non_tensor_batch.keys() == data.non_tensor_batch.keys()
     assert result_list_bool.batch["obs"].shape[0] == sum(idx_list_bool)
     assert result_list_bool.non_tensor_batch["labels"].shape[0] == sum(idx_list_bool)
-    assert np.array_equal(result_list_bool.batch["obs"].cpu().numpy(), obs[idx_list_bool].cpu().numpy())
-    assert np.array_equal(result_list_bool.non_tensor_batch["labels"], labels_np[idx_list_bool])
+    assert np.array_equal(
+        result_list_bool.batch["obs"].cpu().numpy(), obs[idx_list_bool].cpu().numpy()
+    )
+    assert np.array_equal(
+        result_list_bool.non_tensor_batch["labels"], labels_np[idx_list_bool]
+    )
 
 
 def test_old_vs_new_from_single_dict():
@@ -380,7 +474,9 @@ def test_old_vs_new_from_single_dict():
 
 def test_dataproto_no_batch():
     labels = ["a", "b", "c"]
-    data = DataProto.from_dict(non_tensors={"labels": labels}, meta_info={"info": "test_info"})
+    data = DataProto.from_dict(
+        non_tensors={"labels": labels}, meta_info={"info": "test_info"}
+    )
     selected = data.select(non_tensor_batch_keys=["labels"])
     assert (selected.non_tensor_batch["labels"] == labels).all()
     pop_data = data.pop(non_tensor_batch_keys=["labels"])
@@ -392,24 +488,44 @@ def test_sample_level_repeat():
     # Create a DataProto object with some batch and non-tensor data
     obs = torch.tensor([[1, 2], [3, 4], [5, 6]])
     labels = ["a", "b", "c"]
-    data = DataProto.from_dict(tensors={"obs": obs}, non_tensors={"labels": labels}, meta_info={"info": "test_info"})
+    data = DataProto.from_dict(
+        tensors={"obs": obs},
+        non_tensors={"labels": labels},
+        meta_info={"info": "test_info"},
+    )
 
     # list
     repeated_data_interleave = data.sample_level_repeat(repeat_times=[3, 1, 2])
-    expected_obs_interleave = torch.tensor([[1, 2], [1, 2], [1, 2], [3, 4], [5, 6], [5, 6]])
+    expected_obs_interleave = torch.tensor(
+        [[1, 2], [1, 2], [1, 2], [3, 4], [5, 6], [5, 6]]
+    )
     expected_labels_interleave = ["a", "a", "a", "b", "c", "c"]
 
-    assert torch.all(torch.eq(repeated_data_interleave.batch["obs"], expected_obs_interleave))
-    assert (repeated_data_interleave.non_tensor_batch["labels"] == expected_labels_interleave).all()
+    assert torch.all(
+        torch.eq(repeated_data_interleave.batch["obs"], expected_obs_interleave)
+    )
+    assert (
+        repeated_data_interleave.non_tensor_batch["labels"]
+        == expected_labels_interleave
+    ).all()
     assert repeated_data_interleave.meta_info == {"info": "test_info"}
 
     # torch.tensor
-    repeated_data_no_interleave = data.sample_level_repeat(repeat_times=torch.tensor([1, 2, 3]))
-    expected_obs_no_interleave = torch.tensor([[1, 2], [3, 4], [3, 4], [5, 6], [5, 6], [5, 6]])
+    repeated_data_no_interleave = data.sample_level_repeat(
+        repeat_times=torch.tensor([1, 2, 3])
+    )
+    expected_obs_no_interleave = torch.tensor(
+        [[1, 2], [3, 4], [3, 4], [5, 6], [5, 6], [5, 6]]
+    )
     expected_labels_no_interleave = ["a", "b", "b", "c", "c", "c"]
 
-    assert torch.all(torch.eq(repeated_data_no_interleave.batch["obs"], expected_obs_no_interleave))
-    assert (repeated_data_no_interleave.non_tensor_batch["labels"] == expected_labels_no_interleave).all()
+    assert torch.all(
+        torch.eq(repeated_data_no_interleave.batch["obs"], expected_obs_no_interleave)
+    )
+    assert (
+        repeated_data_no_interleave.non_tensor_batch["labels"]
+        == expected_labels_no_interleave
+    ).all()
     assert repeated_data_no_interleave.meta_info == {"info": "test_info"}
 
 
@@ -419,7 +535,9 @@ def test_dataproto_unfold_column_chunks():
 
     labels = ["a", "b", "c"]
     data = DataProto.from_dict(
-        tensors={"obs1": obs1, "obs2": obs2}, non_tensors={"labels": labels}, meta_info={"name": "abc"}
+        tensors={"obs1": obs1, "obs2": obs2},
+        non_tensors={"labels": labels},
+        meta_info={"name": "abc"},
     )
     ret = data.unfold_column_chunks(2, split_keys=["obs1"])
 
@@ -436,7 +554,9 @@ def test_dataproto_unfold_column_chunks():
 
     labels = [["a1", "a2"], ["b1", "b2"], ["c1", "c2"]]
     data = DataProto.from_dict(
-        tensors={"obs1": obs1, "obs2": obs2}, non_tensors={"labels": labels}, meta_info={"name": "abc"}
+        tensors={"obs1": obs1, "obs2": obs2},
+        non_tensors={"labels": labels},
+        meta_info={"name": "abc"},
     )
     ret = data.unfold_column_chunks(2, split_keys=["obs1", "labels"])
 
@@ -449,13 +569,19 @@ def test_dataproto_unfold_column_chunks():
     assert ret.meta_info == {"name": "abc"}
 
     obs1 = torch.tensor(
-        [[[1, 1], [2, 2], [3, 3], [4, 4]], [[5, 5], [6, 6], [7, 7], [8, 8]], [[9, 9], [10, 10], [11, 11], [12, 12]]]
+        [
+            [[1, 1], [2, 2], [3, 3], [4, 4]],
+            [[5, 5], [6, 6], [7, 7], [8, 8]],
+            [[9, 9], [10, 10], [11, 11], [12, 12]],
+        ]
     )
     obs2 = torch.tensor([[[1, 1], [2, 2]], [[5, 5], [6, 6]], [[9, 9], [10, 10]]])
 
     labels = ["a", "b", "c"]
     data = DataProto.from_dict(
-        tensors={"obs1": obs1, "obs2": obs2}, non_tensors={"labels": labels}, meta_info={"name": "abc"}
+        tensors={"obs1": obs1, "obs2": obs2},
+        non_tensors={"labels": labels},
+        meta_info={"name": "abc"},
     )
     ret = data.unfold_column_chunks(2, split_keys=["obs1"])
 
@@ -470,7 +596,14 @@ def test_dataproto_unfold_column_chunks():
         ]
     )
     expect_obs2 = torch.tensor(
-        [[[1, 1], [2, 2]], [[1, 1], [2, 2]], [[5, 5], [6, 6]], [[5, 5], [6, 6]], [[9, 9], [10, 10]], [[9, 9], [10, 10]]]
+        [
+            [[1, 1], [2, 2]],
+            [[1, 1], [2, 2]],
+            [[5, 5], [6, 6]],
+            [[5, 5], [6, 6]],
+            [[9, 9], [10, 10]],
+            [[9, 9], [10, 10]],
+        ]
     )
     expect_labels = ["a", "a", "b", "b", "c", "c"]
     assert torch.all(torch.eq(ret.batch["obs1"], expect_obs1))
@@ -483,13 +616,17 @@ def test_dataproto_chunk_after_index():
     data_len = 4
     obs = torch.randn(data_len, 4)
     labels = [f"label_{i}" for i in range(data_len)]
-    data = DataProto.from_dict(tensors={"obs": obs}, non_tensors={"labels": labels}, meta_info={"name": "abc"})
+    data = DataProto.from_dict(
+        tensors={"obs": obs}, non_tensors={"labels": labels}, meta_info={"name": "abc"}
+    )
 
     # Test with boolean numpy array
     bool_mask = np.array([True, False, True, False])
     selected = data[bool_mask]
     assert isinstance(selected.batch.batch_size, torch.Size)
-    assert all(isinstance(d, int) for d in selected.batch.batch_size)  # int or List[int]
+    assert all(
+        isinstance(d, int) for d in selected.batch.batch_size
+    )  # int or List[int]
 
     # Test with integer numpy array
     int_mask = np.array([0, 2])

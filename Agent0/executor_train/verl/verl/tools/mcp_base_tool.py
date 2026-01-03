@@ -63,7 +63,9 @@ class MCPBaseTool(BaseTool):
     async def _call_tool(self, instance_id, parameters) -> tuple[str, dict]:
         err_msg = ""
         try:
-            call_tool_result = await ClientManager.call_tool(self.name, parameters, self.timeout)
+            call_tool_result = await ClientManager.call_tool(
+                self.name, parameters, self.timeout
+            )
         except ClientError as e:
             err_msg = f"\n Tool call failed: {e}"
         except ConnectionError as e:
@@ -71,16 +73,22 @@ class MCPBaseTool(BaseTool):
         except Exception as e:
             err_msg = f"\n An unexpected error occurred: {e}"
 
-        logger.debug(f"Tool result for instance {instance_id} with tool {self.name}: {call_tool_result.content}")
+        logger.debug(
+            f"Tool result for instance {instance_id} with tool {self.name}: {call_tool_result.content}"
+        )
         result, metadata = self._parse_tool_result(call_tool_result.content)
         metadata["api_request_error"] += err_msg
         return result, metadata
 
     @rollout_trace_op
-    async def execute(self, instance_id: str, parameters: dict[str, Any], **kwargs) -> tuple[str, float, dict]:
+    async def execute(
+        self, instance_id: str, parameters: dict[str, Any], **kwargs
+    ) -> tuple[str, float, dict]:
         if self.name == "" or self.name is None or parameters is None:
             error_msg = "Error: 'parameters' is missing or empty."
-            logger.error(f"[MCPTool] {error_msg} Received tool name: {self.name}, parameters: {parameters}")
+            logger.error(
+                f"[MCPTool] {error_msg} Received tool name: {self.name}, parameters: {parameters}"
+            )
             return json.dumps({"result": error_msg}), 0.0, {}
 
         try:
@@ -112,5 +120,7 @@ class MCPBaseTool(BaseTool):
             del self._instance_dict[instance_id]
 
     def _parse_tool_result(self, content: list) -> tuple[str, dict]:
-        tools_content = [part.text for part in filter(lambda x: x.type == "text", content)]
+        tools_content = [
+            part.text for part in filter(lambda x: x.type == "text", content)
+        ]
         return " ".join(tools_content), {}

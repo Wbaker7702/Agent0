@@ -56,8 +56,14 @@ def test_multiturn_sft_dataset():
 
     # Initialize tokenizer and dataset
     tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen2.5-Coder-7B-Instruct")
-    config = {"max_length": 512, "truncation": "error", "multiturn": {"messages_key": "messages"}}
-    dataset = MultiTurnSFTDataset(parquet_files=test_file, tokenizer=tokenizer, config=config)
+    config = {
+        "max_length": 512,
+        "truncation": "error",
+        "multiturn": {"messages_key": "messages"},
+    }
+    dataset = MultiTurnSFTDataset(
+        parquet_files=test_file, tokenizer=tokenizer, config=config
+    )
 
     # Test 1: Dataset Length
     assert len(dataset) == 2, f"Expected dataset length 2, got {len(dataset)}"
@@ -71,14 +77,20 @@ def test_multiturn_sft_dataset():
     for key in required_keys:
         assert key in item0, f"Missing key {key} in dataset item"
         assert isinstance(item0[key], torch.Tensor), f"Expected torch.Tensor for {key}"
-        assert item0[key].dtype == torch.long, f"Expected torch.long for {key}, got {item0[key].dtype}"
+        assert (
+            item0[key].dtype == torch.long
+        ), f"Expected torch.long for {key}, got {item0[key].dtype}"
 
     # Test 3: Shape Consistency
-    assert item0["loss_mask"].shape == item0["input_ids"].shape, "Loss mask shape doesn't match input_ids shape"
-    assert item0["attention_mask"].shape == item0["input_ids"].shape, (
-        "Attention mask shape doesn't match input_ids shape"
-    )
-    assert item0["position_ids"].shape == item0["input_ids"].shape, "Position IDs shape doesn't match input_ids shape"
+    assert (
+        item0["loss_mask"].shape == item0["input_ids"].shape
+    ), "Loss mask shape doesn't match input_ids shape"
+    assert (
+        item0["attention_mask"].shape == item0["input_ids"].shape
+    ), "Attention mask shape doesn't match input_ids shape"
+    assert (
+        item0["position_ids"].shape == item0["input_ids"].shape
+    ), "Position IDs shape doesn't match input_ids shape"
 
     # Test 4: Loss Mask Pattern - Math Conversation
     loss_mask0 = item0["loss_mask"]
@@ -105,24 +117,32 @@ def test_multiturn_sft_dataset():
     # Decode and verify assistant responses
     assistant_text1 = tokenizer.decode(input_ids1[loss_mask1 == 1])
     print(f"Joke conversation assistant text: {assistant_text1}")
-    assert "chicken cross the road" in assistant_text1, "First assistant response not found"
+    assert (
+        "chicken cross the road" in assistant_text1
+    ), "First assistant response not found"
     assert "other side" in assistant_text1, "Second assistant response not found"
 
     # Test 6: Attention Mask Pattern
     attention_mask0 = item0["attention_mask"]
     sequence_length = torch.sum(attention_mask0)
     assert sequence_length > 0, "No tokens marked as attended in attention mask"
-    assert torch.all(attention_mask0[:sequence_length] == 1), "Incorrect attention mask pattern"
+    assert torch.all(
+        attention_mask0[:sequence_length] == 1
+    ), "Incorrect attention mask pattern"
     if sequence_length < len(attention_mask0):
-        assert torch.all(attention_mask0[sequence_length:] == 0), "Padding not properly masked"
+        assert torch.all(
+            attention_mask0[sequence_length:] == 0
+        ), "Padding not properly masked"
 
     # Test 7: Position IDs Pattern
     position_ids0 = item0["position_ids"]
-    assert torch.equal(position_ids0[:sequence_length], torch.arange(sequence_length)), (
-        "Position IDs not sequential for non-padded tokens"
-    )
+    assert torch.equal(
+        position_ids0[:sequence_length], torch.arange(sequence_length)
+    ), "Position IDs not sequential for non-padded tokens"
     if sequence_length < len(position_ids0):
-        assert torch.all(position_ids0[sequence_length:] == 0), "Padding position IDs not zero"
+        assert torch.all(
+            position_ids0[sequence_length:] == 0
+        ), "Padding position IDs not zero"
 
     # Test 8: Verify loss mask for assistant responses
     # Get the full conversation text
@@ -137,13 +157,15 @@ def test_multiturn_sft_dataset():
     for msg in test_data["messages"][0]:  # First conversation
         if msg["role"] == "assistant":
             # The content should appear in the masked text
-            assert msg["content"] in assistant_text, f"Assistant message '{msg['content']}' not found in masked text"
+            assert (
+                msg["content"] in assistant_text
+            ), f"Assistant message '{msg['content']}' not found in masked text"
 
             # The content should NOT appear in the non-masked text
             non_assistant_text = tokenizer.decode(input_ids0[loss_mask0 == 0])
-            assert msg["content"] not in non_assistant_text, (
-                f"Assistant message '{msg['content']}' found in non-assistant text"
-            )
+            assert (
+                msg["content"] not in non_assistant_text
+            ), f"Assistant message '{msg['content']}' found in non-assistant text"
 
     # Test 9: Verify non-assistant parts have loss_mask=0
     # Get non-assistant text
@@ -153,29 +175,39 @@ def test_multiturn_sft_dataset():
     # Verify that system and user messages are in the non-assistant text
     for msg in test_data["messages"][0]:  # First conversation
         if msg["role"] in ["system", "user"]:
-            assert msg["content"] in non_assistant_text, (
-                f"{msg['role'].title()} message '{msg['content']}' not found in non-assistant text"
-            )
+            assert (
+                msg["content"] in non_assistant_text
+            ), f"{msg['role'].title()} message '{msg['content']}' not found in non-assistant text"
 
             # And verify they're NOT in the assistant text
-            assert msg["content"] not in assistant_text, (
-                f"{msg['role'].title()} message '{msg['content']}' found in assistant text"
-            )
+            assert (
+                msg["content"] not in assistant_text
+            ), f"{msg['role'].title()} message '{msg['content']}' found in assistant text"
 
     # Test 10: Verify padding behavior
-    padding_config = {"max_length": 1024, "truncation": "error", "multiturn": {"messages_key": "messages"}}
-    small_dataset = MultiTurnSFTDataset(parquet_files=test_file, tokenizer=tokenizer, config=padding_config)
+    padding_config = {
+        "max_length": 1024,
+        "truncation": "error",
+        "multiturn": {"messages_key": "messages"},
+    }
+    small_dataset = MultiTurnSFTDataset(
+        parquet_files=test_file, tokenizer=tokenizer, config=padding_config
+    )
     padded_item = small_dataset[0]
 
     # Get actual sequence length (before padding)
     actual_length = torch.sum(padded_item["attention_mask"])
 
     # Verify padding tokens
-    assert torch.all(padded_item["input_ids"][actual_length:] == tokenizer.pad_token_id), (
-        "Padding tokens not set correctly"
-    )
-    assert torch.all(padded_item["attention_mask"][actual_length:] == 0), "Attention mask not set correctly for padding"
-    assert torch.all(padded_item["loss_mask"][actual_length:] == 0), "Loss mask not set correctly for padding"
+    assert torch.all(
+        padded_item["input_ids"][actual_length:] == tokenizer.pad_token_id
+    ), "Padding tokens not set correctly"
+    assert torch.all(
+        padded_item["attention_mask"][actual_length:] == 0
+    ), "Attention mask not set correctly for padding"
+    assert torch.all(
+        padded_item["loss_mask"][actual_length:] == 0
+    ), "Loss mask not set correctly for padding"
 
     print("All tests passed!")
     print("Starting test...")

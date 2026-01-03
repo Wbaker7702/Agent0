@@ -84,7 +84,9 @@ def gather_seq_scatter_heads(
     return x
 
 
-def gather_heads_scatter_seq(x: Tensor, head_dim: int, seq_dim: int, group: ProcessGroup = None) -> Tensor:
+def gather_heads_scatter_seq(
+    x: Tensor, head_dim: int, seq_dim: int, group: ProcessGroup = None
+) -> Tensor:
     """
     A func to sync attention result with alltoall in sequence parallel
     gather head dimension and scatter seq dim:
@@ -115,7 +117,9 @@ def _unpad_tensor(x: Tensor, dim: int, padding_size: int) -> Tensor:
     return x[slc]
 
 
-def slice_input_tensor(x: Tensor, dim: int, padding: bool = True, group: ProcessGroup = None) -> Tensor:
+def slice_input_tensor(
+    x: Tensor, dim: int, padding: bool = True, group: ProcessGroup = None
+) -> Tensor:
     group = get_ulysses_sequence_parallel_group() if group is None else group
     sp_world_size = dist.get_world_size(group)
     sp_rank = get_ulysses_sequence_parallel_rank()
@@ -140,7 +144,10 @@ def all_to_all_tensor(
 ):
     group = get_ulysses_sequence_parallel_group() if group is None else group
     seq_world_size = dist.get_world_size(group)
-    input_list = [t.contiguous() for t in torch.tensor_split(local_input, seq_world_size, scatter_dim)]
+    input_list = [
+        t.contiguous()
+        for t in torch.tensor_split(local_input, seq_world_size, scatter_dim)
+    ]
     output_list = [torch.empty_like(input_list[0]) for _ in range(seq_world_size)]
     comm = dist.all_to_all(output_list, input_list, group=group, async_op=async_op)
     if async_op:
@@ -153,12 +160,18 @@ def all_to_all_tensor(
     return torch.cat(output_list, dim=gather_dim).contiguous()
 
 
-def all_gather_tensor(local_tensor: Tensor, group: Optional[dist.ProcessGroup] = None, async_op: bool = False):
+def all_gather_tensor(
+    local_tensor: Tensor,
+    group: Optional[dist.ProcessGroup] = None,
+    async_op: bool = False,
+):
     group = get_ulysses_sequence_parallel_group() if group is None else group
     sp_world_size = dist.get_world_size(group=group)
     output_shape = list(local_tensor.shape)
     output_shape[0] = output_shape[0] * sp_world_size
-    output = torch.empty(output_shape, dtype=local_tensor.dtype, device=local_tensor.device)
+    output = torch.empty(
+        output_shape, dtype=local_tensor.dtype, device=local_tensor.device
+    )
     dist.all_gather_into_tensor(output, local_tensor, group=group, async_op=async_op)
     return output
 
@@ -187,7 +200,9 @@ class SeqAllToAll(torch.autograd.Function):
             input_t = grad_output[0]
         return (
             None,
-            all_to_all_tensor(input_t, ctx.gather_dim, ctx.scatter_dim, ctx.group, False),
+            all_to_all_tensor(
+                input_t, ctx.gather_dim, ctx.scatter_dim, ctx.group, False
+            ),
             None,
             None,
             None,
@@ -230,7 +245,9 @@ class Gather(torch.autograd.Function):
             grad_output = grad_output * ctx.sp_world_size
         return (
             None,
-            grad_output.split(ctx.part_size, dim=ctx.gather_dim)[ctx.sp_rank].contiguous(),
+            grad_output.split(ctx.part_size, dim=ctx.gather_dim)[
+                ctx.sp_rank
+            ].contiguous(),
             None,
             None,
             None,
@@ -252,7 +269,9 @@ def gather_outputs_and_unpad(
         return x
     x = Gather.apply(group, x, gather_dim, grad_scaler)
     if unpad_dim is not None:
-        assert isinstance(padding_size, int), "padding size is not given or is not an integer"
+        assert isinstance(
+            padding_size, int
+        ), "padding size is not given or is not an integer"
         if padding_size == 0:
             return x
         x = _unpad_tensor(x, unpad_dim, padding_size)
@@ -260,7 +279,9 @@ def gather_outputs_and_unpad(
 
 
 def ulysses_pad_and_slice_inputs(
-    input_ids_rmpad: torch.Tensor, position_ids_rmpad: Optional[torch.Tensor] = None, sp_size: int = 1
+    input_ids_rmpad: torch.Tensor,
+    position_ids_rmpad: Optional[torch.Tensor] = None,
+    sp_size: int = 1,
 ):
     """
     Pad and slice input_ids to be divisible by sp_size
@@ -289,9 +310,13 @@ def ulysses_pad_and_slice_inputs(
     _, total_seq_len = input_ids_rmpad.shape
     pad_size = (sp_size - total_seq_len % sp_size) % sp_size
     if pad_size > 0:
-        input_ids_rmpad = torch.nn.functional.pad(input_ids_rmpad, (0, pad_size), value=0)
+        input_ids_rmpad = torch.nn.functional.pad(
+            input_ids_rmpad, (0, pad_size), value=0
+        )
         if position_ids_rmpad is not None:
-            pad_pos_ids = torch.arange(pad_size, device=position_ids_rmpad.device).unsqueeze(0)
+            pad_pos_ids = torch.arange(
+                pad_size, device=position_ids_rmpad.device
+            ).unsqueeze(0)
             position_ids_rmpad = torch.cat((position_ids_rmpad, pad_pos_ids), dim=-1)
     # we don't need to slice position ids
     input_ids_rmpad = slice_input_tensor(input_ids_rmpad, dim=1, padding=False)

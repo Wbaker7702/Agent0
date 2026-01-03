@@ -1,6 +1,7 @@
 """
 Enhanced Bash Terminal Tool with proper persistent state management
 """
+
 import regex as re
 import subprocess
 import os
@@ -18,83 +19,114 @@ import json
 # Timeout for command execution in seconds
 TIMEOUT = 30
 
+
 def check_forbidden_commands(command: str) -> bool:
     """
     Checks if the command contains potentially dangerous operations.
     """
     forbidden_commands = [
-        'rm -rf /', 'dd if=', 'mkfs', 'fdisk', 'mount', 'umount',
-        'passwd', 'su ', 'sudo ', 'chroot', 'systemctl', 'service',
-        'iptables', 'ufw', 'firewall-cmd',
-        'nc ', 'ncat ', 'telnet ', 'ssh ', 'scp ', 'rsync ',
-        'curl http', 'wget http', 'lynx', 'w3m',
-        'crontab', 'batch',
-        'kill -9', 'killall', 'pkill ',
-        '> /dev/', '< /dev/', 'mknod', 'losetup'
+        "rm -rf /",
+        "dd if=",
+        "mkfs",
+        "fdisk",
+        "mount",
+        "umount",
+        "passwd",
+        "su ",
+        "sudo ",
+        "chroot",
+        "systemctl",
+        "service",
+        "iptables",
+        "ufw",
+        "firewall-cmd",
+        "nc ",
+        "ncat ",
+        "telnet ",
+        "ssh ",
+        "scp ",
+        "rsync ",
+        "curl http",
+        "wget http",
+        "lynx",
+        "w3m",
+        "crontab",
+        "batch",
+        "kill -9",
+        "killall",
+        "pkill ",
+        "> /dev/",
+        "< /dev/",
+        "mknod",
+        "losetup",
     ]
-    
+
     dangerous_patterns = [
-        r'rm\s+.*-rf\s+/',
-        r'>\s*/etc/',
-        r'>\s*/bin/',
-        r'>\s*/usr/',
-        r'>\s*/var/',
-        r'chmod\s+777',
-        r'find\s+/.*-exec',
-        r'eval\s+.*[;&|]',
-        r'source\s+/',
-        r'\.\s+/',
+        r"rm\s+.*-rf\s+/",
+        r">\s*/etc/",
+        r">\s*/bin/",
+        r">\s*/usr/",
+        r">\s*/var/",
+        r"chmod\s+777",
+        r"find\s+/.*-exec",
+        r"eval\s+.*[;&|]",
+        r"source\s+/",
+        r"\.\s+/",
     ]
-    
+
     command_lower = command.lower()
-    
+
     for forbidden in forbidden_commands:
         if forbidden in command_lower:
             return [forbidden]
-    
+
     for pattern in dangerous_patterns:
         detected_forbidden = re.findall(pattern, command_lower)
         if detected_forbidden:
             return detected_forbidden
-    
+
     return False
 
-def simulate_terminal_output(command: str, stdout: str, stderr: str, exit_code: int, prompt: str) -> str:
+
+def simulate_terminal_output(
+    command: str, stdout: str, stderr: str, exit_code: int, prompt: str
+) -> str:
     """Simulate realistic terminal output"""
     output_lines = []
-    
+
     # Show the command being executed
     output_lines.append(f"{prompt}{command}")
-    
+
     # Add stdout if present
     if stdout:
         output_lines.append(stdout)
-    
+
     # Add stderr if present
     if stderr:
         output_lines.append(stderr)
-    
+
     return "\\n".join(output_lines)
+
 
 def format_output(stdout: str, stderr: str, exit_code: int) -> str:
     """Format command output to look like a real terminal"""
     output_parts = []
-    
+
     if stdout:
         output_parts.append(stdout)
-    
+
     if stderr:
         output_parts.append(stderr)
-    
+
     if exit_code != 0 and not stderr:
         output_parts.append(f"Command exited with code {exit_code}")
-    
+
     return "\n".join(output_parts)
 
 
 class BashSession:
     """Manages a persistent bash shell session with proper state persistence"""
-    
+
     def __init__(self, temp_dir: str, use_firejail: bool = False):
         self.temp_dir = temp_dir
         self.use_firejail = use_firejail
@@ -105,10 +137,10 @@ class BashSession:
         self.history_file = os.path.join(self.temp_dir, ".bash_history")
         self.command_counter = 0
         self._initialize_session()
-    
+
     def _initialize_session(self):
         """Initialize the session with a proper bashrc"""
-        bashrc_content = f"""#!/bin/bash
+        bashrc_content = """#!/bin/bash
 # Enhanced bash session initialization
 
 # Basic settings
@@ -136,69 +168,83 @@ if [ -f "$HOME/.bash_functions" ]; then
 fi
 # cd "$HOME" 2>/dev/null || true
 """
-        
-        with open(self.bashrc_file, 'w') as f:
+
+        with open(self.bashrc_file, "w") as f:
             f.write(bashrc_content)
         os.chmod(self.bashrc_file, 0o644)
-        
+
         # Initialize state files
         for state_file in [".bash_env", ".bash_aliases", ".bash_functions"]:
             file_path = os.path.join(self.temp_dir, state_file)
             if not os.path.exists(file_path):
-                with open(file_path, 'w') as f:
+                with open(file_path, "w") as f:
                     f.write("")
-        
+
         # Initialize history file
         if not os.path.exists(self.history_file):
-            with open(self.history_file, 'w') as f:
+            with open(self.history_file, "w") as f:
                 f.write("")
-    
+
     def _prepare_environment(self):
         """Prepare safe environment variables"""
         env = os.environ.copy()
-        
+
         # Keep essential variables
         essential_vars = [
-            "PATH", "USER", "SHELL", "LANG", "LC_ALL", 
-            "LC_CTYPE", "TERM", "TMPDIR", "TEMP", "TMP"
+            "PATH",
+            "USER",
+            "SHELL",
+            "LANG",
+            "LC_ALL",
+            "LC_CTYPE",
+            "TERM",
+            "TMPDIR",
+            "TEMP",
+            "TMP",
         ]
-        
+
         safe_env = {}
         for var in essential_vars:
             if var in env:
                 safe_env[var] = env[var]
-        
+
         # Set safe defaults
         safe_env["PATH"] = "/usr/bin:/bin:/usr/local/bin:/usr/sbin:/sbin"
         safe_env["TERM"] = "xterm-256color"
         safe_env["BASH_SILENCE_DEPRECATION_WARNING"] = "1"
-        
+
         return safe_env
-    
+
     def _set_limits(self):
         """Set resource limits for the bash process"""
         try:
             # Memory limit: 1GB virtual memory
-            resource.setrlimit(resource.RLIMIT_AS, (1024*1024*1024, 1024*1024*1024))
+            resource.setrlimit(
+                resource.RLIMIT_AS, (1024 * 1024 * 1024, 1024 * 1024 * 1024)
+            )
             # Process limit: Allow enough processes for bash operations
             resource.setrlimit(resource.RLIMIT_NPROC, (128, 128))
             # File size limit: 100MB
-            resource.setrlimit(resource.RLIMIT_FSIZE, (100*1024*1024, 100*1024*1024))
+            resource.setrlimit(
+                resource.RLIMIT_FSIZE, (100 * 1024 * 1024, 100 * 1024 * 1024)
+            )
             # CPU time limit
             resource.setrlimit(resource.RLIMIT_CPU, (TIMEOUT * 2, TIMEOUT * 2))
             # File descriptor limit
             resource.setrlimit(resource.RLIMIT_NOFILE, (256, 256))
         except (OSError, ValueError):
             pass
-    
-    def execute_command(self, command: str, timeout: float = TIMEOUT) -> Tuple[str, str, int]:
+
+    def execute_command(
+        self, command: str, timeout: float = TIMEOUT
+    ) -> Tuple[str, str, int]:
         """Execute a command in the persistent bash session context"""
-        
+
         if not command.strip():
             return "", "", 0
-        
+
         self.command_counter += 1
-        
+
         # Create execution script that properly handles state
         script_content = f"""#!/bin/bash
 # Load the session environment
@@ -268,17 +314,17 @@ echo "{command}" >> "$HOME/.bash_history" 2>/dev/null
 
 exit $COMMAND_EXIT_CODE
 """
-        
+
         # Write the script
         script_path = os.path.join(self.temp_dir, f"cmd_{uuid.uuid4().hex[:8]}.sh")
         try:
-            with open(script_path, 'w') as f:
+            with open(script_path, "w") as f:
                 f.write(script_content)
             os.chmod(script_path, 0o755)
-            
+
             # Prepare environment
             env = self._prepare_environment()
-            
+
             # Build command
             if self.use_firejail and shutil.which("firejail"):
                 cmd = [
@@ -297,7 +343,8 @@ exit $COMMAND_EXIT_CODE
                     "--nodvd",
                     "--notv",
                     "--nou2f",
-                    "bash", os.path.basename(script_path)
+                    "bash",
+                    os.path.basename(script_path),
                 ]
                 cwd = None
                 env["HOME"] = os.path.expanduser("~")
@@ -310,7 +357,7 @@ exit $COMMAND_EXIT_CODE
                 env["TMPDIR"] = self.temp_dir
                 cwd = self.temp_dir
                 self.home_dir = self.temp_dir
-            
+
             # Execute the command
             try:
                 result = subprocess.run(
@@ -323,25 +370,25 @@ exit $COMMAND_EXIT_CODE
                     text=True,
                     timeout=timeout,
                 )
-                
+
                 stdout = result.stdout.rstrip() if result.stdout else ""
                 stderr = result.stderr.rstrip() if result.stderr else ""
                 exit_code = result.returncode
-                
+
                 if exit_code == 124:
                     stderr += f"\\nCommand timed out after {timeout} seconds"
-                
+
                 # Update current directory from saved state
                 self._update_current_dir()
-                
+
                 return stdout, stderr, exit_code
-                
+
             except subprocess.TimeoutExpired:
                 return "", f"Process timed out after {timeout} seconds", 124
-                
+
         except Exception as e:
             return "", f"Error executing command: {str(e)}", 1
-            
+
         finally:
             # Clean up the temporary script
             try:
@@ -349,8 +396,10 @@ exit $COMMAND_EXIT_CODE
                     os.remove(script_path)
             except Exception:
                 pass
-    
-    def execute_command_like_shell(self, commands: Union[str, List[str]], timeout: float = TIMEOUT) -> str:
+
+    def execute_command_like_shell(
+        self, commands: Union[str, List[str]], timeout: float = TIMEOUT
+    ) -> str:
         """Execute a command in the session, simulating a shell-like environment"""
         terminal_outputs = ""
         if isinstance(commands, str):
@@ -361,24 +410,24 @@ exit $COMMAND_EXIT_CODE
             output = format_output(stdout, stderr, exit_code)
             if output:
                 # Remove the prompt line that was echoed in the output
-                lines = output.split('\n')
+                lines = output.split("\n")
                 if lines and lines[0].endswith(cmd):
-                    output = '\n'.join(lines[1:])
+                    output = "\n".join(lines[1:])
                 terminal_outputs += output + "\n"
         return terminal_outputs
-            
+
     def _update_current_dir(self):
         """Update current directory from saved state"""
         try:
             current_dir_file = os.path.join(self.temp_dir, ".current_dir")
             if os.path.exists(current_dir_file):
-                with open(current_dir_file, 'r') as f:
+                with open(current_dir_file, "r") as f:
                     saved_dir = f.read().strip()
                     if os.path.exists(saved_dir):
                         self.current_dir = saved_dir
         except Exception:
             pass
-    
+
     def get_prompt(self) -> str:
         """Get the current shell prompt"""
         try:
@@ -386,24 +435,24 @@ exit $COMMAND_EXIT_CODE
             if self.current_dir == self.home_dir:
                 path_display = "~"
             elif self.current_dir.startswith(self.home_dir):
-                path_display = "~" + self.current_dir[len(self.home_dir):]
+                path_display = "~" + self.current_dir[len(self.home_dir) :]
             else:
                 path_display = self.current_dir
-            
+
             return f"user@bash-session:{path_display}$ "
         except:
             return "user@bash-session:~$ "
-    
+
     def get_history(self) -> List[str]:
         """Get command history"""
         try:
             if os.path.exists(self.history_file):
-                with open(self.history_file, 'r') as f:
+                with open(self.history_file, "r") as f:
                     return [line.strip() for line in f.readlines() if line.strip()]
             return []
         except:
             return []
-    
+
     def cleanup(self):
         """Clean up the session"""
         files_to_remove = [
@@ -412,9 +461,9 @@ exit $COMMAND_EXIT_CODE
             os.path.join(self.temp_dir, ".bash_env"),
             os.path.join(self.temp_dir, ".bash_aliases"),
             os.path.join(self.temp_dir, ".bash_functions"),
-            os.path.join(self.temp_dir, ".current_dir")
+            os.path.join(self.temp_dir, ".current_dir"),
         ]
-        
+
         for file_path in files_to_remove:
             try:
                 if os.path.exists(file_path):
@@ -422,13 +471,14 @@ exit $COMMAND_EXIT_CODE
             except Exception:
                 pass
 
+
 # Example usage and testing
 if __name__ == "__main__":
     # Create session
     temp_dir = os.path.join(os.getcwd(), "tmp", "bash", "enhanced_test")
     os.makedirs(temp_dir, exist_ok=True)
     session = BashSession(temp_dir, use_firejail=True)
-    
+
     # Test commands with persistent variables
     test_commands = [
         "ls -la",
@@ -443,22 +493,22 @@ if __name__ == "__main__":
         "echo $MY_LOCAL_VAR",
         "alias ll='ls -la'",
         "ll",
-        "function greet() { echo \"Hello, $1!\"; }",
+        'function greet() { echo "Hello, $1!"; }',
         "greet World",
         "cd ..",
         "pwd",
         "echo $MY_VAR",  # Should still be available
-        "history | tail -5"
+        "history | tail -5",
     ]
-    
+
     print("Enhanced Bash Terminal Session")
     print("=" * 40)
-    
+
     print(session.execute_command_like_shell(test_commands))
-    
+
     print(f"\n{session.get_prompt()}", end="")
     print("[Session ended]")
-    
+
     # Cleanup
     session.cleanup()
 

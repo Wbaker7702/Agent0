@@ -5,8 +5,7 @@ import fire
 import logging
 
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -23,9 +22,9 @@ def _send_request(url, trajectory_id, action):
             {
                 "question": "when is the next deadpool movie being released",
                 "gt": "gt",
-                "url": "http://localhost:22015/wikipedia_en_all_maxi_2022-05/A/User:The_other_Kiwix_guy/Landing"
+                "url": "http://localhost:22015/wikipedia_en_all_maxi_2022-05/A/User:The_other_Kiwix_guy/Landing",
             }
-        ]
+        ],
     }
 
     logger.info(f"Sending request to {url}")
@@ -43,7 +42,9 @@ def _send_request(url, trajectory_id, action):
 
         observations = result["observations"]
         if not observations or not isinstance(observations, list):
-            logger.error(f"Error: Expected observations to be a non-empty list, got {type(observations)}")
+            logger.error(
+                f"Error: Expected observations to be a non-empty list, got {type(observations)}"
+            )
             return False
 
         logger.info("Test passed! ✅")
@@ -68,6 +69,7 @@ def test_connection(url="http://localhost:5000/get_observation"):
     """
     Test the connection to the tool server by sending multiple actions sequentially.
     """
+
     def exec_actions(trajectory_id, actions):
         """
         Execute a list of actions for a given trajectory ID.
@@ -89,6 +91,7 @@ def test_connection(url="http://localhost:5000/get_observation"):
     for i in range(32):
         trajectory_ids.append(f"trajectory-{i}")
     from concurrent.futures import ThreadPoolExecutor, as_completed
+
     with ThreadPoolExecutor(max_workers=16) as executor:
         future_to_id = {
             executor.submit(exec_actions, trajectory_id, actions): trajectory_id
@@ -105,6 +108,7 @@ def test_connection(url="http://localhost:5000/get_observation"):
                 results.append(False)
 
     return all(results)
+
 
 def main():
     """

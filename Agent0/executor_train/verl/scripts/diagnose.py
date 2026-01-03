@@ -61,10 +61,18 @@ def test_connection(name, url, timeout=10):
     try:
         _ = urlopen(url, timeout=timeout)
     except Exception as e:
-        print("Error open {}: {}, {}, DNS finished in {} sec.".format(name, url, e, dns_elapsed))
+        print(
+            "Error open {}: {}, {}, DNS finished in {} sec.".format(
+                name, url, e, dns_elapsed
+            )
+        )
         return
     load_elapsed = time.time() - start
-    print("Timing for {}: {}, DNS: {:.4f} sec, LOAD: {:.4f} sec.".format(name, url, dns_elapsed, load_elapsed))
+    print(
+        "Timing for {}: {}, DNS: {:.4f} sec, LOAD: {:.4f} sec.".format(
+            name, url, dns_elapsed, load_elapsed
+        )
+    )
 
 
 def check_python():
@@ -88,7 +96,9 @@ def check_pip():
 
 def _get_current_git_commit():
     try:
-        result = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True, check=True)
+        result = subprocess.run(
+            ["git", "rev-parse", "HEAD"], capture_output=True, text=True, check=True
+        )
         return result.stdout.strip()
     except subprocess.CalledProcessError as e:
         print(f"Error running git command: {e.stderr.strip()}")
@@ -162,7 +172,12 @@ def check_network(args):
         else:
             import warnings
 
-            warnings.warn("Region {} do not need specific test, please refer to global sites.".format(r), stacklevel=2)
+            warnings.warn(
+                "Region {} do not need specific test, please refer to global sites.".format(
+                    r
+                ),
+                stacklevel=2,
+            )
     for name, url in URLS.items():
         test_connection(name, url, args.timeout)
 
@@ -170,7 +185,13 @@ def check_network(args):
 def check_environment():
     print("----------Environment----------")
     for k, v in os.environ.items():
-        if k.startswith("VERL_") or k.startswith("OMP_") or k.startswith("KMP_") or k == "CC" or k == "CXX":
+        if (
+            k.startswith("VERL_")
+            or k.startswith("OMP_")
+            or k.startswith("KMP_")
+            or k == "CC"
+            or k == "CXX"
+        ):
             print('{}="{}"'.format(k, v))
 
 
@@ -192,7 +213,9 @@ def check_cuda_versions():
             import subprocess
 
             nvcc_output = subprocess.check_output(["nvcc", "--version"]).decode("utf-8")
-            cuda_compiler_version = next((line for line in nvcc_output.splitlines() if "release" in line), None)
+            cuda_compiler_version = next(
+                (line for line in nvcc_output.splitlines() if "release" in line), None
+            )
             if cuda_compiler_version:
                 print(f"CUDA Compiler : {cuda_compiler_version.strip()}")
             else:
@@ -219,7 +242,11 @@ def _get_gpu_info():
     """
     try:
         result = subprocess.run(
-            ["nvidia-smi", "--query-gpu=gpu_name,memory.total", "--format=csv,noheader,nounits"],
+            [
+                "nvidia-smi",
+                "--query-gpu=gpu_name,memory.total",
+                "--format=csv,noheader,nounits",
+            ],
             capture_output=True,
             text=True,
             check=True,
@@ -268,7 +295,9 @@ def parse_args():
     )
     choices = ["python", "pip", "verl", "system", "os", "environment"]
     for choice in choices:
-        parser.add_argument("--" + choice, default=1, type=int, help="Diagnose {}.".format(choice))
+        parser.add_argument(
+            "--" + choice, default=1, type=int, help="Diagnose {}.".format(choice)
+        )
     parser.add_argument("--network", default=0, type=int, help="Diagnose network.")
     parser.add_argument("--hardware", default=0, type=int, help="Diagnose hardware.")
     parser.add_argument(
@@ -278,7 +307,12 @@ def parse_args():
         help="Additional sites in which region(s) to test. \
                         Specify 'cn' for example to test mirror sites in China.",
     )
-    parser.add_argument("--timeout", default=10, type=int, help="Connection test timeout threshold, 0 to disable.")
+    parser.add_argument(
+        "--timeout",
+        default=10,
+        type=int,
+        help="Connection test timeout threshold, 0 to disable.",
+    )
     args = parser.parse_args()
     return args
 

@@ -102,5 +102,7 @@ class LinearForLastLayer(torch.nn.Linear):
         logits = super().forward(input_)
         logits = logits.float()
         if self.sequence_parallel:
-            logits = tensor_parallel.gather_from_sequence_parallel_region(logits, tensor_parallel_output_grad=False)
+            logits = tensor_parallel.gather_from_sequence_parallel_region(
+                logits, tensor_parallel_output_grad=False
+            )
         return logits, None

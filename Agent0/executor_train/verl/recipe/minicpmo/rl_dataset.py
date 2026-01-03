@@ -42,15 +42,21 @@ def build_transform():
     return transforms.Compose(
         [
             transforms.ToTensor(),
-            transforms.Normalize(mean=IMAGENET_INCEPTION_MEAN, std=IMAGENET_INCEPTION_STD),
+            transforms.Normalize(
+                mean=IMAGENET_INCEPTION_MEAN, std=IMAGENET_INCEPTION_STD
+            ),
         ]
     )
 
 
 def build_image_bound(input_ids, tokenizer, new_schema=True, logger=None):
     if new_schema:
-        start_cond = (input_ids == tokenizer.im_start_id) | (input_ids == tokenizer.slice_start_id)
-        end_cond = (input_ids == tokenizer.im_end_id) | (input_ids == tokenizer.slice_end_id)
+        start_cond = (input_ids == tokenizer.im_start_id) | (
+            input_ids == tokenizer.slice_start_id
+        )
+        end_cond = (input_ids == tokenizer.im_end_id) | (
+            input_ids == tokenizer.slice_end_id
+        )
     else:
         start_cond = input_ids == tokenizer.im_start_id
         end_cond = input_ids == tokenizer.im_end_id
@@ -61,7 +67,9 @@ def build_image_bound(input_ids, tokenizer, new_schema=True, logger=None):
         logger.error("image start token != image end tokens")
         raise Exception("image start token != image end tokens")
     if len(image_start_tokens) > 0:
-        image_bound = torch.hstack([image_start_tokens.unsqueeze(-1), image_end_tokens.unsqueeze(-1)])
+        image_bound = torch.hstack(
+            [image_start_tokens.unsqueeze(-1), image_end_tokens.unsqueeze(-1)]
+        )
     else:
         image_bound = []
     return image_bound
@@ -92,7 +100,9 @@ def preprocess(
         assert "patch_size" in slice_config
         assert "max_slice_nums" in slice_config
         assert "scale_resolution" in slice_config
-    default_image_placeholder = tokenizer.im_start + tokenizer.unk_token * query_nums + tokenizer.im_end
+    default_image_placeholder = (
+        tokenizer.im_start + tokenizer.unk_token * query_nums + tokenizer.im_end
+    )
     new_schema = False
     use_image_id = False
     if llm_type == "qwen":
@@ -117,15 +127,21 @@ def preprocess(
                         images.append(patches[i][j])
                 if use_image_id:
                     image_placeholder = (
-                        f"{tokenizer.im_id_start}{image_id_cnt}{tokenizer.im_id_end}" + image_placeholder
+                        f"{tokenizer.im_id_start}{image_id_cnt}{tokenizer.im_id_end}"
+                        + image_placeholder
                     )
                     image_id_cnt += 1
-                image_placeholder += get_grid_placeholder(tokenizer, best_grid, query_nums, new_schema=new_schema)
+                image_placeholder += get_grid_placeholder(
+                    tokenizer, best_grid, query_nums, new_schema=new_schema
+                )
             image_placeholder_dict[img_name] = image_placeholder
         else:
             images.append(image)
             if use_image_id:
-                image_placeholder = f"{tokenizer.im_id_start}{image_id_cnt}{tokenizer.im_id_end}" + image_placeholder
+                image_placeholder = (
+                    f"{tokenizer.im_id_start}{image_id_cnt}{tokenizer.im_id_end}"
+                    + image_placeholder
+                )
                 image_id_cnt += 1
             else:
                 image_placeholder = default_image_placeholder
@@ -135,9 +151,13 @@ def preprocess(
 
     if len(images_dict) == 1 and "<image>" in images_dict:
         if "<image>" in conversations[0]["content"]:
-            conversations[0]["content"] = conversations[0]["content"].replace("<image>", image_placeholder)
+            conversations[0]["content"] = conversations[0]["content"].replace(
+                "<image>", image_placeholder
+            )
         else:
-            conversations[0]["content"] = image_placeholder + "\n" + conversations[0]["content"]
+            conversations[0]["content"] = (
+                image_placeholder + "\n" + conversations[0]["content"]
+            )
     else:
         pattern = r"<image_\d+>"
         new_conversations = []
@@ -157,7 +177,9 @@ def preprocess(
         conversations = new_conversations
 
     # TODO change role in conversation for different llm
-    prompt_with_chat_template = tokenizer.apply_chat_template(conversations, add_generation_prompt=True, tokenize=False)
+    prompt_with_chat_template = tokenizer.apply_chat_template(
+        conversations, add_generation_prompt=True, tokenize=False
+    )
 
     input_ids, attention_mask = verl_F.tokenize_and_postprocess_data(
         prompt=prompt_with_chat_template,
@@ -198,7 +220,9 @@ def preprocess(
     return input_dict
 
 
-def slice_image(image, max_slice_nums=9, scale_resolution=448, patch_size=14, never_split=False):
+def slice_image(
+    image, max_slice_nums=9, scale_resolution=448, patch_size=14, never_split=False
+):
     original_size = image.size
     original_width, original_height = original_size
     log_ratio = math.log(original_width / original_height)
@@ -211,7 +235,9 @@ def slice_image(image, max_slice_nums=9, scale_resolution=448, patch_size=14, ne
 
     if multiple <= 1 or never_split:
         # dont need to slice, upsample
-        best_size = find_best_resize(original_size, scale_resolution, patch_size, allow_upscale=True)
+        best_size = find_best_resize(
+            original_size, scale_resolution, patch_size, allow_upscale=True
+        )
         source_image = image.resize(best_size, Image.Resampling.BICUBIC)
     else:
         candidate_split_grids_nums = []
@@ -241,7 +267,9 @@ def slice_image(image, max_slice_nums=9, scale_resolution=448, patch_size=14, ne
                 best_grid = grid
                 min_error = error
 
-        refine_size = get_refine_size(original_size, best_grid, scale_resolution, patch_size, allow_upscale=True)
+        refine_size = get_refine_size(
+            original_size, best_grid, scale_resolution, patch_size, allow_upscale=True
+        )
 
         refine_image = image.resize(refine_size, Image.Resampling.BICUBIC)
         patches = split_to_patches(refine_image, best_grid)
@@ -264,7 +292,9 @@ def find_best_resize(original_size, scale_resolution, patch_size, allow_upscale=
     return (best_width, best_height)
 
 
-def get_refine_size(original_size, grid, scale_resolution, patch_size, allow_upscale=False):
+def get_refine_size(
+    original_size, grid, scale_resolution, patch_size, allow_upscale=False
+):
     width, height = original_size
     grid_x, grid_y = grid
 
@@ -305,9 +335,15 @@ def split_to_patches(image, grid):
 
 def get_grid_placeholder(tokenizer, grid, query_num, new_schema=False):
     if new_schema:
-        image_placeholder = tokenizer.slice_start + tokenizer.unk_token * query_num + tokenizer.slice_end
+        image_placeholder = (
+            tokenizer.slice_start
+            + tokenizer.unk_token * query_num
+            + tokenizer.slice_end
+        )
     else:
-        image_placeholder = tokenizer.im_start + tokenizer.unk_token * query_num + tokenizer.im_end
+        image_placeholder = (
+            tokenizer.im_start + tokenizer.unk_token * query_num + tokenizer.im_end
+        )
 
     cols = grid[0]
     rows = grid[1]
@@ -320,7 +356,9 @@ def get_grid_placeholder(tokenizer, grid, query_num, new_schema=False):
     if new_schema:
         slice_placeholder = "\n".join(slices)
     else:
-        slice_placeholder = tokenizer.slice_start + "\n".join(slices) + tokenizer.slice_end
+        slice_placeholder = (
+            tokenizer.slice_start + "\n".join(slices) + tokenizer.slice_end
+        )
     return slice_placeholder
 
 
@@ -330,7 +368,9 @@ def reshape_by_patch(image_tensor, patch_size):
     :param patch_size:
     :return: [3, patch_size, HW/patch_size]
     """
-    patches = torch.nn.functional.unfold(image_tensor, (patch_size, patch_size), stride=(patch_size, patch_size))
+    patches = torch.nn.functional.unfold(
+        image_tensor, (patch_size, patch_size), stride=(patch_size, patch_size)
+    )
 
     patches = patches.reshape(image_tensor.size(0), patch_size, patch_size, -1)
     patches = patches.permute(0, 1, 3, 2).reshape(image_tensor.size(0), patch_size, -1)
@@ -344,7 +384,12 @@ def init_minicpmo_config(processor, config):
         "patch_size": config.get("patch_size", 14),
         "query_nums": config.get("query_nums", 64),
         "slice_config": config.get(
-            "slice_config", {"max_slice_nums": 9, "patch_size": config.get("patch_size", 14), "scale_resolution": 448}
+            "slice_config",
+            {
+                "max_slice_nums": 9,
+                "patch_size": config.get("patch_size", 14),
+                "scale_resolution": 448,
+            },
         ),
         "llm_type": config.get("llm_type", "qwen"),
         "batch_vision": config.get("batch_vision", True),
@@ -353,7 +398,14 @@ def init_minicpmo_config(processor, config):
 
 
 def process_minicpmo_data(
-    row_dict, messages, tokenizer, minicpmo_config, image_key, max_prompt_length, truncation, logger
+    row_dict,
+    messages,
+    tokenizer,
+    minicpmo_config,
+    image_key,
+    max_prompt_length,
+    truncation,
+    logger,
 ):
     """Process data for MiniCPM-o model"""
     if len(row_dict[image_key]) == 1:
@@ -379,7 +431,9 @@ def process_minicpmo_data(
         logger=logger,
     )
 
-    raw_prompt = tokenizer.apply_chat_template(messages, add_generation_prompt=True, tokenize=False)
+    raw_prompt = tokenizer.apply_chat_template(
+        messages, add_generation_prompt=True, tokenize=False
+    )
     raw_prompt = raw_prompt.replace("<image>", "(<image>./</image>)")
 
     return model_inputs, multi_modal_data, raw_prompt
@@ -418,7 +472,9 @@ class RLHFDataset(Dataset):
         self.processor = processor
         self.config = config
 
-        self.cache_dir = os.path.expanduser(config.get("cache_dir", "~/.cache/verl/rlhf"))
+        self.cache_dir = os.path.expanduser(
+            config.get("cache_dir", "~/.cache/verl/rlhf")
+        )
         self.prompt_key = config.get("prompt_key", "prompt")
         self.image_key = config.get("image_key", "images")
         self.video_key = config.get("video_key", "videos")
@@ -428,7 +484,9 @@ class RLHFDataset(Dataset):
         self.truncation = config.get("truncation", "error")
         self.filter_overlong_prompts = config.get("filter_overlong_prompts", True)
 
-        self.num_workers = config.get("filter_overlong_prompts_workers", max(1, os.cpu_count() // 4))
+        self.num_workers = config.get(
+            "filter_overlong_prompts_workers", max(1, os.cpu_count() // 4)
+        )
         self.num_workers = min(self.num_workers, os.cpu_count())
         self.use_shm = config.get("use_shm", False)
         self.chat_template_func = config.get("chat_template_func", None)
@@ -442,15 +500,21 @@ class RLHFDataset(Dataset):
     def _download(self, use_origin_parquet=False):
         from verl.utils.fs import copy_to_local
 
-        data_files = self.data_files if not use_origin_parquet else self.original_data_files
+        data_files = (
+            self.data_files if not use_origin_parquet else self.original_data_files
+        )
         for i, parquet_file in enumerate(data_files):
-            self.data_files[i] = copy_to_local(src=parquet_file, cache_dir=self.cache_dir, use_shm=self.use_shm)
+            self.data_files[i] = copy_to_local(
+                src=parquet_file, cache_dir=self.cache_dir, use_shm=self.use_shm
+            )
 
     def _read_files_and_tokenize(self):
         dataframes = []
         for parquet_file in self.data_files:
             # read parquet files and cache
-            dataframe = datasets.load_dataset("parquet", data_files=parquet_file)["train"]
+            dataframe = datasets.load_dataset("parquet", data_files=parquet_file)[
+                "train"
+            ]
             dataframes.append(dataframe)
         self.dataframe: datasets.Dataset = datasets.concatenate_datasets(dataframes)
 
@@ -460,10 +524,14 @@ class RLHFDataset(Dataset):
         self.serialize_dataset = not hasattr(self, "original_data_files")
         # resume dataframe if not it's serialized in data.pt
         if not self.serialize_dataset:
-            self._download(use_origin_parquet=True)  # download and resume from original parquet files
+            self._download(
+                use_origin_parquet=True
+            )  # download and resume from original parquet files
             self._read_files_and_tokenize()
         else:
-            print(r"old dataloader ckpt file is used, please train from scratch for better ckpt performance")
+            print(
+                r"old dataloader ckpt file is used, please train from scratch for better ckpt performance"
+            )
 
     def __len__(self):
         return len(self.dataframe)
@@ -498,8 +566,12 @@ class RLHFDataset(Dataset):
             row_dict["multi_modal_data"] = multi_modal_data
             row_dict["multi_modal_inputs"] = dict(model_inputs)
         else:
-            raw_prompt = self.tokenizer.apply_chat_template(messages, add_generation_prompt=True, tokenize=False)
-            model_inputs = self.tokenizer(raw_prompt, return_tensors="pt", add_special_tokens=False)
+            raw_prompt = self.tokenizer.apply_chat_template(
+                messages, add_generation_prompt=True, tokenize=False
+            )
+            model_inputs = self.tokenizer(
+                raw_prompt, return_tensors="pt", add_special_tokens=False
+            )
             input_ids = model_inputs.pop("input_ids")
             attention_mask = model_inputs.pop("attention_mask")
             position_ids = compute_position_id_with_mask(attention_mask)
@@ -517,9 +589,13 @@ class RLHFDataset(Dataset):
             elif self.truncation == "middle":
                 left_half = self.max_prompt_length // 2
                 right_half = self.max_prompt_length - left_half
-                raw_prompt_ids = raw_prompt_ids[:left_half] + raw_prompt_ids[-right_half:]
+                raw_prompt_ids = (
+                    raw_prompt_ids[:left_half] + raw_prompt_ids[-right_half:]
+                )
             elif self.truncation == "error":
-                raise RuntimeError(f"Prompt length {len(raw_prompt_ids)} is longer than {self.max_prompt_length}.")
+                raise RuntimeError(
+                    f"Prompt length {len(raw_prompt_ids)} is longer than {self.max_prompt_length}."
+                )
 
         row_dict["raw_prompt_ids"] = raw_prompt_ids
         # encode prompts without chat template
@@ -533,10 +609,18 @@ class RLHFDataset(Dataset):
         # add index for each prompt
         index = row_dict.get("extra_info", {}).get("index", 0)
         tools_kwargs = row_dict.get("extra_info", {}).get("tools_kwargs", {})
-        interaction_kwargs = row_dict.get("extra_info", {}).get("interaction_kwargs", {})
-        need_tools_kwargs = row_dict.get("extra_info", {}).get("need_tools_kwargs", self.need_tools_kwargs)
+        interaction_kwargs = row_dict.get("extra_info", {}).get(
+            "interaction_kwargs", {}
+        )
+        need_tools_kwargs = row_dict.get("extra_info", {}).get(
+            "need_tools_kwargs", self.need_tools_kwargs
+        )
         if need_tools_kwargs and not tools_kwargs:
-            logger.warning("tools_kwargs is empty for index {}, data source: {}", index, row_dict["data_source"])
+            logger.warning(
+                "tools_kwargs is empty for index {}, data source: {}",
+                index,
+                row_dict["data_source"],
+            )
         row_dict["index"] = index
         row_dict["tools_kwargs"] = tools_kwargs
         row_dict["interaction_kwargs"] = interaction_kwargs

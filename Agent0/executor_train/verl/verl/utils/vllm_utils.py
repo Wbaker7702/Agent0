@@ -27,7 +27,10 @@ from verl.third_party.vllm import get_version
 SUPPORTED_MOE_MODELS = []
 
 try:
-    from vllm.model_executor.models.deepseek_v2 import DeepseekV2ForCausalLM, DeepseekV3ForCausalLM
+    from vllm.model_executor.models.deepseek_v2 import (
+        DeepseekV2ForCausalLM,
+        DeepseekV3ForCausalLM,
+    )
 
     SUPPORTED_MOE_MODELS.append(DeepseekV2ForCausalLM)
     SUPPORTED_MOE_MODELS.append(DeepseekV3ForCausalLM)
@@ -92,7 +95,9 @@ def patch_vllm_moe_model_weight_loader(model):
 
     model = getattr(model, "model", None) or getattr(model, "language_model", None)
     if model is None:
-        raise ValueError("The provided model does not have a valid 'model' or 'language_model' attribute.")
+        raise ValueError(
+            "The provided model does not have a valid 'model' or 'language_model' attribute."
+        )
 
     for layer in model.layers:
         mlp_attr = MLP_ATTR_MAPPING.get(type(model), DEFAULT_MLP_ATTR)
@@ -143,7 +148,9 @@ class VLLMHijack:
                 else:
                     lora_path = get_adapter_absolute_path(lora_request.lora_path)
 
-                    peft_helper = PEFTHelper.from_local_dir(lora_path, self.max_position_embeddings)
+                    peft_helper = PEFTHelper.from_local_dir(
+                        lora_path, self.max_position_embeddings
+                    )
 
                 # Validates the LoRA configuration against requirements before
                 # loading weights, throwing an exception if validation fails.
@@ -153,7 +160,10 @@ class VLLMHijack:
                 # to ensure correct loading of lora weights.
                 model = self._adapter_manager.model
                 hf_to_vllm_mapper = None
-                if hasattr(model, "hf_to_vllm_mapper") and model.hf_to_vllm_mapper is not None:
+                if (
+                    hasattr(model, "hf_to_vllm_mapper")
+                    and model.hf_to_vllm_mapper is not None
+                ):
                     hf_to_vllm_mapper = model.hf_to_vllm_mapper
 
                 if isinstance(lora_request, TensorLoRARequest):
@@ -164,7 +174,8 @@ class VLLMHijack:
                         device="cpu",
                         dtype=self.lora_config.lora_dtype,
                         embeddings=None,
-                        target_embedding_padding=self.vocab_size + self.lora_config.lora_extra_vocab_size,
+                        target_embedding_padding=self.vocab_size
+                        + self.lora_config.lora_extra_vocab_size,
                         embedding_modules=self.embedding_modules,
                         embedding_padding_modules=self.embedding_padding_modules,
                         weights_mapper=hf_to_vllm_mapper,
@@ -177,7 +188,8 @@ class VLLMHijack:
                         lora_model_id=lora_request.lora_int_id,
                         device="cpu",
                         dtype=self.lora_config.lora_dtype,
-                        target_embedding_padding=self.vocab_size + self.lora_config.lora_extra_vocab_size,
+                        target_embedding_padding=self.vocab_size
+                        + self.lora_config.lora_extra_vocab_size,
                         embedding_modules=self.embedding_modules,
                         embedding_padding_modules=self.embedding_padding_modules,
                         weights_mapper=hf_to_vllm_mapper,

@@ -19,7 +19,11 @@ import torch
 import torch.distributed as dist
 import torch.multiprocessing as mp
 
-from verl.utils.torch_functional import distributed_masked_mean, distributed_mean_max_min_std, masked_mean
+from verl.utils.torch_functional import (
+    distributed_masked_mean,
+    distributed_mean_max_min_std,
+    masked_mean,
+)
 
 
 def _worker_mean(rank: int, world_size: int, rendezvous_file: str):
@@ -99,7 +103,9 @@ def _worker_mask(rank: int, world_size: int, rendezvous_file: str):
 
     valid_values = [1.0] + [2 * i + 2.0 for i in range(1, world_size)]
     expected_mean = sum(valid_values) / len(valid_values)
-    assert torch.allclose(gmean.cpu(), torch.tensor(expected_mean)), f"masked_mean@{rank}"
+    assert torch.allclose(
+        gmean.cpu(), torch.tensor(expected_mean)
+    ), f"masked_mean@{rank}"
 
     dist.destroy_process_group()
 

@@ -57,7 +57,9 @@ def union_two_dict(dict1: Dict[str, Any], dict2: Dict[str, Any]) -> Dict[str, An
     """Union two dict. Will throw an error if there is an item not the same object with the same key."""
     for key in dict2.keys():
         if key in dict1:
-            assert dict1[key] == dict2[key], f"{key} in dict1 and dict2 are not the same object"
+            assert (
+                dict1[key] == dict2[key]
+            ), f"{key} in dict1 and dict2 are not the same object"
 
         dict1[key] = dict2[key]
 
@@ -89,7 +91,9 @@ def unflatten_dict(data: Dict[str, Any], sep: str = "/") -> Dict[str, Any]:
     return unflattened
 
 
-def flatten_dict(data: Dict[str, Any], parent_key: str = "", sep: str = "/") -> Dict[str, Any]:
+def flatten_dict(
+    data: Dict[str, Any], parent_key: str = "", sep: str = "/"
+) -> Dict[str, Any]:
     flattened = {}
     for key, value in data.items():
         new_key = parent_key + sep + key if parent_key else key

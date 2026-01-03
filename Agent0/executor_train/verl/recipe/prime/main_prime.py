@@ -44,7 +44,9 @@ def run_prime(config, compute_score=None):
     if not ray.is_initialized():
         # this is for local ray cluster
         ray.init(
-            runtime_env={"env_vars": {"TOKENIZERS_PARALLELISM": "true", "NCCL_DEBUG": "WARN"}},
+            runtime_env={
+                "env_vars": {"TOKENIZERS_PARALLELISM": "true", "NCCL_DEBUG": "WARN"}
+            },
             num_cpus=config.ray_init.num_cpus,
         )
 
@@ -60,7 +62,9 @@ def main_task(config, compute_score=None):
 
     from verl.utils.fs import copy_local_path_from_hdfs
 
-    pprint(OmegaConf.to_container(config, resolve=True))  # resolve=True will eval symbol values
+    pprint(
+        OmegaConf.to_container(config, resolve=True)
+    )  # resolve=True will eval symbol values
     OmegaConf.resolve(config)
 
     # download the checkpoint from hdfs
@@ -125,12 +129,18 @@ def main_task(config, compute_score=None):
         reward_manager_cls = PrimeRewardManager
     else:
         raise NotImplementedError
-    reward_fn = reward_manager_cls(tokenizer=tokenizer, num_examine=0, compute_score=compute_score)
+    reward_fn = reward_manager_cls(
+        tokenizer=tokenizer, num_examine=0, compute_score=compute_score
+    )
 
     # Note that we always use function-based RM for validation
-    val_reward_fn = reward_manager_cls(tokenizer=tokenizer, num_examine=1, compute_score=compute_score)
+    val_reward_fn = reward_manager_cls(
+        tokenizer=tokenizer, num_examine=1, compute_score=compute_score
+    )
 
-    resource_pool_manager = ResourcePoolManager(resource_pool_spec=resource_pool_spec, mapping=mapping)
+    resource_pool_manager = ResourcePoolManager(
+        resource_pool_spec=resource_pool_spec, mapping=mapping
+    )
 
     trainer = RayPRIMETrainer(
         config=config,

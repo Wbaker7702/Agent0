@@ -110,8 +110,12 @@ class TestComputeDataMetrics(unittest.TestCase):
         self.assertIn("prompt_length/mean", metrics)
 
         # Check some specific values
-        self.assertAlmostEqual(metrics["critic/score/mean"], 5.0)  # Sum of token_level_scores
-        self.assertAlmostEqual(metrics["critic/rewards/mean"], 2.5)  # Sum of token_level_rewards
+        self.assertAlmostEqual(
+            metrics["critic/score/mean"], 5.0
+        )  # Sum of token_level_scores
+        self.assertAlmostEqual(
+            metrics["critic/rewards/mean"], 2.5
+        )  # Sum of token_level_rewards
 
     def test_compute_data_metrics_without_critic(self):
         """Test compute_data_metrics with critic disabled."""
@@ -171,11 +175,17 @@ class TestComputeTimingMetrics(unittest.TestCase):
 
         # Check per-token timing metrics
         # gen uses only response tokens (6 tokens)
-        self.assertAlmostEqual(metrics["timing_per_token_ms/gen"], 0.5 * 1000 / 6, places=5)
+        self.assertAlmostEqual(
+            metrics["timing_per_token_ms/gen"], 0.5 * 1000 / 6, places=5
+        )
 
         # ref and values use all tokens (12 tokens)
-        self.assertAlmostEqual(metrics["timing_per_token_ms/ref"], 0.3 * 1000 / 12, places=5)
-        self.assertAlmostEqual(metrics["timing_per_token_ms/values"], 0.2 * 1000 / 12, places=5)
+        self.assertAlmostEqual(
+            metrics["timing_per_token_ms/ref"], 0.3 * 1000 / 12, places=5
+        )
+        self.assertAlmostEqual(
+            metrics["timing_per_token_ms/values"], 0.2 * 1000 / 12, places=5
+        )
 
 
 class TestComputeThroughputMetrics(unittest.TestCase):
@@ -207,7 +217,9 @@ class TestComputeThroughputMetrics(unittest.TestCase):
 
         self.assertEqual(metrics["perf/total_num_tokens"], 600)
         self.assertEqual(metrics["perf/time_per_step"], 2.0)
-        self.assertEqual(metrics["perf/throughput"], 600 / (2.0 * 2))  # 150 tokens/sec/GPU
+        self.assertEqual(
+            metrics["perf/throughput"], 600 / (2.0 * 2)
+        )  # 150 tokens/sec/GPU
 
 
 class TestBootstrapMetric(unittest.TestCase):
@@ -219,7 +231,9 @@ class TestBootstrapMetric(unittest.TestCase):
         reduce_fns = [np.mean, np.max]
 
         # Use a fixed seed for reproducibility
-        result = bootstrap_metric(data, subset_size=3, reduce_fns=reduce_fns, n_bootstrap=100, seed=42)
+        result = bootstrap_metric(
+            data, subset_size=3, reduce_fns=reduce_fns, n_bootstrap=100, seed=42
+        )
 
         # Check that we get two results (one for each reduce_fn)
         self.assertEqual(len(result), 2)
@@ -287,7 +301,9 @@ class TestProcessValidationMetrics(unittest.TestCase):
             "score": [0.8, 0.9, 0.7],
         }
 
-        result = process_validation_metrics(data_sources, sample_inputs, infos_dict, seed=42)
+        result = process_validation_metrics(
+            data_sources, sample_inputs, infos_dict, seed=42
+        )
 
         # Check the structure of the result
         self.assertIn("source1", result)
@@ -311,7 +327,9 @@ class TestProcessValidationMetrics(unittest.TestCase):
             "pred": ["A", "B", "A"],
         }
 
-        result = process_validation_metrics(data_sources, sample_inputs, infos_dict, seed=42)
+        result = process_validation_metrics(
+            data_sources, sample_inputs, infos_dict, seed=42
+        )
 
         # Check that majority voting metrics are present
         self.assertIn("maj@2/mean", result["source1"]["score"])

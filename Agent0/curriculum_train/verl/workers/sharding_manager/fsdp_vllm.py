@@ -21,7 +21,9 @@ import torch.distributed as dist
 from torch.distributed._tensor import DTensor
 from torch.distributed.checkpoint.state_dict import get_model_state_dict
 from torch.distributed.device_mesh import DeviceMesh
-from torch.distributed.fsdp.fully_sharded_data_parallel import FullyShardedDataParallel as FSDP
+from torch.distributed.fsdp.fully_sharded_data_parallel import (
+    FullyShardedDataParallel as FSDP,
+)
 from transformers import PreTrainedModel
 from vllm import LLM
 from vllm.distributed import parallel_state as vllm_ps
@@ -55,20 +57,30 @@ class FSDPVLLMShardingManager(BaseShardingManager):
         self.torch_random_states = torch.cuda.get_rng_state()
         # get a random rng states
         gen_dp_rank = self.device_mesh["dp"].get_local_rank()
-        torch.cuda.manual_seed(gen_dp_rank + 1000)  # make sure all tp ranks have the same random states
+        torch.cuda.manual_seed(
+            gen_dp_rank + 1000
+        )  # make sure all tp ranks have the same random states
         self.gen_random_states = torch.cuda.get_rng_state()
         torch.cuda.set_rng_state(self.torch_random_states)
 
-    def _rename_weight_keys(self, actor_weights: Dict[str, Union[torch.Tensor, DTensor]], model: PreTrainedModel):
+    def _rename_weight_keys(
+        self,
+        actor_weights: Dict[str, Union[torch.Tensor, DTensor]],
+        model: PreTrainedModel,
+    ):
         # convert state dict keys: https://github.com/huggingface/transformers/pull/38385
         if not hasattr(model, "_checkpoint_conversion_mapping"):
             return actor_weights
 
-        reverse_key_mapping = {v: k for k, v in model._checkpoint_conversion_mapping.items()}
+        reverse_key_mapping = {
+            v: k for k, v in model._checkpoint_conversion_mapping.items()
+        }
         original_weights = {}
         for key, value in actor_weights.items():
             for pattern, replacement in reverse_key_mapping.items():
-                replacement = replacement.lstrip("^")  # strip off un-needed chars and patterns
+                replacement = replacement.lstrip(
+                    "^"
+                )  # strip off un-needed chars and patterns
                 replacement = re.sub(r"\(.*\)", "", replacement)
                 key, n_replace = re.subn(pattern, replacement, key)
                 # Early exit of the loop
@@ -96,7 +108,9 @@ class FSDPVLLMShardingManager(BaseShardingManager):
         torch.cuda.empty_cache()
         print_gpu_memory_usage("Before state_dict() in sharding manager")
         actor_weights = get_model_state_dict(self.module)
-        actor_weights = self._rename_weight_keys(actor_weights, self.module._fsdp_wrapped_module)
+        actor_weights = self._rename_weight_keys(
+            actor_weights, self.module._fsdp_wrapped_module
+        )
         print_gpu_memory_usage("After state_dict() in sharding manager")
 
         if "tags" in inspect.signature(self.inference_engine.wake_up).parameters:
@@ -104,7 +118,9 @@ class FSDPVLLMShardingManager(BaseShardingManager):
         else:
             self.inference_engine.wake_up()
 
-        model = self.inference_engine.llm_engine.model_executor.driver_worker.worker.model_runner.model
+        model = (
+            self.inference_engine.llm_engine.model_executor.driver_worker.worker.model_runner.model
+        )
         model.load_weights(self._make_weight_iterator(actor_weights))
         print_gpu_memory_usage("After sync model weights in sharding manager")
 
@@ -114,7 +130,9 @@ class FSDPVLLMShardingManager(BaseShardingManager):
         if "tags" in inspect.signature(self.inference_engine.wake_up).parameters:
             self.inference_engine.wake_up(tags=["kv_cache"])
 
-        print_gpu_memory_usage("After del state_dict and empty_cache in sharding manager")
+        print_gpu_memory_usage(
+            "After del state_dict and empty_cache in sharding manager"
+        )
         # important: need to manually set the random states of each tp to be identical.
         if self.device_mesh is not None:
             self.torch_random_states = torch.cuda.get_rng_state()

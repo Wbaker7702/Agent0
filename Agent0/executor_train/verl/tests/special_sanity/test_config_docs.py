@@ -41,7 +41,9 @@ def validate_yaml_format(yaml_lines):
                 comment_index = line.index("#")
                 colon_index = line.index(":")
                 if comment_index > colon_index:
-                    errors.append(f"Inline comment found on line {i + 1}: {line.strip()}")
+                    errors.append(
+                        f"Inline comment found on line {i + 1}: {line.strip()}"
+                    )
 
             # Check for blank line after this key line (unless next is a deeper indent)
             if i + 1 < len(yaml_lines):
@@ -50,7 +52,9 @@ def validate_yaml_format(yaml_lines):
 
                 # If next is not empty and not a deeper nested line, enforce blank line
                 if next_stripped != "":
-                    errors.append(f"Missing blank line after line {i + 1}: {line.strip()}")
+                    errors.append(
+                        f"Missing blank line after line {i + 1}: {line.strip()}"
+                    )
 
         i += 1
 
@@ -76,7 +80,9 @@ def test_trainer_config_doc():
         if validation_errors:
             success = False
             print("YAML documentation format check failed:")
-            print(f"Please read the top block of {yaml_to_inspect} to see format rules:\n")
+            print(
+                f"Please read the top block of {yaml_to_inspect} to see format rules:\n"
+            )
             for err in validation_errors:
                 print(" -", err)
 

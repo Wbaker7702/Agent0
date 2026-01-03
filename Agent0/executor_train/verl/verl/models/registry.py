@@ -22,15 +22,27 @@ import torch.nn as nn
 _MODELS = {
     "LlamaForCausalLM": (
         "llama",
-        ("ParallelLlamaForCausalLMRmPadPP", "ParallelLlamaForValueRmPadPP", "ParallelLlamaForCausalLMRmPad"),
+        (
+            "ParallelLlamaForCausalLMRmPadPP",
+            "ParallelLlamaForValueRmPadPP",
+            "ParallelLlamaForCausalLMRmPad",
+        ),
     ),
     "Qwen2ForCausalLM": (
         "qwen2",
-        ("ParallelQwen2ForCausalLMRmPadPP", "ParallelQwen2ForValueRmPadPP", "ParallelQwen2ForCausalLMRmPad"),
+        (
+            "ParallelQwen2ForCausalLMRmPadPP",
+            "ParallelQwen2ForValueRmPadPP",
+            "ParallelQwen2ForCausalLMRmPad",
+        ),
     ),
     "MistralForCausalLM": (
         "mistral",
-        ("ParallelMistralForCausalLMRmPadPP", "ParallelMistralForValueRmPadPP", "ParallelMistralForCausalLMRmPad"),
+        (
+            "ParallelMistralForCausalLMRmPadPP",
+            "ParallelMistralForValueRmPadPP",
+            "ParallelMistralForCausalLMRmPad",
+        ),
     ),
 }
 
@@ -50,7 +62,9 @@ class ModelRegistry:
         elif value:  # critic/rm
             model_cls_name = model_cls_name[1]
 
-        module = importlib.import_module(f"verl.models.{module_name}.{megatron}.modeling_{module_name}_megatron")
+        module = importlib.import_module(
+            f"verl.models.{module_name}.{megatron}.modeling_{module_name}_megatron"
+        )
         return getattr(module, model_cls_name, None)
 
     @staticmethod

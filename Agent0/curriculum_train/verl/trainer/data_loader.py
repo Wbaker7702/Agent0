@@ -23,7 +23,11 @@ from ..utils.dataset import RLHFDataset, collate_fn
 from .config import DataConfig
 
 
-def create_dataloader(config: DataConfig, tokenizer: PreTrainedTokenizer, processor: Optional[ProcessorMixin]) -> None:
+def create_dataloader(
+    config: DataConfig,
+    tokenizer: PreTrainedTokenizer,
+    processor: Optional[ProcessorMixin],
+) -> None:
     train_dataset = RLHFDataset(
         data_path=config.train_files,
         tokenizer=tokenizer,
@@ -42,7 +46,9 @@ def create_dataloader(config: DataConfig, tokenizer: PreTrainedTokenizer, proces
     if config.shuffle:
         train_dataloader_generator = torch.Generator()
         train_dataloader_generator.manual_seed(config.seed)
-        sampler = RandomSampler(data_source=train_dataset, generator=train_dataloader_generator)
+        sampler = RandomSampler(
+            data_source=train_dataset, generator=train_dataloader_generator
+        )
     else:
         sampler = SequentialSampler(data_source=train_dataset)
 
@@ -72,7 +78,9 @@ def create_dataloader(config: DataConfig, tokenizer: PreTrainedTokenizer, proces
     )
     val_dataloader = StatefulDataLoader(
         dataset=val_dataset,
-        batch_size=len(val_dataset) if config.val_batch_size == -1 else config.val_batch_size,
+        batch_size=(
+            len(val_dataset) if config.val_batch_size == -1 else config.val_batch_size
+        ),
         shuffle=False,
         num_workers=8,
         collate_fn=collate_fn,

@@ -72,8 +72,12 @@ if __name__ == "__main__":
 
         return process_fn
 
-    train_dataset = train_dataset.map(function=make_map_fn("train"), with_indices=True, num_proc=8)
-    test_dataset = test_dataset.map(function=make_map_fn("test"), with_indices=True, num_proc=8)
+    train_dataset = train_dataset.map(
+        function=make_map_fn("train"), with_indices=True, num_proc=8
+    )
+    test_dataset = test_dataset.map(
+        function=make_map_fn("test"), with_indices=True, num_proc=8
+    )
 
     local_dir = args.local_dir
     hdfs_dir = args.hdfs_dir

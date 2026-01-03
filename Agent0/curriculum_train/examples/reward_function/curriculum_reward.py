@@ -27,7 +27,8 @@ from nltk.translate.bleu_score import sentence_bleu, SmoothingFunction
 from sklearn.cluster import AgglomerativeClustering
 import numpy as np
 
-STORAGE_PATH = os.getenv("STORAGE_PATH","")
+STORAGE_PATH = os.getenv("STORAGE_PATH", "")
+
 
 def _bleu_distance_matrix(sentences):
     n = len(sentences)
@@ -44,13 +45,13 @@ def _bleu_distance_matrix(sentences):
             dist[i, j] = dist[j, i] = 1 - score
     return dist
 
+
 def cluster_share_per_problem(
-        problems,
-        distance_threshold: float = 0.5,
-        linkage: str = "average"):
+    problems, distance_threshold: float = 0.5, linkage: str = "average"
+):
     if not problems:
         return []
-    print('start clustering')
+    print("start clustering")
     start_time = time.time()
     dist_mat = _bleu_distance_matrix(problems)
 
@@ -58,10 +59,10 @@ def cluster_share_per_problem(
         n_clusters=None,
         distance_threshold=distance_threshold,
         metric="precomputed",
-        linkage=linkage
+        linkage=linkage,
     )
     labels = clustering.fit_predict(dist_mat)
-    print(f'end clustering, time: {time.time() - start_time}')
+    print(f"end clustering, time: {time.time() - start_time}")
     total = len(problems)
     cluster_size = Counter(labels)
     cluster_ratio = {lab: sz / total for lab, sz in cluster_size.items()}
@@ -69,40 +70,51 @@ def cluster_share_per_problem(
     proportions = [cluster_ratio[lab] for lab in labels]
     return proportions
 
+
 def generate_temp_filename(prefix="temp", suffix=".json"):
     timestamp = int(time.time() * 1000)
     rand_part = random.randint(0, 99999)
     return f"{STORAGE_PATH}/temp_results/{prefix}_{timestamp}_{rand_part}{suffix}"
+
+
 def split_list(lst, n=4):
     k, m = divmod(len(lst), n)
-    return [lst[i*k + min(i, m):(i+1)*k + min(i+1, m)] for i in range(n)]
+    return [lst[i * k + min(i, m) : (i + 1) * k + min(i + 1, m)] for i in range(n)]
+
 
 os.environ["NO_PROXY"] = "0.0.0.0,127.0.0.1"
 
-def fetch(index,i):
+
+def fetch(index, i):
     response = requests.get(f"http://0.0.0.0:{5000+index}/hello?name={i}")
     return True
 
+
 def generate_results(data):
-    datas = split_list(data,4)
-    random_names = [generate_temp_filename(prefix=f"temp_{i}", suffix=".json") for i in range(4)]
+    datas = split_list(data, 4)
+    random_names = [
+        generate_temp_filename(prefix=f"temp_{i}", suffix=".json") for i in range(4)
+    ]
     for i in range(4):
-        with open(random_names[i],'w') as f:
-            json.dump(datas[i],f,indent=4)
+        with open(random_names[i], "w") as f:
+            json.dump(datas[i], f, indent=4)
 
     final_results = []
     with ThreadPoolExecutor(max_workers=4) as executor:
-        futures = [executor.submit(fetch, i,random_names[i]) for i in range(4)]
+        futures = [executor.submit(fetch, i, random_names[i]) for i in range(4)]
 
-        for future in tqdm(as_completed(futures), total=len(futures), desc="  - Servers processing"):
-            future.result() # Simplified to just get the result
+        for future in tqdm(
+            as_completed(futures), total=len(futures), desc="  - Servers processing"
+        ):
+            future.result()  # Simplified to just get the result
 
     for i in tqdm(range(4), desc="  - Reading result files", leave=False):
-        with open(random_names[i].replace('.json','_results.json'),'r') as f:
+        with open(random_names[i].replace(".json", "_results.json"), "r") as f:
             final_results.extend(json.load(f))
     for i in range(4):
-        os.remove(random_names[i].replace('.json','_results.json'))
+        os.remove(random_names[i].replace(".json", "_results.json"))
     return final_results
+
 
 def format_reward(predict: str) -> float:
     pattern = re.compile(r"<think>.*</think>.*\\boxed\{.*\}.*", re.DOTALL)
@@ -113,6 +125,7 @@ def format_reward(predict: str) -> float:
 def accuracy_reward(predict: str, ground_truth: str) -> float:
     answer = extract_boxed_content(predict)
     return 1.0 if grade_answer(answer, ground_truth) else 0.0
+
 
 def calculate_tool_reward(predict: str, weight: float = 0.05, cap: int = 4) -> float:
     if not predict:
@@ -125,10 +138,15 @@ def calculate_tool_reward(predict: str, weight: float = 0.05, cap: int = 4) -> f
     return capped_calls * weight
 
 
-def compute_score(predicts: List[str], ground_truths: List[str], format_weight: float = 0.1, file_path: str = "") -> List[Dict[str, float]]:
+def compute_score(
+    predicts: List[str],
+    ground_truths: List[str],
+    format_weight: float = 0.1,
+    file_path: str = "",
+) -> List[Dict[str, float]]:
     results = []
-    with open('test.json','w') as f:
-        json.dump(predicts,f,indent=4)
+    with open("test.json", "w") as f:
+        json.dump(predicts, f, indent=4)
     for i in tqdm(range(len(predicts)), desc=" - Parsing predictions"):
         questions = re.findall(r"<question>(.*?)</question>", predicts[i], re.DOTALL)
         answers = extract_boxed_content(predicts[i])
@@ -143,10 +161,27 @@ def compute_score(predicts: List[str], ground_truths: List[str], format_weight: 
             results.append({"question": "", "answer": ""})
 
     final_results = generate_results(results)
-    penalty = cluster_share_per_problem([result['question'] for result in final_results], distance_threshold=0.5)
+    penalty = cluster_share_per_problem(
+        [result["question"] for result in final_results], distance_threshold=0.5
+    )
     assert len(penalty) == len(final_results)
     scores = []
     for i in tqdm(range(len(final_results)), desc=" - Calculating final scores"):
-        final_score = (min(final_results[i]["score"],1-final_results[i]["score"]) if final_results[i]['question'] else -1)-penalty[i]+calculate_tool_reward(predicts[i])
-        scores.append({"overall": final_score,"format": 1 if final_results[i]['question'] else 0,"accuracy": penalty[i],"tool_reward": calculate_tool_reward(predicts[i])})
+        final_score = (
+            (
+                min(final_results[i]["score"], 1 - final_results[i]["score"])
+                if final_results[i]["question"]
+                else -1
+            )
+            - penalty[i]
+            + calculate_tool_reward(predicts[i])
+        )
+        scores.append(
+            {
+                "overall": final_score,
+                "format": 1 if final_results[i]["question"] else 0,
+                "accuracy": penalty[i],
+                "tool_reward": calculate_tool_reward(predicts[i]),
+            }
+        )
     return scores

@@ -19,7 +19,9 @@ Reward function
 from verl.utils.reward_score import math
 
 
-def char_count_reward_function(data_source, solution_str, ground_truth, extra_info=None):
+def char_count_reward_function(
+    data_source, solution_str, ground_truth, extra_info=None
+):
     try:
         last_boxed_string = math.last_boxed_only_string(solution_str)
         if last_boxed_string is None:

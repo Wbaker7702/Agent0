@@ -32,7 +32,11 @@ from verl.protocol import DataProto
 from verl.single_controller.ray.base import RayWorkerGroup
 from verl.utils import hf_tokenizer
 from verl.utils.fs import copy_to_local
-from verl.utils.rollout_trace import RolloutTraceConfig, rollout_trace_attr, rollout_trace_op
+from verl.utils.rollout_trace import (
+    RolloutTraceConfig,
+    rollout_trace_attr,
+    rollout_trace_op,
+)
 from verl.workers.rollout.async_server import async_server_class
 
 logger = logging.getLogger(__file__)
@@ -46,7 +50,12 @@ class AsyncLLMServerManager:
     - Sticky session: send multi-turn chat completions to same server for automatic prefix caching
     """
 
-    def __init__(self, config: DictConfig, server_handles: list[ray.actor.ActorHandle], max_cache_size: int = 10000):
+    def __init__(
+        self,
+        config: DictConfig,
+        server_handles: list[ray.actor.ActorHandle],
+        max_cache_size: int = 10000,
+    ):
         """Initialize the AsyncLLMServerManager.
 
         Args:
@@ -59,7 +68,9 @@ class AsyncLLMServerManager:
         random.shuffle(self.server_handles)
 
         # Least requests load balancing
-        self.weighted_serveres = [[0, (hash(server), server)] for server in server_handles]
+        self.weighted_serveres = [
+            [0, (hash(server), server)] for server in server_handles
+        ]
         heapq.heapify(self.weighted_serveres)
 
         # LRU cache to map request_id to server
@@ -126,7 +137,12 @@ class AgentLoopBase(ABC):
 
     _class_initialized = False
 
-    def __init__(self, config: DictConfig, server_manager: AsyncLLMServerManager, tokenizer: AutoTokenizer):
+    def __init__(
+        self,
+        config: DictConfig,
+        server_manager: AsyncLLMServerManager,
+        tokenizer: AutoTokenizer,
+    ):
         """Initialize agent loop.
 
         Args:
@@ -148,7 +164,9 @@ class AgentLoopBase(ABC):
         cls._class_initialized = True
 
     @abstractmethod
-    async def run(self, messages: list[dict[str, Any]], sampling_params: dict[str, Any]) -> AgentLoopOutput:
+    async def run(
+        self, messages: list[dict[str, Any]], sampling_params: dict[str, Any]
+    ) -> AgentLoopOutput:
         """Run agent loop to interact with LLM server and environment.
 
         Args:
@@ -224,7 +242,9 @@ class AgentLoopWorker:
 
         # by default, we assume it's a single turn agent
         if "agent_name" not in batch.non_tensor_batch:
-            batch.non_tensor_batch["agent_name"] = np.array(["single_turn_agent"] * len(batch), dtype=object)
+            batch.non_tensor_batch["agent_name"] = np.array(
+                ["single_turn_agent"] * len(batch), dtype=object
+            )
 
         tasks = []
         agent_names = batch.non_tensor_batch["agent_name"]
@@ -234,11 +254,19 @@ class AgentLoopWorker:
         else:
             index = np.arange(len(raw_prompts))
 
-        trajectory_info = await get_trajectory_info(batch.meta_info.get("global_steps", -1), index)
+        trajectory_info = await get_trajectory_info(
+            batch.meta_info.get("global_steps", -1), index
+        )
 
-        for agent_name, messages, trajectory in zip(agent_names, raw_prompts, trajectory_info, strict=True):
+        for agent_name, messages, trajectory in zip(
+            agent_names, raw_prompts, trajectory_info, strict=True
+        ):
             tasks.append(
-                asyncio.create_task(self._run_agent_loop(agent_name, messages.tolist(), sampling_params, trajectory))
+                asyncio.create_task(
+                    self._run_agent_loop(
+                        agent_name, messages.tolist(), sampling_params, trajectory
+                    )
+                )
             )
         outputs = await asyncio.gather(*tasks)
 
@@ -253,10 +281,14 @@ class AgentLoopWorker:
         trajectory: dict[str, Any],
     ) -> AgentLoopOutput:
         with rollout_trace_attr(
-            step=trajectory["step"], sample_index=trajectory["sample_index"], rollout_n=trajectory["rollout_n"]
+            step=trajectory["step"],
+            sample_index=trajectory["sample_index"],
+            rollout_n=trajectory["rollout_n"],
         ):
             agent_loop_class = self.get_agent_loop_class(agent_name)
-            agent_loop = agent_loop_class(self.config, self.server_manager, self.tokenizer)
+            agent_loop = agent_loop_class(
+                self.config, self.server_manager, self.tokenizer
+            )
             output = await agent_loop.run(messages, sampling_params)
             return output
 
@@ -276,7 +308,9 @@ class AgentLoopWorker:
             ValueError: If the agent_name is not recognized.
         """
         # TODO: add tool agent registrary
-        from verl.experimental.agent_loop.single_turn_agent_loop import SingleTurnAgentLoop
+        from verl.experimental.agent_loop.single_turn_agent_loop import (
+            SingleTurnAgentLoop,
+        )
         from verl.experimental.agent_loop.tool_agent_loop import ToolAgentLoop
 
         if agent_name == "single_turn_agent":
@@ -302,7 +336,10 @@ class AgentLoopWorker:
             return_tensors="pt",
             return_attention_mask=True,
         )
-        prompt_ids, prompt_attention_mask = outputs["input_ids"], outputs["attention_mask"]
+        prompt_ids, prompt_attention_mask = (
+            outputs["input_ids"],
+            outputs["attention_mask"],
+        )
 
         # responses
         self.tokenizer.padding_side = "right"
@@ -313,7 +350,10 @@ class AgentLoopWorker:
             return_tensors="pt",
             return_attention_mask=True,
         )
-        response_ids, response_attention_mask = outputs["input_ids"], outputs["attention_mask"]
+        response_ids, response_attention_mask = (
+            outputs["input_ids"],
+            outputs["attention_mask"],
+        )
 
         # response_mask
         outputs = self.tokenizer.pad(
@@ -324,13 +364,15 @@ class AgentLoopWorker:
             return_attention_mask=False,
         )
         response_mask = outputs["input_ids"]
-        assert response_ids.shape == response_mask.shape, (
-            f"mismatch in response_ids and response_mask shape: {response_ids.shape} vs {response_mask.shape}"
-        )
+        assert (
+            response_ids.shape == response_mask.shape
+        ), f"mismatch in response_ids and response_mask shape: {response_ids.shape} vs {response_mask.shape}"
         response_mask = response_mask * response_attention_mask
 
         input_ids = torch.cat([prompt_ids, response_ids], dim=1)
-        attention_mask = torch.cat([prompt_attention_mask, response_attention_mask], dim=1)
+        attention_mask = torch.cat(
+            [prompt_attention_mask, response_attention_mask], dim=1
+        )
         position_ids = (attention_mask.cumsum(dim=1) - 1) * attention_mask
 
         batch = TensorDict(
@@ -347,7 +389,11 @@ class AgentLoopWorker:
 
         num_turns = np.array([input.num_turns for input in inputs], dtype=np.int32)
         metrics = [input.metrics.model_dump() for input in inputs]
-        return DataProto(batch=batch, non_tensor_batch={"__num_turns__": num_turns}, meta_info={"metrics": metrics})
+        return DataProto(
+            batch=batch,
+            non_tensor_batch={"__num_turns__": num_turns},
+            meta_info={"metrics": metrics},
+        )
 
 
 async def get_trajectory_info(step, index):
@@ -359,7 +405,9 @@ async def get_trajectory_info(step, index):
             rollout_n += 1
         else:
             rollout_n = 0
-        trajectory_info.append({"step": step, "sample_index": index[i], "rollout_n": rollout_n})
+        trajectory_info.append(
+            {"step": step, "sample_index": index[i], "rollout_n": rollout_n}
+        )
     return trajectory_info
 
 
@@ -383,10 +431,14 @@ class AgentLoopManager:
         self.sleep()
 
     def _initialize_llm_servers(self):
-        self.rollout_tp_size = self.config.actor_rollout_ref.rollout.tensor_model_parallel_size
+        self.rollout_tp_size = (
+            self.config.actor_rollout_ref.rollout.tensor_model_parallel_size
+        )
         self.rollout_dp_size = self.worker_group.world_size // self.rollout_tp_size
 
-        register_center = ray.get_actor(f"{self.worker_group.name_prefix}_register_center")
+        register_center = ray.get_actor(
+            f"{self.worker_group.name_prefix}_register_center"
+        )
         workers_info = ray.get(register_center.get_worker_info.remote())
         assert len(workers_info) == self.worker_group.world_size
 
@@ -400,7 +452,9 @@ class AgentLoopManager:
                 rollout_backend_class=self.config.actor_rollout_ref.rollout.agent.custom_async_server.name,
             )
         else:
-            server_class = async_server_class(rollout_backend=self.config.actor_rollout_ref.rollout.name)
+            server_class = async_server_class(
+                rollout_backend=self.config.actor_rollout_ref.rollout.name
+            )
 
         # Start all server instances, restart if address already in use.
         unready_dp_ranks = set(range(self.rollout_dp_size))
@@ -413,7 +467,12 @@ class AgentLoopManager:
                         soft=False,
                     ),
                     name=f"async_llm_server_{rollout_dp_rank}",
-                ).remote(self.config, self.rollout_dp_size, rollout_dp_rank, self.worker_group.name_prefix)
+                ).remote(
+                    self.config,
+                    self.rollout_dp_size,
+                    rollout_dp_rank,
+                    self.worker_group.name_prefix,
+                )
                 for rollout_dp_rank in unready_dp_ranks
             }
 
@@ -425,7 +484,9 @@ class AgentLoopManager:
                     unready_dp_ranks.remove(rollout_dp_rank)
                 except Exception:
                     ray.kill(server)
-                    print(f"rollout server {rollout_dp_rank} failed, maybe address already in use, restarting...")
+                    print(
+                        f"rollout server {rollout_dp_rank} failed, maybe address already in use, restarting..."
+                    )
 
         # All server instances are ready, init AsyncLLM engine.
         ray.get([server.init_engine.remote() for server in self.async_llm_servers])
@@ -462,16 +523,24 @@ class AgentLoopManager:
             self.sleep()
 
         # calculate performance metrics
-        metrics = [output.meta_info["metrics"] for output in outputs]  # List[List[Dict[str, str]]]
+        metrics = [
+            output.meta_info["metrics"] for output in outputs
+        ]  # List[List[Dict[str, str]]]
         timing = self._performance_metrics(metrics, output)
 
         output.meta_info = {"timing": timing}
         return output
 
-    def _performance_metrics(self, metrics: list[list[dict[str, str]]], output: DataProto) -> dict[str, float]:
+    def _performance_metrics(
+        self, metrics: list[list[dict[str, str]]], output: DataProto
+    ) -> dict[str, float]:
         timing = {}
-        t_generate_sequences = np.array([metric["generate_sequences"] for chunk in metrics for metric in chunk])
-        t_tool_calls = np.array([metric["tool_calls"] for chunk in metrics for metric in chunk])
+        t_generate_sequences = np.array(
+            [metric["generate_sequences"] for chunk in metrics for metric in chunk]
+        )
+        t_tool_calls = np.array(
+            [metric["tool_calls"] for chunk in metrics for metric in chunk]
+        )
         timing["agent_loop/generate_sequences/min"] = t_generate_sequences.min()
         timing["agent_loop/generate_sequences/max"] = t_generate_sequences.max()
         timing["agent_loop/generate_sequences/mean"] = t_generate_sequences.mean()
@@ -485,8 +554,12 @@ class AgentLoopManager:
         prompt_length = output.batch["prompts"].shape[1]
         timing["agent_loop/slowest/generate_sequences"] = t_generate_sequences[slowest]
         timing["agent_loop/slowest/tool_calls"] = t_tool_calls[slowest]
-        timing["agent_loop/slowest/prompt_length"] = attention_mask[:prompt_length].sum().item()
-        timing["agent_loop/slowest/response_length"] = attention_mask[prompt_length:].sum().item()
+        timing["agent_loop/slowest/prompt_length"] = (
+            attention_mask[:prompt_length].sum().item()
+        )
+        timing["agent_loop/slowest/response_length"] = (
+            attention_mask[prompt_length:].sum().item()
+        )
 
         return timing
 

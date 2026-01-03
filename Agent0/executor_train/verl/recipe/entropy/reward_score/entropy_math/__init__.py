@@ -306,7 +306,11 @@ def _strip_string(string):
     # replace tfrac and dfrac with frac
     string = string.replace("tfrac", "frac")
     string = string.replace("dfrac", "frac")
-    string = string.replace("\\neq", "\\ne").replace("\\leq", "\\le").replace("\\geq", "\\ge")
+    string = (
+        string.replace("\\neq", "\\ne")
+        .replace("\\leq", "\\le")
+        .replace("\\geq", "\\ge")
+    )
     # print(string)
 
     # remove \left and \right
@@ -686,7 +690,9 @@ def is_value_equal(given_answer: str, ground_truth: str) -> bool:
 
     str_equal = ground_truth_normalized_mathd == given_answer_normalized_mathd
     try:
-        number_equal = float(ground_truth_normalized_mathd) == float(given_answer_normalized_mathd)
+        number_equal = float(ground_truth_normalized_mathd) == float(
+            given_answer_normalized_mathd
+        )
         return str_equal or number_equal
     except Exception:
         return str_equal
@@ -703,7 +709,10 @@ def _sympy_parse(expr: str):
     py_expr = expr.replace("^", "**")
     return sympy_parser.parse_expr(
         py_expr,
-        transformations=(sympy_parser.standard_transformations + (sympy_parser.implicit_multiplication_application,)),
+        transformations=(
+            sympy_parser.standard_transformations
+            + (sympy_parser.implicit_multiplication_application,)
+        ),
     )
 
 
@@ -971,13 +980,16 @@ def grade_answer_sympy(given_answer: str, ground_truth: str) -> bool:
     given_elems = split_tuple(given_normalized)
 
     if len(ground_truth_elems) > 1 and (
-        ground_truth_normalized[0] != given_normalized[0] or ground_truth_normalized[-1] != given_normalized[-1]
+        ground_truth_normalized[0] != given_normalized[0]
+        or ground_truth_normalized[-1] != given_normalized[-1]
     ):
         is_correct = False
     elif len(ground_truth_elems) != len(given_elems):
         is_correct = False
     else:
-        for ground_truth_elem, given_elem in zip(ground_truth_elems, given_elems, strict=True):
+        for ground_truth_elem, given_elem in zip(
+            ground_truth_elems, given_elems, strict=True
+        ):
             if _is_frac(ground_truth_elem) and _is_frac(given_elem):
                 # if fractions aren't reduced, then shouldn't be marked as correct
                 # so, we don't want to allow sympy.simplify in this case
@@ -1013,7 +1025,9 @@ def extract_answer(passage: str) -> str:
 def grade(model_answer: str, gt_answer: str, fast: bool = True):
     if "\\boxed" in gt_answer:
         gt_answer = extract_answer(gt_answer)
-    correct = grade_answer_mathd(model_answer, gt_answer) or grade_answer_sympy(model_answer, gt_answer)
+    correct = grade_answer_mathd(model_answer, gt_answer) or grade_answer_sympy(
+        model_answer, gt_answer
+    )
     if not fast:
         # This mode further uses math_verify to recall originally false positives.
         # Will be a bit slower, and sensitive to bad inputs.

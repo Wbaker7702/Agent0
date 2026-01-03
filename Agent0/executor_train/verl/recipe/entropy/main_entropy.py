@@ -71,7 +71,9 @@ class TaskRunner:
 
         from verl.utils.fs import copy_to_local
 
-        pprint(OmegaConf.to_container(config, resolve=True))  # resolve=True will eval symbol values
+        pprint(
+            OmegaConf.to_container(config, resolve=True)
+        )  # resolve=True will eval symbol values
         OmegaConf.resolve(config)
 
         # download the checkpoint from hdfs
@@ -82,13 +84,19 @@ class TaskRunner:
 
         trust_remote_code = config.data.get("trust_remote_code", False)
         tokenizer = hf_tokenizer(local_path, trust_remote_code=trust_remote_code)
-        processor = hf_processor(local_path, use_fast=True)  # used for multimodal LLM, could be none
+        processor = hf_processor(
+            local_path, use_fast=True
+        )  # used for multimodal LLM, could be none
 
         # define worker classes
         if config.actor_rollout_ref.actor.strategy in {"fsdp", "fsdp2"}:
             assert config.critic.strategy in {"fsdp", "fsdp2"}
             from verl.single_controller.ray import RayWorkerGroup
-            from verl.workers.fsdp_workers import ActorRolloutRefWorker, AsyncActorRolloutRefWorker, CriticWorker
+            from verl.workers.fsdp_workers import (
+                ActorRolloutRefWorker,
+                AsyncActorRolloutRefWorker,
+                CriticWorker,
+            )
 
             actor_rollout_cls = (
                 AsyncActorRolloutRefWorker
@@ -100,7 +108,10 @@ class TaskRunner:
         elif config.actor_rollout_ref.actor.strategy == "megatron":
             assert config.actor_rollout_ref.actor.strategy == config.critic.strategy
             from verl.single_controller.ray.megatron import NVMegatronRayWorkerGroup
-            from verl.workers.megatron_workers import ActorRolloutRefWorker, CriticWorker
+            from verl.workers.megatron_workers import (
+                ActorRolloutRefWorker,
+                CriticWorker,
+            )
 
             actor_rollout_cls = ActorRolloutRefWorker
             ray_worker_group_cls = NVMegatronRayWorkerGroup
@@ -141,7 +152,10 @@ class TaskRunner:
             mapping[Role.RewardModel] = global_pool_id
 
         # use reference model
-        if config.algorithm.use_kl_in_reward or config.actor_rollout_ref.actor.use_kl_loss:
+        if (
+            config.algorithm.use_kl_in_reward
+            or config.actor_rollout_ref.actor.use_kl_loss
+        ):
             role_worker_mapping[Role.RefPolicy] = ray.remote(ActorRolloutRefWorker)
             mapping[Role.RefPolicy] = global_pool_id
 
@@ -151,15 +165,26 @@ class TaskRunner:
         }
         cfg_reward_kwargs = config.reward_model.get("reward_kwargs", {})
         reward_fn = load_reward_manager(
-            config, tokenizer, num_examine=0, **OmegaConf.merge(OmegaConf.create(reward_kwargs), cfg_reward_kwargs)
+            config,
+            tokenizer,
+            num_examine=0,
+            **OmegaConf.merge(OmegaConf.create(reward_kwargs), cfg_reward_kwargs),
         )
-        val_reward_fn = load_reward_manager(config, tokenizer, num_examine=1, **reward_kwargs)
-        resource_pool_manager = ResourcePoolManager(resource_pool_spec=resource_pool_spec, mapping=mapping)
+        val_reward_fn = load_reward_manager(
+            config, tokenizer, num_examine=1, **reward_kwargs
+        )
+        resource_pool_manager = ResourcePoolManager(
+            resource_pool_spec=resource_pool_spec, mapping=mapping
+        )
 
         from verl.utils.dataset.rl_dataset import collate_fn
 
-        train_dataset = create_rl_dataset(config.data.train_files, config.data, tokenizer, processor)
-        val_dataset = create_rl_dataset(config.data.val_files, config.data, tokenizer, processor)
+        train_dataset = create_rl_dataset(
+            config.data.train_files, config.data, tokenizer, processor
+        )
+        val_dataset = create_rl_dataset(
+            config.data.val_files, config.data, tokenizer, processor
+        )
         train_sampler = create_rl_sampler(config.data, train_dataset)
         trainer = RayEntropyTrainer(
             config=config,
@@ -194,10 +219,15 @@ def create_rl_dataset(data_paths, data_config, tokenizer, processor):
 
     from verl.utils.dataset.rl_dataset import RLHFDataset
 
-    if "custom_cls" in data_config and data_config.custom_cls.get("path", None) is not None:
+    if (
+        "custom_cls" in data_config
+        and data_config.custom_cls.get("path", None) is not None
+    ):
         from verl.utils.import_utils import load_extern_type
 
-        dataset_cls = load_extern_type(data_config.custom_cls.path, data_config.custom_cls.name)
+        dataset_cls = load_extern_type(
+            data_config.custom_cls.path, data_config.custom_cls.name
+        )
         if not issubclass(dataset_cls, Dataset):
             raise TypeError(
                 f"The custom dataset class '{data_config.custom_cls.name}' from '{data_config.custom_cls.path}' "
@@ -234,7 +264,9 @@ def create_rl_sampler(data_config, dataset):
     if data_config.shuffle:
         train_dataloader_generator = torch.Generator()
         train_dataloader_generator.manual_seed(data_config.get("seed", 1))
-        sampler = RandomSampler(data_source=dataset, generator=train_dataloader_generator)
+        sampler = RandomSampler(
+            data_source=dataset, generator=train_dataloader_generator
+        )
     else:
         sampler = SequentialSampler(data_source=dataset)
 

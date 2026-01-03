@@ -3,12 +3,18 @@ import ray
 import fastapi
 import uvicorn
 from contextlib import asynccontextmanager
-from verl.workers.rollout.vllm_rollout.vllm_async_server import AsyncvLLMServer as VerlAsyncvLLMServer
+from verl.workers.rollout.vllm_rollout.vllm_async_server import (
+    AsyncvLLMServer as VerlAsyncvLLMServer,
+)
 from verl.workers.rollout.async_server import AsyncServerBase, _get_free_port
 from starlette.requests import Request
 from starlette.responses import JSONResponse, StreamingResponse
 from vllm.entrypoints.logger import RequestLogger
-from vllm.entrypoints.openai.protocol import ErrorResponse, CompletionRequest, CompletionResponse
+from vllm.entrypoints.openai.protocol import (
+    ErrorResponse,
+    CompletionRequest,
+    CompletionResponse,
+)
 from vllm.entrypoints.openai.serving_completion import OpenAIServingCompletion
 from verl.workers.rollout.vllm_rollout.vllm_async_server import (
     AsyncEngineArgs,
@@ -21,6 +27,8 @@ from verl.workers.rollout.vllm_rollout.vllm_async_server import (
     SamplingParams,
     AsyncLLM,
 )
+
+
 @ray.remote(num_cpus=1)
 class AsyncvLLMServer(VerlAsyncvLLMServer.__ray_actor_class__):
     async def init_engine(self):
@@ -34,7 +42,11 @@ class AsyncvLLMServer(VerlAsyncvLLMServer.__ray_actor_class__):
 
         tensor_parallel_size = config.get("tensor_model_parallel_size", 1)
         max_num_batched_tokens = config.get("max_num_batched_tokens", 8192)
-        max_model_len = config.max_model_len if config.max_model_len else config.prompt_length + config.response_length
+        max_model_len = (
+            config.max_model_len
+            if config.max_model_len
+            else config.prompt_length + config.response_length
+        )
         self.max_model_len = int(max_model_len)
 
         # Override default generation config from hugging face model config,
@@ -74,7 +86,7 @@ class AsyncvLLMServer(VerlAsyncvLLMServer.__ray_actor_class__):
             disable_log_stats=config.disable_log_stats,
             max_num_batched_tokens=max_num_batched_tokens,
             enable_chunked_prefill=config.enable_chunked_prefill,
-            enable_prefix_caching=False, # changed to False by verl-tool for higher output quality
+            enable_prefix_caching=False,  # changed to False by verl-tool for higher output quality
             trust_remote_code=trust_remote_code,
             seed=config.get("seed", 0),
         )
@@ -114,16 +126,20 @@ class AsyncvLLMServer(VerlAsyncvLLMServer.__ray_actor_class__):
         """
         request_json = await raw_request.json()
         request = CompletionRequest(**request_json)
-        generator = await self.openai_serving_completion.create_completion(request, raw_request)
+        generator = await self.openai_serving_completion.create_completion(
+            request, raw_request
+        )
 
         if isinstance(generator, ErrorResponse):
-            return JSONResponse(content=generator.model_dump(), status_code=generator.code)
+            return JSONResponse(
+                content=generator.model_dump(), status_code=generator.code
+            )
         if request.stream:
             return StreamingResponse(content=generator, media_type="text/event-stream")
         else:
             assert isinstance(generator, CompletionResponse)
             return JSONResponse(content=generator.model_dump())
-    
+
     async def _start_fastapi_server(self):
         @asynccontextmanager
         async def lifespan(app: fastapi.FastAPI):
@@ -133,14 +149,22 @@ class AsyncvLLMServer(VerlAsyncvLLMServer.__ray_actor_class__):
 
             # There's no way to gracefully restart uvicorn server if port is already in use,
             # so we exit the process directly and let AsyncLLMServerManager restart it.
-            print("FastAPI shutdown, maybe address already in use, exit process immediately.")
+            print(
+                "FastAPI shutdown, maybe address already in use, exit process immediately."
+            )
             os._exit(-1)
 
         app = fastapi.FastAPI(lifespan=lifespan)
-        app.router.add_api_route("/v1/chat/completions", self.chat_completion, methods=["POST"])
-        app.router.add_api_route("/v1/completions", self.completion, methods=["POST"]) # added by verl-tool
+        app.router.add_api_route(
+            "/v1/chat/completions", self.chat_completion, methods=["POST"]
+        )
+        app.router.add_api_route(
+            "/v1/completions", self.completion, methods=["POST"]
+        )  # added by verl-tool
 
         self.port = _get_free_port()
-        config = uvicorn.Config(app, host=["::", "0.0.0.0"], port=self.port, log_level="warning")
+        config = uvicorn.Config(
+            app, host=["::", "0.0.0.0"], port=self.port, log_level="warning"
+        )
         server = uvicorn.Server(config)
         await server.serve()

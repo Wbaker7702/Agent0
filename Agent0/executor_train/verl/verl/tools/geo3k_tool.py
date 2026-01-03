@@ -64,7 +64,12 @@ class Geo3kTool(BaseTool):
     def get_openai_tool_schema(self) -> OpenAIFunctionToolSchema:
         return self.tool_schema
 
-    async def create(self, instance_id: Optional[str] = None, ground_truth: Optional[str] = None, **kwargs) -> str:
+    async def create(
+        self,
+        instance_id: Optional[str] = None,
+        ground_truth: Optional[str] = None,
+        **kwargs,
+    ) -> str:
         if instance_id is None:
             instance_id = str(uuid4())
         self._instance_dict[instance_id] = {
@@ -75,14 +80,18 @@ class Geo3kTool(BaseTool):
         return instance_id, None
 
     @rollout_trace_op
-    async def execute(self, instance_id: str, parameters: dict[str, Any], **kwargs) -> tuple[str, float, dict]:
+    async def execute(
+        self, instance_id: str, parameters: dict[str, Any], **kwargs
+    ) -> tuple[str, float, dict]:
         answer = parameters.get("answer", "")
         if not isinstance(answer, str):
             answer = str(answer)
         self._instance_dict[instance_id]["response"] = answer
         reward = await self.calc_reward(instance_id)
         # penalty for non improved answer submission
-        tool_reward = 0.0 if reward > self._instance_dict[instance_id]["reward"] else -0.05
+        tool_reward = (
+            0.0 if reward > self._instance_dict[instance_id]["reward"] else -0.05
+        )
         # update the reward
         self._instance_dict[instance_id]["reward"] = reward
         return f"Current parsed {answer=} {reward=}", tool_reward, {}

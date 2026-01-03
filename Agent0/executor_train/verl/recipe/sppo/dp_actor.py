@@ -63,10 +63,19 @@ class DataParallelSPPOActor(DataParallelPPOActor):
         # make sure we are in training mode
         self.actor_module.train()
 
-        temperature = data.meta_info["temperature"]  # temperature must be in the data.meta_info to avoid slient error
+        temperature = data.meta_info[
+            "temperature"
+        ]  # temperature must be in the data.meta_info to avoid slient error
         multi_turn = data.meta_info.get("multi_turn", False)
 
-        select_keys = ["responses", "input_ids", "attention_mask", "position_ids", "old_log_probs", "seq_level_rewards"]
+        select_keys = [
+            "responses",
+            "input_ids",
+            "attention_mask",
+            "position_ids",
+            "old_log_probs",
+            "seq_level_rewards",
+        ]
         if multi_turn:
             select_keys.append("loss_mask")
         if self.config.use_kl_loss:
@@ -77,9 +86,13 @@ class DataParallelSPPOActor(DataParallelPPOActor):
         # Split to make minibatch iterator for updating the actor
         # See PPO paper for details. https://arxiv.org/abs/1707.06347
         if has_multi_modal_inputs:
-            num_mini_batches = data.batch.batch_size[0] // self.config.ppo_mini_batch_size
+            num_mini_batches = (
+                data.batch.batch_size[0] // self.config.ppo_mini_batch_size
+            )
             non_tensor_select_keys = ["multi_modal_inputs"]
-            dataloader = data.select(select_keys, non_tensor_select_keys).chunk(num_mini_batches)
+            dataloader = data.select(select_keys, non_tensor_select_keys).chunk(
+                num_mini_batches
+            )
         else:
             dataloader = batch.split(self.config.ppo_mini_batch_size)
 
@@ -90,28 +103,47 @@ class DataParallelSPPOActor(DataParallelPPOActor):
                 mini_batch = data
                 if has_multi_modal_inputs:
                     self.gradient_accumulation = (
-                        self.config.ppo_mini_batch_size // self.config.ppo_micro_batch_size_per_gpu
+                        self.config.ppo_mini_batch_size
+                        // self.config.ppo_micro_batch_size_per_gpu
                     )
-                    num_micro_batches = mini_batch.batch.batch_size[0] // self.config.ppo_micro_batch_size_per_gpu
-                    micro_batches = data.select(select_keys, non_tensor_select_keys).chunk(num_micro_batches)
+                    num_micro_batches = (
+                        mini_batch.batch.batch_size[0]
+                        // self.config.ppo_micro_batch_size_per_gpu
+                    )
+                    micro_batches = data.select(
+                        select_keys, non_tensor_select_keys
+                    ).chunk(num_micro_batches)
                 elif self.config.use_dynamic_bsz:
-                    max_token_len = self.config.ppo_max_token_len_per_gpu * self.ulysses_sequence_parallel_size
-                    micro_batches, _ = rearrange_micro_batches(batch=mini_batch, max_token_len=max_token_len)
+                    max_token_len = (
+                        self.config.ppo_max_token_len_per_gpu
+                        * self.ulysses_sequence_parallel_size
+                    )
+                    micro_batches, _ = rearrange_micro_batches(
+                        batch=mini_batch, max_token_len=max_token_len
+                    )
                 else:
                     self.gradient_accumulation = (
-                        self.config.ppo_mini_batch_size // self.config.ppo_micro_batch_size_per_gpu
+                        self.config.ppo_mini_batch_size
+                        // self.config.ppo_micro_batch_size_per_gpu
                     )
                     # split batch into micro_batches
-                    micro_batches = mini_batch.split(self.config.ppo_micro_batch_size_per_gpu)
+                    micro_batches = mini_batch.split(
+                        self.config.ppo_micro_batch_size_per_gpu
+                    )
 
                 self.actor_optimizer.zero_grad()
 
                 for data in micro_batches:
                     # Support all hardwares
                     if isinstance(data, DataProto):
-                        data = {**data.batch.to(get_device_id()), **data.non_tensor_batch}
+                        data = {
+                            **data.batch.to(get_device_id()),
+                            **data.non_tensor_batch,
+                        }
                     else:
-                        data = data.to(get_device_id())  # actor device is cpu when using offload
+                        data = data.to(
+                            get_device_id()
+                        )  # actor device is cpu when using offload
                     responses = data["responses"]
                     response_length = responses.size(1)
                     attention_mask = data["attention_mask"]
@@ -132,7 +164,9 @@ class DataParallelSPPOActor(DataParallelPPOActor):
                     if entropy_coeff != 0:
                         calculate_entropy = True
                     entropy, log_prob = self._forward_micro_batch(
-                        micro_batch=data, temperature=temperature, calculate_entropy=calculate_entropy
+                        micro_batch=data,
+                        temperature=temperature,
+                        calculate_entropy=calculate_entropy,
                     )
 
                     pg_loss, log_ratios, preference = compute_sppo_loss(
@@ -145,7 +179,11 @@ class DataParallelSPPOActor(DataParallelPPOActor):
                     )
 
                     if entropy_coeff != 0:
-                        entropy_loss = agg_loss(loss_mat=entropy, loss_mask=response_mask, loss_agg_mode=loss_agg_mode)
+                        entropy_loss = agg_loss(
+                            loss_mat=entropy,
+                            loss_mask=response_mask,
+                            loss_agg_mode=loss_agg_mode,
+                        )
 
                         # compute policy loss
                         policy_loss = pg_loss - entropy_loss * entropy_coeff
@@ -156,10 +194,14 @@ class DataParallelSPPOActor(DataParallelPPOActor):
                         ref_log_prob = data["ref_log_prob"]
                         # compute kl loss
                         kld = kl_penalty(
-                            logprob=log_prob, ref_logprob=ref_log_prob, kl_penalty=self.config.kl_loss_type
+                            logprob=log_prob,
+                            ref_logprob=ref_log_prob,
+                            kl_penalty=self.config.kl_loss_type,
                         )
                         kl_loss = agg_loss(
-                            loss_mat=kld, loss_mask=response_mask, loss_agg_mode=self.config.loss_agg_mode
+                            loss_mat=kld,
+                            loss_mask=response_mask,
+                            loss_agg_mode=self.config.loss_agg_mode,
                         )
 
                         policy_loss = policy_loss + kl_loss * self.config.kl_loss_coef
@@ -168,7 +210,9 @@ class DataParallelSPPOActor(DataParallelPPOActor):
 
                     if self.config.use_dynamic_bsz:
                         # relative to the dynamic bsz
-                        loss = policy_loss * (len(data) / self.config.ppo_mini_batch_size)
+                        loss = policy_loss * (
+                            len(data) / self.config.ppo_mini_batch_size
+                        )
                     else:
                         loss = policy_loss / self.gradient_accumulation
                     loss.backward()

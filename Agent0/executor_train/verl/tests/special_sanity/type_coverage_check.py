@@ -26,7 +26,9 @@ from pathlib import Path
 
 def get_changed_files() -> list[Path]:
     result = subprocess.run(
-        ["git", "diff", "--name-only", "--diff-filter=AM", "origin/main...HEAD"], stdout=subprocess.PIPE, text=True
+        ["git", "diff", "--name-only", "--diff-filter=AM", "origin/main...HEAD"],
+        stdout=subprocess.PIPE,
+        text=True,
     )
     return [Path(f) for f in result.stdout.splitlines() if f.endswith(".py")]
 
@@ -70,14 +72,25 @@ def has_type_annotations(node: ast.AST, debug: bool = False) -> int:
     if isinstance(node, ast.FunctionDef):
         is_private = node.name.startswith("_")
         has_ann = (
-            all(arg.annotation is not None for arg in node.args.args if should_check_type(arg.arg))
+            all(
+                arg.annotation is not None
+                for arg in node.args.args
+                if should_check_type(arg.arg)
+            )
             and node.returns is not None
         )
         if has_ann or is_private:
             return CHECK_SUCCESS
         else:
             if debug:
-                print(node, [(arg.annotation, arg.arg) for arg in node.args.args if should_check_type(arg.arg)])
+                print(
+                    node,
+                    [
+                        (arg.annotation, arg.arg)
+                        for arg in node.args.args
+                        if should_check_type(arg.arg)
+                    ],
+                )
             return CHECK_FAILURE
     return CHECK_SUCCESS
 
@@ -102,7 +115,11 @@ def check_file(
                     annotated += 1
                     if result == CHECK_WARNING:
                         warning_lines.append(
-                            (file_path, node.lineno, linecache.getline(str(file_path), node.lineno).strip())
+                            (
+                                file_path,
+                                node.lineno,
+                                linecache.getline(str(file_path), node.lineno).strip(),
+                            )
                         )
                 else:
                     source_line = linecache.getline(str(file_path), node.lineno).strip()
@@ -114,9 +131,17 @@ def check_file(
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--threshold", type=float, default=0.3, help="Minimum ratio of annotated lines required (0.0 - 1.0)"
+        "--threshold",
+        type=float,
+        default=0.3,
+        help="Minimum ratio of annotated lines required (0.0 - 1.0)",
     )
-    parser.add_argument("--target-file", type=str, default=None, help="Path to the Python source file to analyse")
+    parser.add_argument(
+        "--target-file",
+        type=str,
+        default=None,
+        help="Path to the Python source file to analyse",
+    )
     parser.add_argument(
         "--all-lines",
         action="store_true",
@@ -130,7 +155,9 @@ def main() -> None:
     all_warnings: list[tuple[Path, int, str]] = []
     all_failures: list[tuple[Path, int, str]] = []
 
-    target_files = [args.target_file] if args.target_file is not None else get_changed_files()
+    target_files = (
+        [args.target_file] if args.target_file is not None else get_changed_files()
+    )
     for fpath in target_files:
         if "tests/" in str(fpath):
             continue
@@ -138,7 +165,9 @@ def main() -> None:
             changed_lines = [i + 1 for i in range(len(open(fpath).readlines()))]
         else:
             changed_lines = get_changed_lines(fpath)
-        annotated, total, warning_lines, failure_lines = check_file(fpath, changed_lines, args.debug)
+        annotated, total, warning_lines, failure_lines = check_file(
+            fpath, changed_lines, args.debug
+        )
         total_annotated += annotated
         total_changed += total
         all_warnings.extend(warning_lines)
@@ -152,7 +181,9 @@ def main() -> None:
     )
 
     if all_warnings:
-        print("\n⚠️ Suggest Improve: Lines missing type annotations for inputs and outputs:\n")
+        print(
+            "\n⚠️ Suggest Improve: Lines missing type annotations for inputs and outputs:\n"
+        )
         for fname, lineno, line in all_warnings:
             print(f"{fname}:{lineno}: {line}")
 

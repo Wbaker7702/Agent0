@@ -20,7 +20,11 @@ import os
 import ray
 
 from verl.single_controller.base.worker import Worker
-from verl.single_controller.ray.base import RayClassWithInitArgs, RayResourcePool, RayWorkerGroup
+from verl.single_controller.ray.base import (
+    RayClassWithInitArgs,
+    RayResourcePool,
+    RayWorkerGroup,
+)
 
 
 @ray.remote
@@ -41,7 +45,9 @@ def test_basics():
     class_with_args = RayClassWithInitArgs(cls=TestActor)
 
     worker_group = RayWorkerGroup(
-        resource_pool=resource_pool, ray_cls_with_init=class_with_args, name_prefix="worker_group_basic"
+        resource_pool=resource_pool,
+        ray_cls_with_init=class_with_args,
+        name_prefix="worker_group_basic",
     )
 
     output = worker_group.execute_all_sync("getenv", key="RAY_LOCAL_WORLD_SIZE")

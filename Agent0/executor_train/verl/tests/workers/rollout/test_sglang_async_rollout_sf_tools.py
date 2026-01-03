@@ -38,7 +38,11 @@ from verl.tools.schemas import (
     OpenAIFunctionSchema,
     OpenAIFunctionToolSchema,
 )
-from verl.workers.rollout.schemas import AsyncRolloutRequest, AsyncRolloutRequestStateEnum, Message
+from verl.workers.rollout.schemas import (
+    AsyncRolloutRequest,
+    AsyncRolloutRequestStateEnum,
+    Message,
+)
 from verl.workers.rollout.sglang_rollout.sglang_rollout import SGLangRollout
 
 sandbox_url = ""
@@ -163,14 +167,20 @@ class TestRolloutWithTools:
 
     @pytest.fixture
     def sandbox_fusion_data(self, qwen_tokenizer):
-        user_prompt, expect_turn_array, tool_return_array = get_sandbox_fusion_messages()
+        user_prompt, expect_turn_array, tool_return_array = (
+            get_sandbox_fusion_messages()
+        )
         prompts = [[message] for message in user_prompt]
         preencode_turn_array = [
-            qwen_tokenizer.apply_chat_template([turn], tokenize=False, add_generation_prompt=False)
+            qwen_tokenizer.apply_chat_template(
+                [turn], tokenize=False, add_generation_prompt=False
+            )
             for turn in expect_turn_array
         ]
         preencode_tool_return_array = [
-            qwen_tokenizer.apply_chat_template([turn], tokenize=False, add_generation_prompt=True)
+            qwen_tokenizer.apply_chat_template(
+                [turn], tokenize=False, add_generation_prompt=True
+            )
             for turn in tool_return_array
         ]
         return prompts, preencode_turn_array, preencode_tool_return_array
@@ -183,7 +193,11 @@ class TestRolloutWithTools:
         tensor_parallel_size = 1
         tool_path = "./resource/tool_configs/sandbox_fusion_tool_config"
         rollout_config = get_rollout_config(
-            max_response_length, max_prompt_length, dtype, tensor_parallel_size, tool_path
+            max_response_length,
+            max_prompt_length,
+            dtype,
+            tensor_parallel_size,
+            tool_path,
         )
         return rollout_config
 
@@ -191,10 +205,14 @@ class TestRolloutWithTools:
     def sandbox_data_proto(self, sandbox_fusion_data, qwen_tokenizer):
         preencode_prompts, _, _ = sandbox_fusion_data
         prompts = [
-            qwen_tokenizer.apply_chat_template(message, tokenize=False, add_generation_prompt=True)
+            qwen_tokenizer.apply_chat_template(
+                message, tokenize=False, add_generation_prompt=True
+            )
             for message in preencode_prompts
         ]
-        input_ids, attention_mask, position_ids = prepare_inputs(qwen_tokenizer, prompts, 1000)
+        input_ids, attention_mask, position_ids = prepare_inputs(
+            qwen_tokenizer, prompts, 1000
+        )
         prompt_dict = TensorDict(
             {
                 "input_ids": input_ids,
@@ -216,16 +234,27 @@ class TestRolloutWithTools:
         )
         index = np.array([0], dtype=object)
         prompts = DataProto(
-            batch=prompt_dict, non_tensor_batch={"raw_prompt": messages, "tools_kwargs": tools_kwargs, "index": index}
+            batch=prompt_dict,
+            non_tensor_batch={
+                "raw_prompt": messages,
+                "tools_kwargs": tools_kwargs,
+                "index": index,
+            },
         )
         return prompts
 
     @pytest.fixture
-    def mock_rollout(self, sandbox_fusion_rollout_config, qwen_tokenizer, qwen_model_config):
+    def mock_rollout(
+        self, sandbox_fusion_rollout_config, qwen_tokenizer, qwen_model_config
+    ):
         """Mock the rollout instance"""
-        with patch.object(SGLangRollout, "_init_distributed_env", return_value=None), patch.object(
+        with patch.object(
+            SGLangRollout, "_init_distributed_env", return_value=None
+        ), patch.object(
             SGLangRollout, "_init_inference_engine", return_value=None
-        ), patch.object(SGLangRollout, "_init_sampling_params", return_value=None):
+        ), patch.object(
+            SGLangRollout, "_init_sampling_params", return_value=None
+        ):
             rollout = SGLangRollout(
                 actor_module="",
                 config=sandbox_fusion_rollout_config,
@@ -253,7 +282,9 @@ class TestRolloutWithTools:
 
     def test_rollout_req_creation(self, mock_rollout, sandbox_data_proto):
         """Test request creation functionality"""
-        req_list = mock_rollout._preprocess_prompt_to_async_rollout_requests(sandbox_data_proto, n=1)
+        req_list = mock_rollout._preprocess_prompt_to_async_rollout_requests(
+            sandbox_data_proto, n=1
+        )
         assert len(req_list) == 1
         assert req_list[0].state == AsyncRolloutRequestStateEnum.PENDING
         assert len(req_list[0].tool_schemas) == 1
@@ -278,10 +309,14 @@ class TestRolloutWithTools:
             ),
         )
 
-    def test_over_size_case(self, mock_rollout, sandbox_data_proto, sandbox_fusion_data):
+    def test_over_size_case(
+        self, mock_rollout, sandbox_data_proto, sandbox_fusion_data
+    ):
         """Test over-size response truncation case"""
         mock_rollout.config.multi_turn.max_assistant_turns = 1
-        req = mock_rollout._preprocess_prompt_to_async_rollout_requests(sandbox_data_proto, n=1)[0]
+        req = mock_rollout._preprocess_prompt_to_async_rollout_requests(
+            sandbox_data_proto, n=1
+        )[0]
         req = MagicMock(wraps=req, spec=AsyncRolloutRequest)
         req.finalize = MagicMock()
         req_list = [req]
@@ -308,7 +343,10 @@ class TestRolloutWithTools:
         loop = asyncio.get_event_loop()
         output_req_list = loop.run_until_complete(
             asyncio.gather(
-                *[mock_rollout._async_rollout_a_request(req, True, False) for req in req_list],
+                *[
+                    mock_rollout._async_rollout_a_request(req, True, False)
+                    for req in req_list
+                ],
             )
         )
         assert len(output_req_list) == 1
@@ -324,11 +362,15 @@ class TestRolloutWithTools:
         )
 
     @skip_if_valid_sandbox(sandbox_url)
-    def test_tool_call_basic_case(self, mock_rollout, sandbox_data_proto, sandbox_fusion_data):
+    def test_tool_call_basic_case(
+        self, mock_rollout, sandbox_data_proto, sandbox_fusion_data
+    ):
         """Test basic tool call case"""
         mock_rollout.config.multi_turn.max_assistant_turns = 10
         mock_rollout._tool_map["code_interpreter"].sandbox_fusion_url = sandbox_url
-        req = mock_rollout._preprocess_prompt_to_async_rollout_requests(sandbox_data_proto, n=1)[0]
+        req = mock_rollout._preprocess_prompt_to_async_rollout_requests(
+            sandbox_data_proto, n=1
+        )[0]
         req = MagicMock(wraps=req, spec=AsyncRolloutRequest)
         req.finalize = MagicMock()
         req_list = [req]
@@ -342,7 +384,13 @@ class TestRolloutWithTools:
                     "text": turn,
                     "meta_info": {
                         "id": "d1188d81cba840359df5b352b344bc8e",
-                        "finish_reason": {"type": "tool_calls" if idx < len(expect_turn_array) - 1 else "stop"},
+                        "finish_reason": {
+                            "type": (
+                                "tool_calls"
+                                if idx < len(expect_turn_array) - 1
+                                else "stop"
+                            )
+                        },
                         "prompt_tokens": len(turn),
                         "completion_tokens": 100,
                         "cached_tokens": 0,
@@ -359,7 +407,10 @@ class TestRolloutWithTools:
         loop = asyncio.get_event_loop()
         output_req_list = loop.run_until_complete(
             asyncio.gather(
-                *[mock_rollout._async_rollout_a_request(req, True, False) for req in req_list],
+                *[
+                    mock_rollout._async_rollout_a_request(req, True, False)
+                    for req in req_list
+                ],
             )
         )
         assert len(output_req_list) == 1
@@ -377,11 +428,15 @@ class TestRolloutWithTools:
         assert code_counter == 2
 
     @skip_if_valid_sandbox(sandbox_url)
-    def test_tool_call_batch_case(self, mock_rollout, sandbox_data_proto, sandbox_fusion_data):
+    def test_tool_call_batch_case(
+        self, mock_rollout, sandbox_data_proto, sandbox_fusion_data
+    ):
         """Test batch tool call case"""
         mock_rollout.config.multi_turn.max_assistant_turns = 10
         mock_rollout._tool_map["code_interpreter"].sandbox_fusion_url = sandbox_url
-        req = mock_rollout._preprocess_prompt_to_async_rollout_requests(sandbox_data_proto, n=1)[0]
+        req = mock_rollout._preprocess_prompt_to_async_rollout_requests(
+            sandbox_data_proto, n=1
+        )[0]
         req_nums = 100
         req_list = []
         req_turns_counter = {}
@@ -400,7 +455,13 @@ class TestRolloutWithTools:
                         "text": turn,
                         "meta_info": {
                             "id": "d1188d81cba840359df5b352b344bc8e",
-                            "finish_reason": {"type": "tool_calls" if idx < len(expect_turn_array) - 1 else "stop"},
+                            "finish_reason": {
+                                "type": (
+                                    "tool_calls"
+                                    if idx < len(expect_turn_array) - 1
+                                    else "stop"
+                                )
+                            },
                             "prompt_tokens": len(turn),
                             "completion_tokens": 100,
                             "cached_tokens": 0,
@@ -415,19 +476,30 @@ class TestRolloutWithTools:
             req_turns_counter[_temp_req.batch_data_id] = 0
 
         async def hacked_handle_engine_call(
-            self, _req: AsyncRolloutRequest, do_sample: bool, is_validate: bool, **kwargs
+            self,
+            _req: AsyncRolloutRequest,
+            do_sample: bool,
+            is_validate: bool,
+            **kwargs,
         ):
-            result = req_turns_map[_req.batch_data_id][req_turns_counter[_req.batch_data_id]]
+            result = req_turns_map[_req.batch_data_id][
+                req_turns_counter[_req.batch_data_id]
+            ]
             req_turns_counter[_req.batch_data_id] += 1
             re = await result
             return re
 
-        with patch.object(SGLangRollout, "_handle_engine_call", new=hacked_handle_engine_call):
+        with patch.object(
+            SGLangRollout, "_handle_engine_call", new=hacked_handle_engine_call
+        ):
             mock_rollout._tp_rank = 0
             loop = asyncio.get_event_loop()
             output_req_list = loop.run_until_complete(
                 asyncio.gather(
-                    *[mock_rollout._async_rollout_a_request(req, True, False) for req in req_list],
+                    *[
+                        mock_rollout._async_rollout_a_request(req, True, False)
+                        for req in req_list
+                    ],
                 )
             )
             assert len(output_req_list) == req_nums
@@ -562,9 +634,14 @@ class TestSingleNodeRateLimiterCase(RayMultiProcessTestCase):
 
         # exec_worker = ExecutionWorker.options(max_concurrency=10).remote(enable_global_rate_limit=True, rate_limit=3)
         exec_worker = init_execution_pool(
-            num_workers=10, enable_global_rate_limit=True, rate_limit=3, mode=PoolMode.ThreadMode
+            num_workers=10,
+            enable_global_rate_limit=True,
+            rate_limit=3,
+            mode=PoolMode.ThreadMode,
         )
-        center = TestActor.options(get_if_exists=True, name="test-actor").remote(self.rank, self.world_size)
+        center = TestActor.options(get_if_exists=True, name="test-actor").remote(
+            self.rank, self.world_size
+        )
         ray.get(exec_worker.ping.remote())
 
         def fn(i):
@@ -594,7 +671,10 @@ class TestSingleNodeRateLimiterCase(RayMultiProcessTestCase):
 
         # exec_worker = ExecutionWorker.options(max_concurrency=10).remote(enable_global_rate_limit=True, rate_limit=6)
         exec_worker = init_execution_pool(
-            num_workers=10, enable_global_rate_limit=True, rate_limit=6, mode=PoolMode.ThreadMode
+            num_workers=10,
+            enable_global_rate_limit=True,
+            rate_limit=6,
+            mode=PoolMode.ThreadMode,
         )
         ray.get(exec_worker.ping.remote())
 
@@ -609,8 +689,12 @@ class TestSingleNodeRateLimiterCase(RayMultiProcessTestCase):
         results = loop.run_until_complete(asyncio.gather(*tasks))
         expect_result = [None] + list(range(10)) + list(range(11, 20))
         sorted_data = sorted(results, key=lambda x: (x is not None, x))
-        assert sorted_data == expect_result, f"results: {results}, expect_result: {expect_result}"
-        rate_limiter = TokenBucketWorker.options(name="rate-limiter", get_if_exists=True).remote()
+        assert (
+            sorted_data == expect_result
+        ), f"results: {results}, expect_result: {expect_result}"
+        rate_limiter = TokenBucketWorker.options(
+            name="rate-limiter", get_if_exists=True
+        ).remote()
         rate = ray.get(rate_limiter.get_current_count.remote())
         assert rate == 0, f"rate: {rate}"
 
@@ -626,9 +710,14 @@ class TestMultiNodeRateLimiterCase(RayMultiProcessTestCase):
 
         # exec_worker = ExecutionWorker.options(max_concurrency=10).remote(enable_global_rate_limit=True, rate_limit=6)
         exec_worker = init_execution_pool(
-            num_workers=10, enable_global_rate_limit=True, rate_limit=6, mode=PoolMode.ThreadMode
+            num_workers=10,
+            enable_global_rate_limit=True,
+            rate_limit=6,
+            mode=PoolMode.ThreadMode,
         )
-        center = TestActor.options(get_if_exists=True, name="test-actor").remote(self.rank, self.world_size)
+        center = TestActor.options(get_if_exists=True, name="test-actor").remote(
+            self.rank, self.world_size
+        )
         ray.get(exec_worker.ping.remote())
 
         def fn(i):

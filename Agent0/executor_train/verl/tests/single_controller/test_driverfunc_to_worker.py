@@ -45,7 +45,8 @@ def get_aux_metrics(self, test_proto):
         decode_count.append(len(sequence_ids[i].tolist()))
     ret_proto = DataProto(
         batch=TensorDict(
-            {"sequence_ids": sequence_ids, "decode_count": torch.tensor(decode_count)}, batch_size=sequence_ids.size(0)
+            {"sequence_ids": sequence_ids, "decode_count": torch.tensor(decode_count)},
+            batch_size=sequence_ids.size(0),
         )
     )
     return ret_proto
@@ -79,6 +80,8 @@ def test():
     hs = HackSelf()
     ret_proto2 = get_aux_metrics(hs, test_proto)
 
-    torch.testing.assert_close(ret_proto1.batch["decode_count"], ret_proto2.batch["decode_count"])
+    torch.testing.assert_close(
+        ret_proto1.batch["decode_count"], ret_proto2.batch["decode_count"]
+    )
 
     ray.shutdown()

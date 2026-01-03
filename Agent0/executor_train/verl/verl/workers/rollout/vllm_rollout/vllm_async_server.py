@@ -24,7 +24,11 @@ from starlette.responses import JSONResponse, StreamingResponse
 from vllm import SamplingParams
 from vllm.engine.arg_utils import AsyncEngineArgs
 from vllm.entrypoints.logger import RequestLogger
-from vllm.entrypoints.openai.protocol import ChatCompletionRequest, ChatCompletionResponse, ErrorResponse
+from vllm.entrypoints.openai.protocol import (
+    ChatCompletionRequest,
+    ChatCompletionResponse,
+    ErrorResponse,
+)
 from vllm.entrypoints.openai.serving_chat import OpenAIServingChat
 from vllm.entrypoints.openai.serving_models import BaseModelPath, OpenAIServingModels
 from vllm.inputs import TokensPrompt
@@ -40,21 +44,30 @@ logger = logging.getLogger(__file__)
 
 
 def _get_model_runner_workers(vllm_config, init_ray: bool = True):
-    assert vllm_config.instance_id is not None, "instance_id must be set for external ray actors."
+    assert (
+        vllm_config.instance_id is not None
+    ), "instance_id must be set for external ray actors."
 
     fields = vllm_config.instance_id.split(":")
     assert len(fields) == 4, (
         f"instance_id: {vllm_config.instance_id} must be in the format of "
         f"<namespace>:<wg_prefix>:<vllm_dp_size>:<vllm_dp_rank>."
     )
-    namespace, wg_prefix, vllm_dp_size, vllm_dp_rank = fields[0], fields[1], int(fields[2]), int(fields[3])
+    namespace, wg_prefix, vllm_dp_size, vllm_dp_rank = (
+        fields[0],
+        fields[1],
+        int(fields[2]),
+        int(fields[3]),
+    )
 
     # Make sure subprocess in same namespace as parent actor.
     # actor name format: {name_prefix}WorkerDict_{pg_idx}:{local_rank}
     if init_ray:
         ray.init(namespace=namespace)
     actor_names = [
-        actor_name for actor_name in ray.util.list_named_actors() if actor_name.startswith(f"{wg_prefix}WorkerDict")
+        actor_name
+        for actor_name in ray.util.list_named_actors()
+        if actor_name.startswith(f"{wg_prefix}WorkerDict")
     ]
 
     vllm_tp_size = vllm_config.parallel_config.tensor_parallel_size
@@ -71,9 +84,15 @@ def _get_model_runner_workers(vllm_config, init_ray: bool = True):
 
     # sort actor names by pg_index and local_rank
     actor_names = sorted(actor_names, key=get_pg_index_and_local_rank)
-    actor_names = actor_names[vllm_dp_rank * vllm_tp_size : (vllm_dp_rank + 1) * vllm_tp_size]
-    workers: list[WorkerWrapperBase] = [ray.get_actor(actor_name) for actor_name in actor_names]
-    print(f"instance_id: {vllm_config.instance_id} initializes with external actors: {actor_names}")
+    actor_names = actor_names[
+        vllm_dp_rank * vllm_tp_size : (vllm_dp_rank + 1) * vllm_tp_size
+    ]
+    workers: list[WorkerWrapperBase] = [
+        ray.get_actor(actor_name) for actor_name in actor_names
+    ]
+    print(
+        f"instance_id: {vllm_config.instance_id} initializes with external actors: {actor_names}"
+    )
 
     return workers
 
@@ -84,7 +103,9 @@ class ExternalRayDistributedExecutor(Executor):
     uses_ray: bool = False
 
     def _init_executor(self) -> None:
-        self.workers = _get_model_runner_workers(vllm_config=self.vllm_config, init_ray=True)
+        self.workers = _get_model_runner_workers(
+            vllm_config=self.vllm_config, init_ray=True
+        )
 
         kwargs = dict(
             vllm_config=self.vllm_config,
@@ -114,7 +135,10 @@ class ExternalRayDistributedExecutor(Executor):
 
         # ~3ms overhead per schedule step due to SchedulerOutput/ModelRunnerOutput serialization/deserialization.
         outputs = ray.get(
-            [worker.execute_method.remote(sent_method, *args, **(kwargs or {})) for worker in self.workers]
+            [
+                worker.execute_method.remote(sent_method, *args, **(kwargs or {}))
+                for worker in self.workers
+            ]
         )
         return outputs
 
@@ -190,7 +214,9 @@ class AsyncvLLMServer(AsyncServerBase):
     For vLLM AsyncLLM design, see: https://github.com/vllm-project/vllm/pull/9826
     """
 
-    def __init__(self, config: DictConfig, vllm_dp_size: int, vllm_dp_rank: int, wg_prefix: str):
+    def __init__(
+        self, config: DictConfig, vllm_dp_size: int, vllm_dp_rank: int, wg_prefix: str
+    ):
         """
         Args:
             config: DictConfig.
@@ -217,7 +243,11 @@ class AsyncvLLMServer(AsyncServerBase):
 
         tensor_parallel_size = config.get("tensor_model_parallel_size", 1)
         max_num_batched_tokens = config.get("max_num_batched_tokens", 8192)
-        max_model_len = config.max_model_len if config.max_model_len else config.prompt_length + config.response_length
+        max_model_len = (
+            config.max_model_len
+            if config.max_model_len
+            else config.prompt_length + config.response_length
+        )
         self.max_model_len = int(max_model_len)
 
         # Override default generation config from hugging face model config,
@@ -285,12 +315,19 @@ class AsyncvLLMServer(AsyncServerBase):
     def _create_engine_config(self, engine_args: AsyncEngineArgs):
         vllm_config = engine_args.create_engine_config()
         namespace = ray.get_runtime_context().namespace
-        vllm_config.instance_id = f"{namespace}:{self.wg_prefix}:{self.vllm_dp_size}:{self.vllm_dp_rank}"
+        vllm_config.instance_id = (
+            f"{namespace}:{self.wg_prefix}:{self.vllm_dp_size}:{self.vllm_dp_rank}"
+        )
 
         # VERL_VLLM_ZMQ_ADDRESSES
-        if engine_args.distributed_executor_backend == ExternalZeroMQDistributedExecutor:
+        if (
+            engine_args.distributed_executor_backend
+            == ExternalZeroMQDistributedExecutor
+        ):
             workers = _get_model_runner_workers(vllm_config=vllm_config, init_ray=False)
-            zmq_addresses = ray.get([worker.get_zeromq_address.remote() for worker in workers])
+            zmq_addresses = ray.get(
+                [worker.get_zeromq_address.remote() for worker in workers]
+            )
             print(f"VERL_VLLM_ZMQ_ADDRESSES: {zmq_addresses}")
             os.environ["VERL_VLLM_ZMQ_ADDRESSES"] = ",".join(zmq_addresses)
 
@@ -303,21 +340,29 @@ class AsyncvLLMServer(AsyncServerBase):
         """
         request_json = await raw_request.json()
         request = ChatCompletionRequest(**request_json)
-        generator = await self.openai_serving_chat.create_chat_completion(request, raw_request)
+        generator = await self.openai_serving_chat.create_chat_completion(
+            request, raw_request
+        )
 
         if isinstance(generator, ErrorResponse):
-            return JSONResponse(content=generator.model_dump(), status_code=generator.code)
+            return JSONResponse(
+                content=generator.model_dump(), status_code=generator.code
+            )
         if request.stream:
             return StreamingResponse(content=generator, media_type="text/event-stream")
         else:
             assert isinstance(generator, ChatCompletionResponse)
             return JSONResponse(content=generator.model_dump())
 
-    async def generate(self, prompt_ids: list[int], sampling_params: dict[str, Any], request_id: str) -> list[int]:
+    async def generate(
+        self, prompt_ids: list[int], sampling_params: dict[str, Any], request_id: str
+    ) -> list[int]:
         max_tokens = self.max_model_len - len(prompt_ids)
         sampling_params = SamplingParams(max_tokens=max_tokens, **sampling_params)
         prompt = TokensPrompt(prompt_token_ids=prompt_ids)
-        generator = self.engine.generate(prompt=prompt, sampling_params=sampling_params, request_id=request_id)
+        generator = self.engine.generate(
+            prompt=prompt, sampling_params=sampling_params, request_id=request_id
+        )
 
         # Get final response
         final_res: Optional[RequestOutput] = None

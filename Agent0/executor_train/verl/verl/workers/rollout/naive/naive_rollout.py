@@ -62,7 +62,11 @@ class NaiveRollout(BaseRollout):
 
         self.module.eval()
 
-        prev_attention_mask = torch.ones(size=(batch_size, 1), dtype=attention_mask.dtype, device=attention_mask.device)
+        prev_attention_mask = torch.ones(
+            size=(batch_size, 1),
+            dtype=attention_mask.dtype,
+            device=attention_mask.device,
+        )
 
         logits_lst = []
         for _ in range(self.config.response_length):
@@ -71,7 +75,11 @@ class NaiveRollout(BaseRollout):
             idx_cond = idx
             # forward the model to get the logits for the index in the sequence
             # we use huggingface APIs here
-            output = self.module(input_ids=idx_cond, attention_mask=attention_mask, position_ids=position_ids)
+            output = self.module(
+                input_ids=idx_cond,
+                attention_mask=attention_mask,
+                position_ids=position_ids,
+            )
             logits = output.logits
             # pluck the logits at the final step and scale by desired temperature
             logits = logits[:, -1, :] / self.config.temperature  # (bs, vocab_size)
@@ -90,7 +98,9 @@ class NaiveRollout(BaseRollout):
             attention_mask = torch.cat((attention_mask, prev_attention_mask), dim=-1)
 
             for token_id in eos_token_id:
-                prev_attention_mask = torch.logical_and(idx_next != token_id, prev_attention_mask.bool())
+                prev_attention_mask = torch.logical_and(
+                    idx_next != token_id, prev_attention_mask.bool()
+                )
             prev_attention_mask.to(attention_mask.dtype)
 
             position_ids = torch.cat((position_ids, position_ids[:, -1:] + 1), dim=-1)

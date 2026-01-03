@@ -29,8 +29,12 @@ def test_trainer_forward_consistency(trainer: FSDPSFTTrainer, total_steps: int =
         total_steps: Number of steps to test (default: 4)
     """
     if trainer.device_mesh.get_rank() == 0:
-        print("\nStarting debug comparison between original and SP+rmpad forward passes...")
-        print(f"Sequence parallel size: {trainer.config.ulysses_sequence_parallel_size}")
+        print(
+            "\nStarting debug comparison between original and SP+rmpad forward passes..."
+        )
+        print(
+            f"Sequence parallel size: {trainer.config.ulysses_sequence_parallel_size}"
+        )
         print(f"Remove padding: {trainer.use_remove_padding}\n")
 
     steps_remaining = total_steps
@@ -38,7 +42,9 @@ def test_trainer_forward_consistency(trainer: FSDPSFTTrainer, total_steps: int =
     for epoch in range(1):  # Just one epoch for testing
         trainer.train_sampler.set_epoch(epoch=epoch)
         for data in trainer.train_dataloader:
-            data = TensorDict(data, batch_size=trainer.config.data.train_batch_size).cuda()
+            data = TensorDict(
+                data, batch_size=trainer.config.data.train_batch_size
+            ).cuda()
             trainer.fsdp_model.train()
             micro_batches = data.split(trainer.config.data.micro_batch_size_per_gpu)
 
@@ -51,21 +57,31 @@ def test_trainer_forward_consistency(trainer: FSDPSFTTrainer, total_steps: int =
                 trainer.use_remove_padding = False
                 old_sp = trainer.config.ulysses_sequence_parallel_size
                 trainer.config.ulysses_sequence_parallel_size = 1
-                loss_ref = trainer._compute_loss_and_backward(micro_batch.copy(), do_backward=False)
+                loss_ref = trainer._compute_loss_and_backward(
+                    micro_batch.copy(), do_backward=False
+                )
 
                 # Do SP and rmpad
                 trainer.config.ulysses_sequence_parallel_size = old_sp
                 trainer.use_remove_padding = True
-                loss_sp = trainer._compute_loss_and_backward(micro_batch.copy(), do_backward=False)
+                loss_sp = trainer._compute_loss_and_backward(
+                    micro_batch.copy(), do_backward=False
+                )
 
                 # Collect losses across all ranks
                 loss_ref_all = loss_ref.clone()
                 loss_sp_all = loss_sp.clone()
-                torch.distributed.all_reduce(loss_ref_all, op=torch.distributed.ReduceOp.AVG)
-                torch.distributed.all_reduce(loss_sp_all, op=torch.distributed.ReduceOp.AVG)
+                torch.distributed.all_reduce(
+                    loss_ref_all, op=torch.distributed.ReduceOp.AVG
+                )
+                torch.distributed.all_reduce(
+                    loss_sp_all, op=torch.distributed.ReduceOp.AVG
+                )
 
                 # Calculate relative difference of averaged losses
-                rel_diff = torch.abs(loss_ref_all - loss_sp_all) / (torch.abs(loss_ref_all) + 1e-8)
+                rel_diff = torch.abs(loss_ref_all - loss_sp_all) / (
+                    torch.abs(loss_ref_all) + 1e-8
+                )
 
                 if trainer.device_mesh.get_rank() == 0:
                     print("\nComparison Results (Averaged across ranks):")
@@ -73,7 +89,9 @@ def test_trainer_forward_consistency(trainer: FSDPSFTTrainer, total_steps: int =
                     print(f"SP+rmpad Loss: {loss_sp_all.item():.6f}")
                     print(f"Relative Difference: {rel_diff.item():.6f}")
 
-                    assert rel_diff.item() < 1e-2, "Significant difference detected between averaged losses!"
+                    assert (
+                        rel_diff.item() < 1e-2
+                    ), "Significant difference detected between averaged losses!"
                     print("Loss difference is within the acceptable range.")
 
                 steps_remaining -= 1
@@ -98,11 +116,15 @@ def create_trainer(config):
     """
     local_rank, rank, world_size = initialize_global_process_group()
 
-    device_mesh = init_device_mesh(device_type="cuda", mesh_shape=(world_size,), mesh_dim_names=("fsdp",))
+    device_mesh = init_device_mesh(
+        device_type="cuda", mesh_shape=(world_size,), mesh_dim_names=("fsdp",)
+    )
 
     dp_size = world_size // config.ulysses_sequence_parallel_size
     ulysses_device_mesh = init_device_mesh(
-        device_type="cuda", mesh_shape=(dp_size, config.ulysses_sequence_parallel_size), mesh_dim_names=("dp", "sp")
+        device_type="cuda",
+        mesh_shape=(dp_size, config.ulysses_sequence_parallel_size),
+        mesh_dim_names=("dp", "sp"),
     )
 
     # build tokenizer and datasets first
@@ -111,7 +133,9 @@ def create_trainer(config):
     from verl.utils.fs import copy_to_local
 
     local_model_path = copy_to_local(src=config.model.partial_pretrain, verbose=True)
-    tokenizer = hf_tokenizer(local_model_path, trust_remote_code=config.model.trust_remote_code)
+    tokenizer = hf_tokenizer(
+        local_model_path, trust_remote_code=config.model.trust_remote_code
+    )
     train_dataset = create_sft_dataset(config.data.train_files, config.data, tokenizer)
     val_dataset = create_sft_dataset(config.data.val_files, config.data, tokenizer)
 

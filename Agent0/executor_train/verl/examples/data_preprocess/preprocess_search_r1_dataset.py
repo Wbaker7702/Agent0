@@ -25,7 +25,9 @@ from huggingface_hub.utils import EntryNotFoundError
 from verl.utils.hdfs_io import copy, makedirs
 
 # Setup logging
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger(__name__)
 
 # Configuration constants
@@ -58,7 +60,10 @@ def process_single_row(row, current_split_name, row_index):
 
     # Build prompt structure
     user_content = user_content_prefix.rstrip("\n") + question
-    prompt = [{"role": "system", "content": system_content}, {"role": "user", "content": user_content}]
+    prompt = [
+        {"role": "system", "content": system_content},
+        {"role": "user", "content": user_content},
+    ]
 
     # Extract ground truth from reward_model or fallback to golden_answers
     reward_model_data = row.get("reward_model")
@@ -73,7 +78,11 @@ def process_single_row(row, current_split_name, row_index):
     # Build tools kwargs structure
     tools_kwargs = {
         "search": {
-            "create_kwargs": {"ground_truth": ground_truth, "question": question, "data_source": data_source_tagged}
+            "create_kwargs": {
+                "ground_truth": ground_truth,
+                "question": question,
+                "data_source": data_source_tagged,
+            }
         }
     }
 
@@ -126,18 +135,24 @@ def main():
                 logger.info(f"Loaded {len(df_raw)} rows from {parquet_filename}")
 
                 def apply_process_row(row, split_name=split):
-                    return process_single_row(row, current_split_name=split_name, row_index=row.name)
+                    return process_single_row(
+                        row, current_split_name=split_name, row_index=row.name
+                    )
 
                 df_processed = df_raw.apply(apply_process_row, axis=1)
 
                 # Save processed DataFrame
                 output_file_path = os.path.join(local_save_dir, f"{split}.parquet")
                 df_processed.to_parquet(output_file_path, index=False)
-                logger.info(f"Saved {len(df_processed)} processed rows to {output_file_path}")
+                logger.info(
+                    f"Saved {len(df_processed)} processed rows to {output_file_path}"
+                )
                 processed_files.append(output_file_path)
 
             except EntryNotFoundError:
-                logger.warning(f"{parquet_filename} not found in repository {args.hf_repo_id}")
+                logger.warning(
+                    f"{parquet_filename} not found in repository {args.hf_repo_id}"
+                )
             except Exception as e:
                 logger.error(f"Error processing {split} split: {e}")
 
@@ -145,7 +160,9 @@ def main():
         logger.warning("No data was processed or saved")
         return
 
-    logger.info(f"Successfully processed {len(processed_files)} files to {local_save_dir}")
+    logger.info(
+        f"Successfully processed {len(processed_files)} files to {local_save_dir}"
+    )
 
     # Copy to HDFS if specified
     if args.hdfs_dir:
@@ -158,16 +175,24 @@ def main():
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Download Search-R1 from HuggingFace, process, and save to Parquet.")
+    parser = argparse.ArgumentParser(
+        description="Download Search-R1 from HuggingFace, process, and save to Parquet."
+    )
     parser.add_argument(
-        "--hf_repo_id", default="PeterJinGo/nq_hotpotqa_train", help="HuggingFace dataset repository ID."
+        "--hf_repo_id",
+        default="PeterJinGo/nq_hotpotqa_train",
+        help="HuggingFace dataset repository ID.",
     )
     parser.add_argument(
         "--local_dir",
         default="~/data/searchR1_processed_direct",
         help="Local directory to save the processed Parquet files.",
     )
-    parser.add_argument("--hdfs_dir", default=None, help="Optional HDFS directory to copy the Parquet files to.")
+    parser.add_argument(
+        "--hdfs_dir",
+        default=None,
+        help="Optional HDFS directory to copy the Parquet files to.",
+    )
 
     args = parser.parse_args()
 

@@ -107,7 +107,9 @@ def get_rope_index(
     video_token_id = 151656
     vision_start_token_id = 151652
     mrope_position_deltas = []
-    if input_ids is not None and (image_grid_thw is not None or video_grid_thw is not None):
+    if input_ids is not None and (
+        image_grid_thw is not None or video_grid_thw is not None
+    ):
         total_input_ids = input_ids
         if attention_mask is None:
             attention_mask = torch.ones_like(total_input_ids)
@@ -123,7 +125,9 @@ def get_rope_index(
         for i, input_ids in enumerate(total_input_ids):
             input_ids = input_ids[attention_mask[i] == 1]
             image_nums, video_nums = 0, 0
-            vision_start_indices = torch.argwhere(input_ids == vision_start_token_id).squeeze(1)
+            vision_start_indices = torch.argwhere(
+                input_ids == vision_start_token_id
+            ).squeeze(1)
             vision_tokens = input_ids[vision_start_indices + 1]
             image_nums = (vision_tokens == image_token_id).sum()
             video_nums = (vision_tokens == video_token_id).sum()
@@ -171,8 +175,12 @@ def get_rope_index(
                 )
                 text_len = ed - st
 
-                st_idx = llm_pos_ids_list[-1].max() + 1 if len(llm_pos_ids_list) > 0 else 0
-                llm_pos_ids_list.append(torch.arange(text_len).view(1, -1).expand(3, -1) + st_idx)
+                st_idx = (
+                    llm_pos_ids_list[-1].max() + 1 if len(llm_pos_ids_list) > 0 else 0
+                )
+                llm_pos_ids_list.append(
+                    torch.arange(text_len).view(1, -1).expand(3, -1) + st_idx
+                )
 
                 range_tensor = torch.arange(llm_grid_t).view(-1, 1)
                 expanded_range = range_tensor.expand(-1, llm_grid_h * llm_grid_w)
@@ -182,27 +190,53 @@ def get_rope_index(
                 time_tensor_long = time_tensor.long()
                 t_index = time_tensor_long.flatten()
 
-                h_index = torch.arange(llm_grid_h).view(1, -1, 1).expand(llm_grid_t, -1, llm_grid_w).flatten()
-                w_index = torch.arange(llm_grid_w).view(1, 1, -1).expand(llm_grid_t, llm_grid_h, -1).flatten()
-                llm_pos_ids_list.append(torch.stack([t_index, h_index, w_index]) + text_len + st_idx)
+                h_index = (
+                    torch.arange(llm_grid_h)
+                    .view(1, -1, 1)
+                    .expand(llm_grid_t, -1, llm_grid_w)
+                    .flatten()
+                )
+                w_index = (
+                    torch.arange(llm_grid_w)
+                    .view(1, 1, -1)
+                    .expand(llm_grid_t, llm_grid_h, -1)
+                    .flatten()
+                )
+                llm_pos_ids_list.append(
+                    torch.stack([t_index, h_index, w_index]) + text_len + st_idx
+                )
                 st = ed + llm_grid_t * llm_grid_h * llm_grid_w
 
             if st < len(input_tokens):
-                st_idx = llm_pos_ids_list[-1].max() + 1 if len(llm_pos_ids_list) > 0 else 0
+                st_idx = (
+                    llm_pos_ids_list[-1].max() + 1 if len(llm_pos_ids_list) > 0 else 0
+                )
                 text_len = len(input_tokens) - st
-                llm_pos_ids_list.append(torch.arange(text_len).view(1, -1).expand(3, -1) + st_idx)
+                llm_pos_ids_list.append(
+                    torch.arange(text_len).view(1, -1).expand(3, -1) + st_idx
+                )
 
             llm_positions = torch.cat(llm_pos_ids_list, dim=1).reshape(3, -1)
-            position_ids[..., i, attention_mask[i] == 1] = llm_positions.to(position_ids.device)
-            mrope_position_deltas.append(llm_positions.max() + 1 - len(total_input_ids[i]))
-        mrope_position_deltas = torch.tensor(mrope_position_deltas, device=input_ids.device).unsqueeze(1)
+            position_ids[..., i, attention_mask[i] == 1] = llm_positions.to(
+                position_ids.device
+            )
+            mrope_position_deltas.append(
+                llm_positions.max() + 1 - len(total_input_ids[i])
+            )
+        mrope_position_deltas = torch.tensor(
+            mrope_position_deltas, device=input_ids.device
+        ).unsqueeze(1)
         return position_ids, mrope_position_deltas
     else:
         if attention_mask is not None:
             position_ids = attention_mask.long().cumsum(-1) - 1
             position_ids.masked_fill_(attention_mask == 0, 1)
-            position_ids = position_ids.unsqueeze(0).expand(3, -1, -1).to(attention_mask.device)
-            max_position_ids = position_ids.max(0, keepdim=False)[0].max(-1, keepdim=True)[0]
+            position_ids = (
+                position_ids.unsqueeze(0).expand(3, -1, -1).to(attention_mask.device)
+            )
+            max_position_ids = position_ids.max(0, keepdim=False)[0].max(
+                -1, keepdim=True
+            )[0]
             mrope_position_deltas = max_position_ids + 1 - attention_mask.shape[-1]
         else:
             position_ids = (
@@ -233,7 +267,9 @@ def apply_rotary_pos_emb_thd_absolute(
     Returns:
         Tensor: Shape [t, h, d]. The input tensor after applying RoPE.
     """
-    return _apply_rotary_pos_emb_bshd(t[:, None], freqs, rotary_interleaved=rotary_interleaved).squeeze(1)
+    return _apply_rotary_pos_emb_bshd(
+        t[:, None], freqs, rotary_interleaved=rotary_interleaved
+    ).squeeze(1)
 
 
 def apply_rotary_pos_emb_absolute(
@@ -253,7 +289,9 @@ def apply_rotary_pos_emb_absolute(
         if cu_seqlens is None:
             # NOTE: TE backends do not support mRoPE in bshd format when bs > 1
             if freqs.shape[1] > 1:
-                return _apply_rotary_pos_emb_bshd(t, freqs, rotary_interleaved=config.rotary_interleaved)
+                return _apply_rotary_pos_emb_bshd(
+                    t, freqs, rotary_interleaved=config.rotary_interleaved
+                )
             else:
                 return fused_apply_rotary_pos_emb(t, freqs)
         else:
@@ -261,6 +299,10 @@ def apply_rotary_pos_emb_absolute(
             return fused_apply_rotary_pos_emb(t[:, None], freqs).squeeze(1)
     else:
         if cu_seqlens is None:
-            return _apply_rotary_pos_emb_bshd(t, freqs, rotary_interleaved=config.rotary_interleaved)
+            return _apply_rotary_pos_emb_bshd(
+                t, freqs, rotary_interleaved=config.rotary_interleaved
+            )
         else:
-            return apply_rotary_pos_emb_thd_absolute(t, cu_seqlens, freqs, rotary_interleaved=config.rotary_interleaved)
+            return apply_rotary_pos_emb_thd_absolute(
+                t, cu_seqlens, freqs, rotary_interleaved=config.rotary_interleaved
+            )

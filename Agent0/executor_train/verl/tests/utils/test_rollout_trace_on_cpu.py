@@ -18,7 +18,11 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from verl.utils.rollout_trace import RolloutTraceConfig, rollout_trace_attr, rollout_trace_op
+from verl.utils.rollout_trace import (
+    RolloutTraceConfig,
+    rollout_trace_attr,
+    rollout_trace_op,
+)
 
 
 @pytest.fixture(autouse=True)
@@ -39,7 +43,10 @@ def mock_weave_client():
     # Also mock the call_context if it's used internally by the decorator
     mock_weave.trace.context.call_context.return_value = MagicMock()
 
-    with patch.dict(sys.modules, {"weave": mock_weave, "weave.trace.context": mock_weave.trace.context}):
+    with patch.dict(
+        sys.modules,
+        {"weave": mock_weave, "weave.trace.context": mock_weave.trace.context},
+    ):
         yield mock_client
 
 
@@ -78,7 +85,9 @@ async def test_rollout_trace_on_untraced_class():
 
 async def test_rollout_trace_with_tracer(mock_weave_client):
     """Tests that the decorator calls the tracer's methods correctly."""
-    RolloutTraceConfig.init(project_name="my-project", experiment_name="my-experiment", backend="weave")
+    RolloutTraceConfig.init(
+        project_name="my-project", experiment_name="my-experiment", backend="weave"
+    )
     instance = TracedClass()
     assert RolloutTraceConfig.get_client() is mock_weave_client
 
@@ -97,7 +106,9 @@ async def test_rollout_trace_with_tracer(mock_weave_client):
 
 async def test_rollout_trace_with_exception(mock_weave_client):
     """Tests that `finish` is called with the exception when one is raised."""
-    RolloutTraceConfig.init(project_name="my-project", experiment_name="my-experiment", backend="weave")
+    RolloutTraceConfig.init(
+        project_name="my-project", experiment_name="my-experiment", backend="weave"
+    )
     instance = TracedClass()
 
     with pytest.raises(ValueError, match="Test Exception"):
@@ -116,7 +127,9 @@ async def test_rollout_trace_with_exception(mock_weave_client):
 
 async def test_rollout_trace_with_dummy_backend(mock_weave_client):
     """Tests that the tracer is not called when the backend is 'dummy'."""
-    RolloutTraceConfig.init(project_name="my-project", experiment_name="my-experiment", backend="dummy")
+    RolloutTraceConfig.init(
+        project_name="my-project", experiment_name="my-experiment", backend="dummy"
+    )
     instance = TracedClass()
 
     await instance.my_method("test_a")
@@ -132,7 +145,9 @@ async def test_rollout_trace_with_real_weave_backend():
     """Integration test with a real weave backend."""
 
     # This assumes that the weave environment (e.g., project) is configured
-    RolloutTraceConfig.init(project_name="my-project", experiment_name="my-experiment", backend="weave")
+    RolloutTraceConfig.init(
+        project_name="my-project", experiment_name="my-experiment", backend="weave"
+    )
 
     instance = TracedClass()
 
@@ -142,4 +157,6 @@ async def test_rollout_trace_with_real_weave_backend():
     with pytest.raises(ValueError, match="Test Exception"):
         await instance.my_method_with_exception()
 
-    print("\nWeave integration test ran successfully. Check your weave project for the trace.")
+    print(
+        "\nWeave integration test ran successfully. Check your weave project for the trace."
+    )

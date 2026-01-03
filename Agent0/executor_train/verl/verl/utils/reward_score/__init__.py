@@ -77,7 +77,12 @@ def default_compute_score(
 
             # Pass the URL directly, ground_truth likely contains test cases here
             res = sandbox_fusion.compute_score(
-                sandbox_fusion_url, concurrent_semaphore, memory_limit_mb, solution_str, ground_truth, continuous=True
+                sandbox_fusion_url,
+                concurrent_semaphore,
+                memory_limit_mb,
+                solution_str,
+                ground_truth,
+                continuous=True,
             )
         else:
             # If no sandbox URL is provided, fall back to prime_code or raise error
@@ -103,7 +108,9 @@ def default_compute_score(
         res = search_r1_like_qa_em.compute_score(solution_str, ground_truth)
 
     else:
-        raise NotImplementedError(f"Reward function is not implemented for {data_source=}")
+        raise NotImplementedError(
+            f"Reward function is not implemented for {data_source=}"
+        )
 
     if isinstance(res, dict):
         return res
@@ -127,7 +134,13 @@ def _default_compute_score(
     Legacy function API to be deprecated. Please use `default_compute_score` instead.
     """
     return default_compute_score(
-        data_source, solution_str, ground_truth, extra_info, sandbox_fusion_url, concurrent_semaphore, memory_limit_mb
+        data_source,
+        solution_str,
+        ground_truth,
+        extra_info,
+        sandbox_fusion_url,
+        concurrent_semaphore,
+        memory_limit_mb,
     )
 
 

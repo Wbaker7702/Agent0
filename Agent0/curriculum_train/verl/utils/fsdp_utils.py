@@ -27,23 +27,32 @@ from transformers import PreTrainedModel
 from transformers.trainer_pt_utils import get_module_class_from_name
 
 
-def get_init_fn(model: nn.Module, device: Union[str, torch.device]) -> Callable[[nn.Module], None]:
+def get_init_fn(
+    model: nn.Module, device: Union[str, torch.device]
+) -> Callable[[nn.Module], None]:
     param_occurrence = defaultdict(int)
     for _, param in model.named_parameters(remove_duplicate=False):
         param_occurrence[param] += 1
 
-    duplicated_params = {param for param in param_occurrence.keys() if param_occurrence[param] > 1}
+    duplicated_params = {
+        param for param in param_occurrence.keys() if param_occurrence[param] > 1
+    }
     materialized_params = {}
 
     def init_fn(module: nn.Module):
         for name, param in module.named_parameters(recurse=False):
             if param in duplicated_params:
                 module._parameters[name] = materialized_params.setdefault(
-                    param, nn.Parameter(torch.empty_like(param.data, device=device), requires_grad=param.requires_grad)
+                    param,
+                    nn.Parameter(
+                        torch.empty_like(param.data, device=device),
+                        requires_grad=param.requires_grad,
+                    ),
                 )
             else:
                 module._parameters[name] = nn.Parameter(
-                    torch.empty_like(param.data, device=device), requires_grad=param.requires_grad
+                    torch.empty_like(param.data, device=device),
+                    requires_grad=param.requires_grad,
                 )
 
     return init_fn
@@ -63,7 +72,9 @@ def get_fsdp_wrap_policy(model: PreTrainedModel):
         else:
             transformer_cls_to_wrap.add(transformer_cls)
 
-    return partial(transformer_auto_wrap_policy, transformer_layer_cls=transformer_cls_to_wrap)
+    return partial(
+        transformer_auto_wrap_policy, transformer_layer_cls=transformer_cls_to_wrap
+    )
 
 
 @torch.no_grad()

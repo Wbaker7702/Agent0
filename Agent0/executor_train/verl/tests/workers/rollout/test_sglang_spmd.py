@@ -35,7 +35,9 @@ from utils_sglang import (
 
 
 def _pre_process_inputs(pad_token_id, prompt_token_ids: torch.Tensor):
-    non_pad_index = torch.nonzero(prompt_token_ids != pad_token_id, as_tuple=False)[0][0]
+    non_pad_index = torch.nonzero(prompt_token_ids != pad_token_id, as_tuple=False)[0][
+        0
+    ]
     token_ids = prompt_token_ids[non_pad_index:].tolist()
     return token_ids
 
@@ -51,14 +53,24 @@ def test_sglang_spmd():
     local_model_path = "Qwen/Qwen2.5-0.5B"
     tokenizer, actor_model = load_tokenizer_and_model(local_model_path)
 
-    preencode_prompts = ["Who won the Champions League in 2019?", "The founder of Apple is", "What's your name?"]
-    input_ids, attention_mask, _ = prepare_inputs(tokenizer, preencode_prompts, max_prompt_length)
+    preencode_prompts = [
+        "Who won the Champions League in 2019?",
+        "The founder of Apple is",
+        "What's your name?",
+    ]
+    input_ids, attention_mask, _ = prepare_inputs(
+        tokenizer, preencode_prompts, max_prompt_length
+    )
 
-    hf_response_tokens = generate_hf_output(actor_model, input_ids, attention_mask, tokenizer, max_response_length)
+    hf_response_tokens = generate_hf_output(
+        actor_model, input_ids, attention_mask, tokenizer, max_response_length
+    )
 
     tensor_parallel_size = 2
     inference_device_mesh_cpu = init_device_mesh(
-        "cpu", mesh_shape=(1, tensor_parallel_size, 1), mesh_dim_names=["dp", "tp", "pp"]
+        "cpu",
+        mesh_shape=(1, tensor_parallel_size, 1),
+        mesh_dim_names=["dp", "tp", "pp"],
     )
     tp_rank = inference_device_mesh_cpu["tp"].get_local_rank()
 
@@ -74,7 +86,11 @@ def test_sglang_spmd():
         input_ids = input_ids.cuda()
         idx_list = []
 
-        pad_token_id = tokenizer.pad_token_id if tokenizer.pad_token_id is not None else tokenizer.eos_token_id
+        pad_token_id = (
+            tokenizer.pad_token_id
+            if tokenizer.pad_token_id is not None
+            else tokenizer.eos_token_id
+        )
         for i in range(input_ids.shape[0]):
             idx_list.append(_pre_process_inputs(pad_token_id, input_ids[i]))
 
@@ -93,7 +109,9 @@ def test_sglang_spmd():
         )
 
         loop = asyncio.get_event_loop()
-        outputs = loop.run_until_complete(llm.async_generate(input_ids=idx_list, sampling_params=sampling_params))
+        outputs = loop.run_until_complete(
+            llm.async_generate(input_ids=idx_list, sampling_params=sampling_params)
+        )
     else:
         outputs = None
 
@@ -108,7 +126,9 @@ def test_sglang_spmd():
     sglang_response_tokens = [output["text"] for output in outputs]
 
     print(f"sglang response: {sglang_response_tokens}")
-    assert are_lists_similar(hf_response_tokens, sglang_response_tokens), "Strings differ more than 10%:\n"
+    assert are_lists_similar(
+        hf_response_tokens, sglang_response_tokens
+    ), "Strings differ more than 10%:\n"
     print("SPMD Test Passed!")
 
     torch.distributed.barrier()

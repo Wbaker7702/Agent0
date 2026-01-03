@@ -46,9 +46,15 @@ def forward_base_model(
     This function should be generic enough for all pure text models.
     ```"""
 
-    output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
+    output_attentions = (
+        output_attentions
+        if output_attentions is not None
+        else self.config.output_attentions
+    )
     output_hidden_states = (
-        output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
+        output_hidden_states
+        if output_hidden_states is not None
+        else self.config.output_hidden_states
     )
 
     # decoder outputs consists of (dec_features, layer_state, dec_hidden, dec_attn)
@@ -111,7 +117,9 @@ def forward_with_torch_backend(
     elif input_ids is not None:
         rolled_labels = torch.roll(input_ids, shifts=-1, dims=-1)
     else:
-        raise RuntimeError("To use forward_with_torch_backend, either labels or input_ids must be provided.")
+        raise RuntimeError(
+            "To use forward_with_torch_backend, either labels or input_ids must be provided."
+        )
 
     fused_linear_for_ppo = FusedLinearForPPO()
     log_probs, entropy = fused_linear_for_ppo.forward(
@@ -174,7 +182,9 @@ def forward_with_triton_backend(
     elif input_ids is not None:
         rolled_labels = torch.roll(input_ids, shifts=-1, dims=-1)
     else:
-        raise RuntimeError("To use forward_with_triton_backend, either labels or input_ids must be provided.")
+        raise RuntimeError(
+            "To use forward_with_triton_backend, either labels or input_ids must be provided."
+        )
 
     log_probs, entropy = linear_cross_entropy(
         hidden_states,

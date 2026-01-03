@@ -78,7 +78,10 @@ class OpenAIFunctionCallSchema(BaseModel):
             arguments = {}
             has_decode_error = True
 
-        return OpenAIFunctionCallSchema(name=parsed_schema.name, arguments=arguments), has_decode_error
+        return (
+            OpenAIFunctionCallSchema(name=parsed_schema.name, arguments=arguments),
+            has_decode_error,
+        )
 
 
 class OpenAIFunctionToolCall(BaseModel):

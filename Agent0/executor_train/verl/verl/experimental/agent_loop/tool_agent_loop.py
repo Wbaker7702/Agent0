@@ -72,7 +72,10 @@ class HermesToolParser(ToolParser):
     async def extract_tool_calls(self, responses_ids: list[int]) -> list[FunctionCall]:
         loop = asyncio.get_running_loop()
         text = await loop.run_in_executor(None, self.tokenizer.decode, responses_ids)
-        if self.tool_call_start_token not in text or self.tool_call_end_token not in text:
+        if (
+            self.tool_call_start_token not in text
+            or self.tool_call_end_token not in text
+        ):
             return []
 
         matches = self.tool_call_regex.findall(text)
@@ -81,7 +84,11 @@ class HermesToolParser(ToolParser):
             try:
                 function_call = json.loads(match)
                 name, arguments = function_call["name"], function_call["arguments"]
-                function_calls.append(FunctionCall(name=name, arguments=json.dumps(arguments, ensure_ascii=False)))
+                function_calls.append(
+                    FunctionCall(
+                        name=name, arguments=json.dumps(arguments, ensure_ascii=False)
+                    )
+                )
             except Exception as e:
                 logger.error(f"Failed to decode tool call: {e}")
         return function_calls
@@ -101,29 +108,51 @@ class ToolAgentLoop(AgentLoopBase):
         # Initialize tools from config file
         cls.tokenizer = tokenizer
         cls.max_user_turns = config.actor_rollout_ref.rollout.multi_turn.max_user_turns
-        cls.max_assistant_turns = config.actor_rollout_ref.rollout.multi_turn.max_assistant_turns
-        cls.max_parallel_calls = config.actor_rollout_ref.rollout.multi_turn.max_parallel_calls
-        cls.max_tool_response_length = config.actor_rollout_ref.rollout.multi_turn.max_tool_response_length
-        cls.tool_response_truncate_side = config.actor_rollout_ref.rollout.multi_turn.tool_response_truncate_side
+        cls.max_assistant_turns = (
+            config.actor_rollout_ref.rollout.multi_turn.max_assistant_turns
+        )
+        cls.max_parallel_calls = (
+            config.actor_rollout_ref.rollout.multi_turn.max_parallel_calls
+        )
+        cls.max_tool_response_length = (
+            config.actor_rollout_ref.rollout.multi_turn.max_tool_response_length
+        )
+        cls.tool_response_truncate_side = (
+            config.actor_rollout_ref.rollout.multi_turn.tool_response_truncate_side
+        )
         tool_config_path = config.actor_rollout_ref.rollout.multi_turn.tool_config_path
-        tool_list = initialize_tools_from_config(tool_config_path) if tool_config_path else []
+        tool_list = (
+            initialize_tools_from_config(tool_config_path) if tool_config_path else []
+        )
         cls.tools = {tool.name: tool for tool in tool_list}
-        cls.tool_schemas = [tool.tool_schema.model_dump(exclude_unset=True, exclude_none=True) for tool in tool_list]
-        cls.tool_parser = cls.get_tool_parser(config.actor_rollout_ref.rollout.multi_turn.format)
+        cls.tool_schemas = [
+            tool.tool_schema.model_dump(exclude_unset=True, exclude_none=True)
+            for tool in tool_list
+        ]
+        cls.tool_parser = cls.get_tool_parser(
+            config.actor_rollout_ref.rollout.multi_turn.format
+        )
         print(f"Initialized tools: {cls.tools}")
 
         cls.prompt_length = config.actor_rollout_ref.rollout.prompt_length
         cls.response_length = config.actor_rollout_ref.rollout.response_length
-        cls.system_prompt = tokenizer.apply_chat_template([{}], add_generation_prompt=False, tokenize=True)
+        cls.system_prompt = tokenizer.apply_chat_template(
+            [{}], add_generation_prompt=False, tokenize=True
+        )
 
     @rollout_trace_op
-    async def run(self, messages: list[dict[str, Any]], sampling_params: dict[str, Any]) -> AgentLoopOutput:
+    async def run(
+        self, messages: list[dict[str, Any]], sampling_params: dict[str, Any]
+    ) -> AgentLoopOutput:
         metrics = {}
         request_id = uuid4().hex
         prompt_ids = await self.loop.run_in_executor(
             None,
             lambda: self.tokenizer.apply_chat_template(
-                messages, tools=self.tool_schemas, add_generation_prompt=True, tokenize=True
+                messages,
+                tools=self.tool_schemas,
+                add_generation_prompt=True,
+                tokenize=True,
             ),
         )
         response_mask = []
@@ -132,7 +161,9 @@ class ToolAgentLoop(AgentLoopBase):
         while True:
             with simple_timer("generate_sequences", metrics):
                 response_ids = await self.server_manager.generate(
-                    request_id=request_id, prompt_ids=prompt_ids, sampling_params=sampling_params
+                    request_id=request_id,
+                    prompt_ids=prompt_ids,
+                    sampling_params=sampling_params,
                 )
             prompt_ids += response_ids
             response_mask += [1] * len(response_ids)
@@ -214,12 +245,20 @@ class ToolAgentLoop(AgentLoopBase):
 
         if len(tool_response) > self.max_tool_response_length:
             if self.tool_response_truncate_side == "left":
-                tool_response = tool_response[: self.max_tool_response_length] + "...(truncated)"
+                tool_response = (
+                    tool_response[: self.max_tool_response_length] + "...(truncated)"
+                )
             elif self.tool_response_truncate_side == "right":
-                tool_response = "(truncated)..." + tool_response[-self.max_tool_response_length :]
+                tool_response = (
+                    "(truncated)..." + tool_response[-self.max_tool_response_length :]
+                )
             else:
                 length = self.max_tool_response_length // 2
-                tool_response = tool_response[:length] + "...(truncated)..." + tool_response[-length:]
+                tool_response = (
+                    tool_response[:length]
+                    + "...(truncated)..."
+                    + tool_response[-length:]
+                )
 
         return {
             "role": "tool",

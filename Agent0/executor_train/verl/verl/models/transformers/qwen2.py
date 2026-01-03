@@ -39,7 +39,9 @@ def qwen2_flash_attn_forward(
     output_attentions: bool = False,
     use_cache: bool = False,
     cache_position: Optional[torch.LongTensor] = None,
-    position_embeddings: Optional[tuple[torch.Tensor, torch.Tensor]] = None,  # will become mandatory in v4.46
+    position_embeddings: Optional[
+        tuple[torch.Tensor, torch.Tensor]
+    ] = None,  # will become mandatory in v4.46
 ):
     """
     Adapted from transformers 4.47.1 to support Ulysses sequence parallelism.
@@ -82,8 +84,14 @@ def qwen2_flash_attn_forward(
     query_states, key_states = apply_rotary_pos_emb(query_states, key_states, cos, sin)
 
     if past_key_value is not None:
-        cache_kwargs = {"sin": sin, "cos": cos, "cache_position": cache_position}  # Specific to RoPE models
-        key_states, value_states = past_key_value.update(key_states, value_states, self.layer_idx, cache_kwargs)
+        cache_kwargs = {
+            "sin": sin,
+            "cos": cos,
+            "cache_position": cache_position,
+        }  # Specific to RoPE models
+        key_states, value_states = past_key_value.update(
+            key_states, value_states, self.layer_idx, cache_kwargs
+        )
 
     # repeat k/v heads if n_kv_heads < n_heads
     key_states = repeat_kv(key_states, self.num_key_value_groups)
@@ -196,7 +204,9 @@ def qwen2_attn_forward(
     if past_key_value is not None:
         # sin and cos are specific to RoPE models; cache_position needed for the static cache
         cache_kwargs = {"sin": sin, "cos": cos, "cache_position": cache_position}
-        key_states, value_states = past_key_value.update(key_states, value_states, self.layer_idx, cache_kwargs)
+        key_states, value_states = past_key_value.update(
+            key_states, value_states, self.layer_idx, cache_kwargs
+        )
 
     sliding_window = None
     if (
@@ -210,14 +220,18 @@ def qwen2_attn_forward(
 
     attention_interface: Callable = eager_attention_forward
     if self.config._attn_implementation != "eager":
-        if self.config._attn_implementation == "sdpa" and kwargs.get("output_attentions", False):
+        if self.config._attn_implementation == "sdpa" and kwargs.get(
+            "output_attentions", False
+        ):
             logger.warning_once(
                 "`torch.nn.functional.scaled_dot_product_attention` does not support `output_attentions=True`. "
                 "Falling back to eager attention. This warning can be removed using the argument "
                 '`attn_implementation="eager"` when loading the model.'
             )
         else:
-            attention_interface = ALL_ATTENTION_FUNCTIONS[self.config._attn_implementation]
+            attention_interface = ALL_ATTENTION_FUNCTIONS[
+                self.config._attn_implementation
+            ]
 
     attn_output, attn_weights = attention_interface(
         self,

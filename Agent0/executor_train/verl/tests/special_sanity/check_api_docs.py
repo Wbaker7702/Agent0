@@ -55,7 +55,9 @@ def iter_submodules(root: ModuleType) -> Iterable[ModuleType]:
     """Yield *root* and every sub-module inside it."""
     yield root
     if getattr(root, "__path__", None):  # only packages have __path__
-        for mod_info in pkgutil.walk_packages(root.__path__, prefix=f"{root.__name__}."):
+        for mod_info in pkgutil.walk_packages(
+            root.__path__, prefix=f"{root.__name__}."
+        ):
             try:
                 yield importlib.import_module(mod_info.name)
             except Exception as exc:  # noqa: BLE001
@@ -116,7 +118,9 @@ def main() -> None:
 
     targets = args.modules or autodiscover_packages()
     if not targets:
-        raise ValueError("[error] No modules specified and none detected automatically.")
+        raise ValueError(
+            "[error] No modules specified and none detected automatically."
+        )
 
     all_missing: list[str] = []
     for modname in targets:
@@ -126,7 +130,9 @@ def main() -> None:
         print("\nMissing docstrings:")
         for name in sorted(all_missing):
             print(f"  - {name}")
-        raise ValueError("Missing docstrings detected. Please enhance them with docs accordingly.")
+        raise ValueError(
+            "Missing docstrings detected. Please enhance them with docs accordingly."
+        )
 
     print("✅ All exported functions/classes have docstrings.")
 

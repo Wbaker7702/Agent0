@@ -32,6 +32,8 @@ from . import torch_functional as VF
 
 import json
 import random
+
+
 def collate_fn(features: List[Dict[str, Any]]) -> Dict[str, Any]:
     tensors = defaultdict(list)
     non_tensors = defaultdict(list)
@@ -51,8 +53,9 @@ def collate_fn(features: List[Dict[str, Any]]) -> Dict[str, Any]:
     return {**tensors, **non_tensors}
 
 
-
-def process_image(image: Union[Dict[str, Any], ImageObject, str], min_pixels: int, max_pixels: int) -> ImageObject:
+def process_image(
+    image: Union[Dict[str, Any], ImageObject, str], min_pixels: int, max_pixels: int
+) -> ImageObject:
     if isinstance(image, str):
         image = Image.open(image)
     elif isinstance(image, dict):
@@ -62,12 +65,16 @@ def process_image(image: Union[Dict[str, Any], ImageObject, str], min_pixels: in
 
     if (image.width * image.height) > max_pixels:
         resize_factor = math.sqrt(max_pixels / (image.width * image.height))
-        width, height = int(image.width * resize_factor), int(image.height * resize_factor)
+        width, height = int(image.width * resize_factor), int(
+            image.height * resize_factor
+        )
         image = image.resize((width, height))
 
     if (image.width * image.height) < min_pixels:
         resize_factor = math.sqrt(min_pixels / (image.width * image.height))
-        width, height = int(image.width * resize_factor), int(image.height * resize_factor)
+        width, height = int(image.width * resize_factor), int(
+            image.height * resize_factor
+        )
         image = image.resize((width, height))
 
     if image.mode != "RGB":
@@ -128,11 +135,15 @@ class RLHFDataset(Dataset):
 
         if "questioner_format_with_persona" in self.format_prompt:
             print("load personas")
-            personas_dataset = load_dataset("proj-persona/PersonaHub", "math", split="train")
-            self.personas = [item['input persona'] for item in personas_dataset]
+            personas_dataset = load_dataset(
+                "proj-persona/PersonaHub", "math", split="train"
+            )
+            self.personas = [item["input persona"] for item in personas_dataset]
             # self.personas = self.personas.select(range(100))
         if self.filter_overlong_prompts:
-            self.dataset = self.dataset.filter(self._filter_overlong_prompts, desc="Filtering overlong prompts")
+            self.dataset = self.dataset.filter(
+                self._filter_overlong_prompts, desc="Filtering overlong prompts"
+            )
 
     def _build_messages(self, example: Dict[str, Any]) -> List[Dict[str, Any]]:
         prompt_str: str = example[self.prompt_key]
@@ -154,15 +165,15 @@ class RLHFDataset(Dataset):
                         r"\boxed{final_answer}"
                         "\n\n"
                         "Do NOT output anything else—no explanations, no extra markup."
-                    )
+                    ),
                 },
                 {
                     "role": "user",
                     "content": (
                         "Generate one new, challenging reasoning question now. "
                         "Remember to format the output exactly as instructed."
-                    )
-                }
+                    ),
+                },
             ]
         if "questioner_format" in self.format_prompt:
             # print('detected questioner_format')
@@ -182,31 +193,28 @@ class RLHFDataset(Dataset):
                         r"\boxed{final_answer}"
                         "\n\n"
                         "Do NOT output anything else—no explanations, no extra markup."
-                    )
+                    ),
                 },
                 {
                     "role": "user",
                     "content": (
                         "Generate one new, challenging reasoning question now. "
                         "Remember to format the output exactly as instructed."
-                    )
-                }
+                    ),
+                },
             ]
         if "solver_format" in self.format_prompt:
             return [
                 {
-                    "role": "system", 
-                    "content": r"Please reason step by step, and put your final answer within \boxed{}."
+                    "role": "system",
+                    "content": r"Please reason step by step, and put your final answer within \boxed{}.",
                 },
-                {
-                    "role": "user", 
-                    "content": prompt_str
-                }
-                ]
+                {"role": "user", "content": prompt_str},
+            ]
         if self.format_prompt:
             format_prompt = Template(self.format_prompt.strip())
             prompt_str = format_prompt.render(content=prompt_str)
-        
+
         if self.image_key in example:
             # https://huggingface.co/docs/transformers/en/tasks/image_text_to_text
             content_list = []
@@ -223,16 +231,29 @@ class RLHFDataset(Dataset):
 
     def _filter_overlong_prompts(self, example: Dict[str, Any]) -> bool:
         messages = self._build_messages(example)
-        processing_class = self.processor if self.processor is not None else self.tokenizer
+        processing_class = (
+            self.processor if self.processor is not None else self.tokenizer
+        )
         if self.tokenizer.chat_template:
             return (
-                len(processing_class.apply_chat_template(messages, add_generation_prompt=True)) <= self.max_prompt_length
+                len(
+                    processing_class.apply_chat_template(
+                        messages, add_generation_prompt=True
+                    )
+                )
+                <= self.max_prompt_length
             )
         else:
             return (
-                len("system: " + messages[0]["content"] + '\n' + "user: " + messages[1]["content"]) <= self.max_prompt_length
+                len(
+                    "system: "
+                    + messages[0]["content"]
+                    + "\n"
+                    + "user: "
+                    + messages[1]["content"]
+                )
+                <= self.max_prompt_length
             )
-        
 
     def __len__(self):
         return len(self.dataset)
@@ -242,26 +263,46 @@ class RLHFDataset(Dataset):
         messages = self._build_messages(example)
 
         if self.image_key in example:
-            prompt = self.processor.apply_chat_template(messages, add_generation_prompt=True, tokenize=False)
+            prompt = self.processor.apply_chat_template(
+                messages, add_generation_prompt=True, tokenize=False
+            )
             raw_image_data = example.pop(self.image_key)
             images = [
-                process_image(image, min_pixels=self.min_pixels, max_pixels=self.max_pixels)
+                process_image(
+                    image, min_pixels=self.min_pixels, max_pixels=self.max_pixels
+                )
                 for image in raw_image_data
             ]
-            model_inputs = self.processor(images, [prompt], add_special_tokens=False, return_tensors="pt")
+            model_inputs = self.processor(
+                images, [prompt], add_special_tokens=False, return_tensors="pt"
+            )
             input_ids = model_inputs.pop("input_ids")[0]
             attention_mask = model_inputs.pop("attention_mask")[0]
             example["multi_modal_data"] = {"image": raw_image_data}
         else:
             if self.tokenizer.chat_template:
-                prompt = self.tokenizer.apply_chat_template(messages, add_generation_prompt=True, tokenize=False)
+                prompt = self.tokenizer.apply_chat_template(
+                    messages, add_generation_prompt=True, tokenize=False
+                )
             else:
-                prompt = "system: " + messages[0]["content"] + '\n' + "user: " + messages[1]["content"]
-            model_inputs = self.tokenizer([prompt], add_special_tokens=False, return_tensors="pt")
+                prompt = (
+                    "system: "
+                    + messages[0]["content"]
+                    + "\n"
+                    + "user: "
+                    + messages[1]["content"]
+                )
+            model_inputs = self.tokenizer(
+                [prompt], add_special_tokens=False, return_tensors="pt"
+            )
             input_ids = model_inputs.pop("input_ids")[0]
             attention_mask = model_inputs.pop("attention_mask")[0]
 
-        if self.processor is not None and self.processor.image_processor.__class__.__name__ == "Qwen2VLImageProcessor":
+        if (
+            self.processor is not None
+            and self.processor.image_processor.__class__.__name__
+            == "Qwen2VLImageProcessor"
+        ):
             # qwen2vl mrope
             position_ids = get_rope_index(
                 self.processor,
@@ -270,7 +311,9 @@ class RLHFDataset(Dataset):
                 attention_mask=attention_mask,
             )  # (3, seq_length)
         else:
-            position_ids = torch.clip(attention_mask.cumsum(dim=0) - 1, min=0, max=None)  # (seq_length,)
+            position_ids = torch.clip(
+                attention_mask.cumsum(dim=0) - 1, min=0, max=None
+            )  # (seq_length,)
 
         input_ids, attention_mask, position_ids = VF.postprocess_data(
             input_ids=input_ids,
@@ -288,7 +331,9 @@ class RLHFDataset(Dataset):
             elif self.truncation == "right":
                 raw_prompt_ids = raw_prompt_ids[: self.max_prompt_length]
             elif self.truncation == "error":
-                raise RuntimeError(f"Prompt length {len(raw_prompt_ids)} is longer than {self.max_prompt_length}.")
+                raise RuntimeError(
+                    f"Prompt length {len(raw_prompt_ids)} is longer than {self.max_prompt_length}."
+                )
 
         example["input_ids"] = input_ids
         example["attention_mask"] = attention_mask

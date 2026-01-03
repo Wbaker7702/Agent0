@@ -37,7 +37,9 @@ def main():
     shuffled_train_dataset = train_dataset.shuffle(seed=args.seed)
     split_idx = int(len(shuffled_train_dataset) * args.train_ratio)
     train_dataset = shuffled_train_dataset.select(range(split_idx))
-    test_dataset = shuffled_train_dataset.select(range(split_idx, len(shuffled_train_dataset)))
+    test_dataset = shuffled_train_dataset.select(
+        range(split_idx, len(shuffled_train_dataset))
+    )
 
     # add a row to each data item that represents a unique id
     def make_map_fn(split):

@@ -10,8 +10,11 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from tools.piston import PistonTool
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger(__name__)
+
 
 def test_python(
     url: str = None,
@@ -47,8 +50,9 @@ for i in range(5):
     print(f'Number {i}')
   </file>
 </piston>"""
-    
+
     return _send_test_request(url, trajectory_id, action, "Python", use_local)
+
 
 def test_cpp(
     url: str = None,
@@ -82,8 +86,9 @@ def test_cpp(
     }
   ]
 }"""
-    
+
     return _send_test_request(url, trajectory_id, action, "C++", use_local)
+
 
 def test_bash(
     url: str = None,
@@ -123,8 +128,9 @@ echo "Current directory: $(pwd)"
 echo "Files: $(ls -la)"
   </file>
 </piston>"""
-    
+
     return _send_test_request(url, trajectory_id, action, "Bash", use_local)
+
 
 def test_php(
     url: str = None,
@@ -168,8 +174,9 @@ for ($i = 0; $i < 5; $i++) {
 echo "PHP Version: " . phpversion() . "\n";
   </file>
 </piston>"""
-    
+
     return _send_test_request(url, trajectory_id, action, "PHP", use_local)
+
 
 def test_multifile(
     url: str = None,
@@ -216,26 +223,29 @@ def greeting(name):
     return f"Hello, {name}!"
   </file>
 </piston>"""
-    
-    return _send_test_request(url, trajectory_id, action, "Multi-file Python", use_local)
+
+    return _send_test_request(
+        url, trajectory_id, action, "Multi-file Python", use_local
+    )
+
 
 def _send_test_request(url, trajectory_id, action, test_name, use_local=False):
     """Helper function to send test requests and process responses"""
     logger.info(f"Testing {test_name} code execution...")
-    
+
     # Handle different execution methods
     if url is None:
         # Use PistonTool directly (no server required)
         try:
             # Initialize the tool
             tool = PistonTool(use_local=use_local)
-            
+
             # Execute the code
             observation, done, valid = tool.conduct_action(trajectory_id, action, {})
-            
+
             logger.info(f"\n--- {test_name} Result ---\n{observation}\n")
             return {"observations": [observation], "dones": [done], "valids": [valid]}
-            
+
         except Exception as e:
             logger.error(f"PistonTool error: {str(e)}")
             return {"error": str(e)}
@@ -244,23 +254,23 @@ def _send_test_request(url, trajectory_id, action, test_name, use_local=False):
         payload = {
             "trajectory_ids": [trajectory_id],
             "actions": [action],
-            "extra_field": {}
+            "extra_field": {},
         }
-        
+
         try:
             response = requests.post(url, json=payload)
             response.raise_for_status()  # Raise exception for error status codes
-            
+
             result = response.json()
             logger.info(f"Response received for {test_name} test")
-            
+
             # Print observation
             if "observations" in result and len(result["observations"]) > 0:
                 observation = result["observations"][0]
                 logger.info(f"\n--- {test_name} Result ---\n{observation}\n")
             else:
                 logger.error(f"No observation found in response for {test_name}")
-            
+
             return result
         except requests.exceptions.RequestException as e:
             logger.error(f"Request error: {str(e)}")
@@ -268,6 +278,7 @@ def _send_test_request(url, trajectory_id, action, test_name, use_local=False):
         except Exception as e:
             logger.error(f"Unexpected error: {str(e)}")
             return {"error": str(e)}
+
 
 def _run_all_tests(url=None, use_local=False, format_type="xml"):
     """Run all test cases"""
@@ -280,20 +291,24 @@ def _run_all_tests(url=None, use_local=False, format_type="xml"):
     results["multifile"] = test_multifile(url, use_local, format_type)
     return results
 
+
 def main():
     """Main entry point for the test script
     Run with:
         python -m verl_tool.servers.tests.test_piston_tool python --url=http://localhost:5000/get_observation
         python -m verl_tool.servers.tests.test_piston_tool all --url=http://localhost:5000/get_observation
     """
-    fire.Fire({
-        "python": test_python,
-        "cpp": test_cpp,
-        "bash": test_bash,
-        "php": test_php,
-        "multifile": test_multifile,
-        "all": _run_all_tests
-    })
+    fire.Fire(
+        {
+            "python": test_python,
+            "cpp": test_cpp,
+            "bash": test_bash,
+            "php": test_php,
+            "multifile": test_multifile,
+            "all": _run_all_tests,
+        }
+    )
+
 
 if __name__ == "__main__":
     main()
