@@ -121,7 +121,7 @@ def main(args):
                 results.append({"question": question, "answer": answer, "score": 0})
             else:
                 results.append({"question": response, "answer": "", "score": -1})
-        except:
+        except Exception:
             results.append({"question": response, "answer": "", "score": -1})
     with open(
         f"{STORAGE_PATH}/generated_question/{args.save_name}_{args.suffix}.json", "w"
