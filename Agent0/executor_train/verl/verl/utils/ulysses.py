@@ -43,7 +43,8 @@ def get_ulysses_sequence_parallel_group() -> Optional[dist.ProcessGroup]:
     return _ULYSSES_SEQUENCE_PARALLEL_GROUP
 
 
-def get_ulysses_sequence_parallel_world_size(group: ProcessGroup = None) -> int:
+def get_ulysses_sequence_parallel_world_size(
+        group: ProcessGroup = None) -> int:
     """
     Get ulysses sequence parallel world size.
     """
@@ -147,8 +148,13 @@ def all_to_all_tensor(
         t.contiguous()
         for t in torch.tensor_split(local_input, seq_world_size, scatter_dim)
     ]
-    output_list = [torch.empty_like(input_list[0]) for _ in range(seq_world_size)]
-    comm = dist.all_to_all(output_list, input_list, group=group, async_op=async_op)
+    output_list = [torch.empty_like(input_list[0])
+                   for _ in range(seq_world_size)]
+    comm = dist.all_to_all(
+        output_list,
+        input_list,
+        group=group,
+        async_op=async_op)
     if async_op:
 
         def wait():
@@ -171,7 +177,11 @@ def all_gather_tensor(
     output = torch.empty(
         output_shape, dtype=local_tensor.dtype, device=local_tensor.device
     )
-    dist.all_gather_into_tensor(output, local_tensor, group=group, async_op=async_op)
+    dist.all_gather_into_tensor(
+        output,
+        local_tensor,
+        group=group,
+        async_op=async_op)
     return output
 
 
@@ -189,10 +199,16 @@ class SeqAllToAll(torch.autograd.Function):
         ctx.scatter_dim = scatter_dim
         ctx.gather_dim = gather_dim
         ctx.async_op = async_op
-        return all_to_all_tensor(local_input, scatter_dim, gather_dim, group, async_op)
+        return all_to_all_tensor(
+            local_input,
+            scatter_dim,
+            gather_dim,
+            group,
+            async_op)
 
     @staticmethod
-    def backward(ctx: Any, *grad_output: Tensor) -> tuple[None, Tensor, None, None]:
+    def backward(ctx: Any, *
+                 grad_output: Tensor) -> tuple[None, Tensor, None, None]:
         input_t = (
             torch.cat(grad_output[1:], dim=ctx.gather_dim).contiguous()
             if ctx.async_op
@@ -314,7 +330,8 @@ def ulysses_pad(
             ).unsqueeze(0)
             if position_ids_rmpad.dim() == 3:
                 pad_pos_ids = pad_pos_ids.unsqueeze(0).repeat(3, 1, 1)
-            position_ids_rmpad = torch.cat((position_ids_rmpad, pad_pos_ids), dim=-1)
+            position_ids_rmpad = torch.cat(
+                (position_ids_rmpad, pad_pos_ids), dim=-1)
     return input_ids_rmpad, position_ids_rmpad, pad_size
 
 

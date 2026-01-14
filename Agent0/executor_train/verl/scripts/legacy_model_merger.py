@@ -87,7 +87,8 @@ class ModelMergerConfig:
     hf_upload: bool = field(init=False)
 
     def __post_init__(self):
-        self.hf_upload = self.operation == "merge" and bool(self.hf_upload_path)
+        self.hf_upload = self.operation == "merge" and bool(
+            self.hf_upload_path)
         if self.operation == "test":
             self.target_dir = None
             self.hf_upload_path = None
@@ -105,7 +106,8 @@ class BaseModelMerger(ABC):
             )
             self.hf_model_config_path = config.hf_model_path
 
-        self.model_config = AutoConfig.from_pretrained(self.hf_model_config_path)
+        self.model_config = AutoConfig.from_pretrained(
+            self.hf_model_config_path)
 
     def get_transformers_auto_model_class(self):
         if "ForTokenClassification" in self.model_config.architectures[0]:
@@ -133,8 +135,8 @@ class BaseModelMerger(ABC):
                 )
             except OSError:
                 print(
-                    f"Warning: Generation config file not found in {self.hf_model_config_path}, using a generation config created from the model config."
-                )
+                    f"Warning: Generation config file not found in {
+                        self.hf_model_config_path}, using a generation config created from the model config.")
         return model
 
     def save_lora_adapter(self, state_dict: dict[str, torch.Tensor]):
@@ -147,7 +149,8 @@ class BaseModelMerger(ABC):
         Note:
             This function change the 'state_dict' in place.
         """
-        lora_params_names = [name for name in state_dict.keys() if "lora_" in name]
+        lora_params_names = [
+            name for name in state_dict.keys() if "lora_" in name]
 
         if len(lora_params_names) == 0:
             return None
@@ -167,19 +170,21 @@ class BaseModelMerger(ABC):
             target_modules.add(lora_key.split(".")[-3])
             lora_params[lora_key] = state_dict.pop(name)
 
-        lora_rank = min(lora_params[lora_key].shape[0], lora_params[lora_key].shape[1])
+        lora_rank = min(
+            lora_params[lora_key].shape[0],
+            lora_params[lora_key].shape[1])
         peft_dict = {
             "r": lora_rank,
-            "lora_alpha": 0,  # lora_alpha is not set. An error should be raised to inform the user to set it manually.
+            # lora_alpha is not set. An error should be raised to inform the
+            # user to set it manually.
+            "lora_alpha": 0,
             "target_modules": list(target_modules),
         }
         peft_config = peft.LoraConfig(**peft_dict).to_dict()
         peft_config["task_type"] = (
-            peft_config["task_type"].value if peft_config["task_type"] else None
-        )
+            peft_config["task_type"].value if peft_config["task_type"] else None)
         peft_config["peft_type"] = (
-            peft_config["peft_type"].value if peft_config["peft_type"] else None
-        )
+            peft_config["peft_type"].value if peft_config["peft_type"] else None)
         peft_config["target_modules"] = list(peft_config["target_modules"])
 
         lora_path = os.path.join(self.config.target_dir, "lora_adapter")
@@ -188,7 +193,11 @@ class BaseModelMerger(ABC):
             os.path.join(lora_path, "adapter_config.json"), "w", encoding="utf-8"
         ) as f:
             json.dump(peft_config, f, ensure_ascii=False, indent=4)
-        save_file(lora_params, os.path.join(lora_path, "adapter_model.safetensors"))
+        save_file(
+            lora_params,
+            os.path.join(
+                lora_path,
+                "adapter_model.safetensors"))
 
         for name in list(state_dict.keys()):
             key = (
@@ -255,12 +264,14 @@ class FSDPModelMerger(BaseModelMerger):
             if match:
                 return int(match.group(1))
         raise FileNotFoundError(
-            f"Could not determine world size. No file matching 'model_world_size_(\d+)_rank_0.pt' found in {self.config.local_dir}"
-        )
+            f"Could not determine world size. No file matching 'model_world_size_(\\d+)_rank_0.pt' found in {
+                self.config.local_dir}")
 
     def _load_rank_zero_state_dict(self, world_size: int) -> dict:
         return torch.load(
-            Path(self.config.local_dir) / f"model_world_size_{world_size}_rank_0.pt",
+            Path(
+                self.config.local_dir) /
+            f"model_world_size_{world_size}_rank_0.pt",
             map_location="cpu",
             weights_only=False,
         )
@@ -333,7 +344,10 @@ class FSDPModelMerger(BaseModelMerger):
                 Path(self.config.local_dir)
                 / f"model_world_size_{world_size}_rank_{rank}.pt"
             )
-            state_dict = torch.load(model_path, map_location="cpu", weights_only=False)
+            state_dict = torch.load(
+                model_path,
+                map_location="cpu",
+                weights_only=False)
             model_state_dict_lst[rank] = state_dict
             return state_dict
 
@@ -343,8 +357,9 @@ class FSDPModelMerger(BaseModelMerger):
                 for rank in range(total_shards)
             ]
             for future in tqdm(
-                futures, desc=f"Loading {total_shards} FSDP shards", total=total_shards
-            ):
+                    futures,
+                    desc=f"Loading {total_shards} FSDP shards",
+                    total=total_shards):
                 future.result()
 
         # Merge state dicts from all shards
@@ -385,7 +400,8 @@ class FSDPModelMerger(BaseModelMerger):
                     # 1-D list, FSDP without TP
                     assert len(placements) == 1
                     shards = state_dict[key]
-                    state_dict[key] = self._merge_by_placement(shards, placements[0])
+                    state_dict[key] = self._merge_by_placement(
+                        shards, placements[0])
                 else:
                     # 2-D list, FSDP + TP
                     raise NotImplementedError("FSDP + TP is not supported yet")
@@ -406,7 +422,8 @@ class FSDPModelMerger(BaseModelMerger):
         total_shards, mesh_shape = self._calculate_shard_configuration(
             mesh, mesh_dim_names
         )
-        print(f"Processing model shards with {total_shards} {mesh_shape} in total")
+        print(
+            f"Processing model shards with {total_shards} {mesh_shape} in total")
 
         merged_state_dict = self._load_and_merge_state_dicts(
             world_size, total_shards, mesh_shape, mesh_dim_names
@@ -414,7 +431,8 @@ class FSDPModelMerger(BaseModelMerger):
 
         if self.config.operation == "test":
             if not self.config.test_hf_dir:
-                raise ValueError("test_hf_dir must be provided for test operation")
+                raise ValueError(
+                    "test_hf_dir must be provided for test operation")
             self._test_state_dict(merged_state_dict)
         elif self.config.operation == "merge":
             self.save_hf_model_and_tokenizer(merged_state_dict)
@@ -437,8 +455,9 @@ class FSDPModelMerger(BaseModelMerger):
 
         missing_keys = hf_model_keys - collected_keys
         assert (
-            len(missing_keys) == 0
-        ), f"Missing keys in collected state dict: {list(sorted(missing_keys))}"
+            len(missing_keys) == 0), f"Missing keys in collected state dict: {
+            list(
+                sorted(missing_keys))}"
 
         extra_keys = collected_keys - hf_model_keys
         assert (
@@ -474,13 +493,14 @@ class MegatronModelMerger(BaseModelMerger):
         )
 
         config.hf_model_config_path = get_hf_config_and_tokenizer_checkpoint_path(
-            config.local_dir
-        )
+            config.local_dir)
         super().__init__(config)
 
         self.params_mapping = {
             # megatron core gpt model name, huggingface model name
-            # NOTICE: It's a little bit tricky, when 2 keys have the same prefix, we need to make sure the longer key within the containing relationship is processed first.
+            # NOTICE: It's a little bit tricky, when 2 keys have the same
+            # prefix, we need to make sure the longer key within the containing
+            # relationship is processed first.
             "embedding.word_embeddings": "model.embed_tokens",
             # attn
             "self_attention.linear_qkv.layer_norm_weight": "input_layernorm.weight",
@@ -515,7 +535,8 @@ class MegatronModelMerger(BaseModelMerger):
             "output_layer": "lm_head",
         }
 
-    def _get_tp_pp_rank_from_sharded_dir(self, sharded_dir: str) -> tuple[int, int]:
+    def _get_tp_pp_rank_from_sharded_dir(
+            self, sharded_dir: str) -> tuple[int, int]:
         tp_rank = pp_rank = None
         rank_list = sharded_dir.split("_")[2:]
         if re.match(r"mp_rank_(\d\d)_(\d\d\d)", sharded_dir):
@@ -545,7 +566,8 @@ class MegatronModelMerger(BaseModelMerger):
             assert "model.pt" in os.listdir(
                 Path(model_path) / sharded_dir
             ), f"model.pt not found in {sharded_dir}"
-            tp_rank, pp_rank = self._get_tp_pp_rank_from_sharded_dir(sharded_dir)
+            tp_rank, pp_rank = self._get_tp_pp_rank_from_sharded_dir(
+                sharded_dir)
             tp_size = max(tp_size, tp_rank + 1)
             pp_size = max(pp_size, pp_rank + 1)
         return sharded_dirs, tp_size, pp_size
@@ -579,15 +601,23 @@ class MegatronModelMerger(BaseModelMerger):
             num_q_per_kv = config.num_attention_heads // config.num_key_value_heads
             assert tp_data[0].shape[0] % (num_q_per_kv + 2) == 0
             kv_size_per_tp = tp_data[0].shape[0] // (num_q_per_kv + 2)
-            split_size = [kv_size_per_tp * num_q_per_kv, kv_size_per_tp, kv_size_per_tp]
+            split_size = [
+                kv_size_per_tp *
+                num_q_per_kv,
+                kv_size_per_tp,
+                kv_size_per_tp]
 
             for infer_param in tp_data:
                 num_query_groups_per_partition = config.num_key_value_heads // tp_size
                 for chunk in infer_param.chunk(num_query_groups_per_partition):
                     split_size = [
-                        kv_size_per_tp * num_q_per_kv // num_query_groups_per_partition,
-                        kv_size_per_tp // num_query_groups_per_partition,
-                        kv_size_per_tp // num_query_groups_per_partition,
+                        kv_size_per_tp *
+                        num_q_per_kv //
+                        num_query_groups_per_partition,
+                        kv_size_per_tp //
+                        num_query_groups_per_partition,
+                        kv_size_per_tp //
+                        num_query_groups_per_partition,
                     ]
                     q, k, v = chunk.split(split_size)
                     q_lst.append(q)
@@ -611,17 +641,21 @@ class MegatronModelMerger(BaseModelMerger):
                 dim = 1
             return torch.cat(tp_data, dim=dim)
 
-    def _load_state_dicts(
-        self, model_ckpt_path: str, sharded_dirs: list[str], tp_size: int, pp_size: int
-    ) -> list[list[dict]]:
-        model_state_dict_lst = [[None for _ in range(tp_size)] for _ in range(pp_size)]
+    def _load_state_dicts(self,
+                          model_ckpt_path: str,
+                          sharded_dirs: list[str],
+                          tp_size: int,
+                          pp_size: int) -> list[list[dict]]:
+        model_state_dict_lst = [
+            [None for _ in range(tp_size)] for _ in range(pp_size)]
 
         def _process_one_megatron_shard(sharded_dir: str):
             model_file_path = Path(model_ckpt_path) / sharded_dir / "model.pt"
             state_dict = torch.load(
                 model_file_path, map_location="cpu", weights_only=False
             )
-            tp_rank, pp_rank = self._get_tp_pp_rank_from_sharded_dir(sharded_dir)
+            tp_rank, pp_rank = self._get_tp_pp_rank_from_sharded_dir(
+                sharded_dir)
             model_state_dict_lst[pp_rank][tp_rank] = state_dict
 
         with ThreadPoolExecutor(max_workers=min(32, os.cpu_count())) as executor:
@@ -647,8 +681,7 @@ class MegatronModelMerger(BaseModelMerger):
         """
         if key.startswith("model."):
             raise ValueError(
-                f"Invalid key {key} in Megatron state_dict. Expected keys to start with 'decoder/embedding/output_layer' in TransformerLayer."
-            )
+                f"Invalid key {key} in Megatron state_dict. Expected keys to start with 'decoder/embedding/output_layer' in TransformerLayer.")
 
         skip_checking_keys = ["embedding.word_embeddings", "output_layer"]
         for skip_key in skip_checking_keys:
@@ -659,8 +692,7 @@ class MegatronModelMerger(BaseModelMerger):
         # Exclude extra state keys
         if not key.startswith("decoder"):
             raise ValueError(
-                f"Invalid key {key} in Megatron state_dict. Expected keys to start with 'decoder' in TransformerLayer."
-            )
+                f"Invalid key {key} in Megatron state_dict. Expected keys to start with 'decoder' in TransformerLayer.")
 
     def _merge_state_dicts(
         self, model_state_dict_lst: list[list[dict]], tp_size: int, pp_size: int
@@ -676,7 +708,8 @@ class MegatronModelMerger(BaseModelMerger):
                 for key in keys:
                     if "extra_state" in key:
                         continue
-                    if self.config.tie_word_embedding and ("output_layer" in key):
+                    if self.config.tie_word_embedding and (
+                            "output_layer" in key):
                         print(
                             "skip lm_head and reward_head loading because of tie_word_embeddings"
                         )
@@ -696,9 +729,7 @@ class MegatronModelMerger(BaseModelMerger):
                         hf_name = ".".join(new_key_list)
                     else:
                         warnings.warn(
-                            f"hf_name {hf_name} will not be fixed with layer number",
-                            stacklevel=2,
-                        )
+                            f"hf_name {hf_name} will not be fixed with layer number", stacklevel=2, )
 
                     tp_data = [
                         model_state_dict_lst[pp_rank][tp_rank][vpp_rank][key]
@@ -720,11 +751,15 @@ class MegatronModelMerger(BaseModelMerger):
                             state_dict[hf_name.replace("qkv", n)] = d
                     elif len(merged) == 2:
                         # split gate up
-                        state_dict[hf_name.replace("gate_up", "gate")] = merged[0]
-                        state_dict[hf_name.replace("gate_up", "up")] = merged[1]
+                        state_dict[hf_name.replace(
+                            "gate_up", "gate")] = merged[0]
+                        state_dict[hf_name.replace(
+                            "gate_up", "up")] = merged[1]
                     print(
-                        f"converted {key} to {hf_name} with shape {merged.shape if isinstance(merged, torch.Tensor) else [t.shape for t in merged]}"
-                    )
+                        f"converted {key} to {hf_name} with shape {
+                            merged.shape if isinstance(
+                                merged, torch.Tensor) else [
+                                t.shape for t in merged]}")
 
                 layers_cum += layers_handled + 1  # zero based
 
@@ -738,8 +773,8 @@ class MegatronModelMerger(BaseModelMerger):
             model_ckpt_path
         )
         print(
-            f"sharded_dirs: {sharded_dirs}, tp_size: {tp_size}, pp_size: {pp_size}, mp_size: {len(sharded_dirs)}"
-        )
+            f"sharded_dirs: {sharded_dirs}, tp_size: {tp_size}, pp_size: {pp_size}, mp_size: {
+                len(sharded_dirs)}")
 
         model_state_dict_lst = self._load_state_dicts(
             model_ckpt_path, sharded_dirs, tp_size, pp_size
@@ -751,7 +786,8 @@ class MegatronModelMerger(BaseModelMerger):
 
         if self.config.operation == "test":
             if not self.config.test_hf_dir:
-                raise ValueError("test_hf_dir must be provided for test operation")
+                raise ValueError(
+                    "test_hf_dir must be provided for test operation")
             self._test_state_dict(merged_state_dict)
         elif self.config.operation == "merge":
             self.save_hf_model_and_tokenizer(merged_state_dict)
@@ -765,11 +801,15 @@ class MegatronModelMerger(BaseModelMerger):
         Compares the merged Megatron state_dict against a reference safetensors model.
         Applies necessary name mappings from Megatron to Hugging Face conventions using _replace_name.
         """
-        ref_state_dict = load_file(Path(self.config.test_hf_dir) / "model.safetensors")
+        ref_state_dict = load_file(
+            Path(
+                self.config.test_hf_dir) /
+            "model.safetensors")
 
         for name, loaded_weight in state_dict.items():
             # name = self._replace_name(original_name, self.params_mapping)
-            if not name or name.endswith(".bias") and name not in ref_state_dict:
+            if not name or name.endswith(
+                    ".bias") and name not in ref_state_dict:
                 continue
             if "rotary_emb.inv_freq" in name:
                 continue
@@ -779,9 +819,11 @@ class MegatronModelMerger(BaseModelMerger):
                 raise RuntimeError(f"key: {name} not exist in state_dict")
             param = ref_state_dict[name]
             assert loaded_weight.dtype == param.dtype
-            torch.testing.assert_close(loaded_weight, param, atol=1e-2, rtol=5e-2)
+            torch.testing.assert_close(
+                loaded_weight, param, atol=1e-2, rtol=5e-2)
 
-    def _replace_name(self, megatron_name: str, name_mapping: dict[str, str]) -> str:
+    def _replace_name(self, megatron_name: str,
+                      name_mapping: dict[str, str]) -> str:
         for m_name, v_name in name_mapping.items():
             if m_name not in megatron_name:
                 continue
@@ -796,8 +838,9 @@ class MegatronModelMerger(BaseModelMerger):
 def main():
     parser = argparse.ArgumentParser(description="verl model merger")
     subparsers = parser.add_subparsers(
-        dest="operation", required=True, help="Specify 'merge' or 'test' operation."
-    )
+        dest="operation",
+        required=True,
+        help="Specify 'merge' or 'test' operation.")
 
     base_op_parser = argparse.ArgumentParser(add_help=False)
     base_op_parser.add_argument(
@@ -831,8 +874,9 @@ def main():
     )
 
     merge_parser = subparsers.add_parser(
-        "merge", parents=[base_op_parser], help="Merge model checkpoints and save."
-    )
+        "merge",
+        parents=[base_op_parser],
+        help="Merge model checkpoints and save.")
     merge_parser.add_argument(
         "--target_dir",
         default="tmp",

@@ -62,8 +62,7 @@ def build_gpqa_dimond_dataset():
     GPQA_QUERY_TEMPLATE = (
         "Answer the following multiple choice question. The last line of your response should be of the following "
         "format: 'Answer: $LETTER' (without quotes) where LETTER is one of ABCD. Think step by step before "
-        "answering.\n\n{Question}\n\nA) {A}\nB) {B}\nC) {C}\nD) {D}"
-    )
+        "answering.\n\n{Question}\n\nA) {A}\nB) {B}\nC) {C}\nD) {D}")
 
     def process_gpqa_diamond(example):
         choices = [
@@ -144,7 +143,8 @@ def build_livecodebench_dataset():
 
     def process_livecodebench(example):
         # Construct Query Prompt
-        # From https://github.com/LiveCodeBench/LiveCodeBench/blob/998c52d394b836f15fff3b9a29866191108ff81b/lcb_runner/prompts/code_generation.py#L140
+        # From
+        # https://github.com/LiveCodeBench/LiveCodeBench/blob/998c52d394b836f15fff3b9a29866191108ff81b/lcb_runner/prompts/code_generation.py#L140
         query_prompt = (
             f"You will be given a question (problem specification) and will generate a correct Python program "
             f"that matches the specification and passes all tests.\n\nQuestion: {example['question_content']}\n\n"
@@ -159,8 +159,7 @@ def build_livecodebench_dataset():
                 "Read the inputs from stdin solve the problem and write the answer to stdout (do not directly test "
                 "on the sample inputs). Enclose your code within delimiters as follows. Ensure that when the python "
                 "program runs, it reads the inputs, runs the algorithm and writes output to STDOUT."
-                "```python\n# YOUR CODE HERE\n```"
-            )
+                "```python\n# YOUR CODE HERE\n```")
 
         # Construct test cases
         public_test_cases = json.loads(example["public_test_cases"])
@@ -171,10 +170,8 @@ def build_livecodebench_dataset():
             private_test_cases = json.loads(
                 pickle.loads(
                     zlib.decompress(
-                        base64.b64decode(example["private_test_cases"].encode("utf-8"))
-                    )
-                )
-            )
+                        base64.b64decode(
+                            example["private_test_cases"].encode("utf-8")))))
         full_test_cases = public_test_cases + private_test_cases
 
         metadata = json.loads(example["metadata"])
@@ -206,8 +203,10 @@ def build_livecodebench_dataset():
     )
 
     dataset = dataset.map(
-        map_fn, with_indices=True, remove_columns=dataset.column_names, num_proc=8
-    )
+        map_fn,
+        with_indices=True,
+        remove_columns=dataset.column_names,
+        num_proc=8)
     return dataset
 
 
@@ -230,7 +229,8 @@ if __name__ == "__main__":
     if args.tasks.lower() == "all":
         args.tasks = SUPPORTED_TASKS
     else:
-        args.tasks = [task.strip() for task in args.tasks.split(",") if task.strip()]
+        args.tasks = [task.strip()
+                      for task in args.tasks.split(",") if task.strip()]
         for task in args.tasks:
             if task not in SUPPORTED_TASKS:
                 raise NotImplementedError(f"{task} has not been supported.")

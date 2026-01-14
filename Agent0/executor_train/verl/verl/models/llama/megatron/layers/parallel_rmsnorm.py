@@ -24,7 +24,10 @@ from verl.utils.megatron import sequence_parallel as sp_utils
 
 
 class ParallelLlamaRMSNorm(nn.Module):
-    def __init__(self, config: LlamaConfig, megatron_config: ModelParallelConfig):
+    def __init__(
+            self,
+            config: LlamaConfig,
+            megatron_config: ModelParallelConfig):
         """
         LlamaRMSNorm is equivalent to T5LayerNorm
         """

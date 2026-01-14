@@ -65,7 +65,8 @@ def load_pr_body(event_path):
             payload = json.load(f)
         return payload.get("pull_request", {}).get("body", "") or ""
     except Exception as e:
-        raise PRBodyLoadError(f"Failed to read PR body from {event_path}: {e}") from e
+        raise PRBodyLoadError(
+            f"Failed to read PR body from {event_path}: {e}") from e
 
 
 def check_pr_description(body, template_lines):
@@ -78,8 +79,7 @@ def check_pr_description(body, template_lines):
     if pr_first == template_lines:
         raise PRDescriptionError(
             "It looks like you haven't updated the '### What does this PR do?' section. Please replace "
-            "the placeholder text with a concise description of what your PR does."
-        )
+            "the placeholder text with a concise description of what your PR does.")
     else:
         print(pr_first)
         print(template_lines)

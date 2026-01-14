@@ -37,7 +37,8 @@ class FSDPUlyssesShardingManager(BaseShardingManager):
     def __enter__(self):
         if self.device_mesh is not None:
             self.prev_sp_group = get_ulysses_sequence_parallel_group()
-            set_ulysses_sequence_parallel_group(self.device_mesh["sp"].get_group())
+            set_ulysses_sequence_parallel_group(
+                self.device_mesh["sp"].get_group())
 
     def __exit__(self, exc_type, exc_value, traceback):
         if self.device_mesh is not None:

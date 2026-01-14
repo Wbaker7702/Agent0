@@ -82,14 +82,16 @@ class BatchRewardManager:
         return scores
 
     def __call__(self, data: DataProto, return_dict=False):
-        # If there is rm score, we directly return rm score. Otherwise, we compute via rm_score_fn
+        # If there is rm score, we directly return rm score. Otherwise, we
+        # compute via rm_score_fn
         if "rm_scores" in data.batch.keys():
             if return_dict:
                 return {"reward_tensor": data.batch["rm_scores"]}
             else:
                 return data.batch["rm_scores"]
 
-        reward_tensor = torch.zeros_like(data.batch["responses"], dtype=torch.float32)
+        reward_tensor = torch.zeros_like(
+            data.batch["responses"], dtype=torch.float32)
         reward_extra_info = defaultdict(list)
         prompt_ids = data.batch["prompts"]
         prompt_len = prompt_ids.shape[-1]
@@ -124,13 +126,14 @@ class BatchRewardManager:
                     data.batch["prompts"][i], skip_special_tokens=True
                 )
                 ground_truth = (
-                    data[i].non_tensor_batch["reward_model"].get("ground_truth", None)
-                )
+                    data[i].non_tensor_batch["reward_model"].get(
+                        "ground_truth", None))
                 print("[prompt]", prompt_str)
                 print("[response]", response_str)
                 print("[ground_truth]", ground_truth)
                 print("[score]", scores[i])
-                already_printed[data_source] = already_printed.get(data_source, 0) + 1
+                already_printed[data_source] = already_printed.get(
+                    data_source, 0) + 1
 
         data.batch["acc"] = torch.tensor(
             rewards, dtype=torch.float32, device=prompt_ids.device

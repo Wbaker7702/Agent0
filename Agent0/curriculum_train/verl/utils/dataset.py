@@ -120,10 +120,13 @@ class RLHFDataset(Dataset):
             data_split = "train"
 
         if os.path.isdir(data_path):
-            # when we use dataset builder, we should always refer to the train split
-            self.dataset = load_dataset("parquet", data_dir=data_path, split="train")
+            # when we use dataset builder, we should always refer to the train
+            # split
+            self.dataset = load_dataset(
+                "parquet", data_dir=data_path, split="train")
         elif os.path.isfile(data_path):
-            self.dataset = load_dataset("parquet", data_files=data_path, split="train")
+            self.dataset = load_dataset(
+                "parquet", data_files=data_path, split="train")
         else:
             # load remote dataset from huggingface hub
             self.dataset = load_dataset(data_path, split=data_split)
@@ -138,12 +141,13 @@ class RLHFDataset(Dataset):
             personas_dataset = load_dataset(
                 "proj-persona/PersonaHub", "math", split="train"
             )
-            self.personas = [item["input persona"] for item in personas_dataset]
+            self.personas = [item["input persona"]
+                             for item in personas_dataset]
             # self.personas = self.personas.select(range(100))
         if self.filter_overlong_prompts:
             self.dataset = self.dataset.filter(
-                self._filter_overlong_prompts, desc="Filtering overlong prompts"
-            )
+                self._filter_overlong_prompts,
+                desc="Filtering overlong prompts")
 
     def _build_messages(self, example: Dict[str, Any]) -> List[Dict[str, Any]]:
         prompt_str: str = example[self.prompt_key]
@@ -151,10 +155,10 @@ class RLHFDataset(Dataset):
             print("load personas")
             return [
                 {
-                    "role": "system",
-                    "content": (
-                        f"You are {random.choice(self.personas)}.\n"
-                        "FIRST, in your private scratch-pad, think step-by-step to design a brand-new, non-trivial problem. "
+                    "role": "system", "content": (
+                        f"You are {
+                            random.choice(
+                                self.personas)}.\n" "FIRST, in your private scratch-pad, think step-by-step to design a brand-new, non-trivial problem. "
                         "The problem could come from any field of mathematics, including but not limited to algebra, geometry, number theory, combinatorics, prealgebra, probability, statistics, and calculus. "
                         "Aim for a difficulty such that fewer than 30 % of advanced high-school students could solve it. "
                         "Avoid re-using textbook clichés or famous contest problems.\n"
@@ -164,23 +168,15 @@ class RLHFDataset(Dataset):
                         "</question>\n\n"
                         r"\boxed{final_answer}"
                         "\n\n"
-                        "Do NOT output anything else—no explanations, no extra markup."
-                    ),
-                },
-                {
-                    "role": "user",
-                    "content": (
-                        "Generate one new, challenging reasoning question now. "
-                        "Remember to format the output exactly as instructed."
-                    ),
-                },
-            ]
+                        "Do NOT output anything else—no explanations, no extra markup."), }, {
+                    "role": "user", "content": (
+                            "Generate one new, challenging reasoning question now. "
+                            "Remember to format the output exactly as instructed."), }, ]
         if "questioner_format" in self.format_prompt:
             # print('detected questioner_format')
             return [
                 {
-                    "role": "system",
-                    "content": (
+                    "role": "system", "content": (
                         "You are an expert competition-math problem setter.\n"
                         "FIRST, in your private scratch-pad, think step-by-step to design a brand-new, non-trivial problem. "
                         "The problem could come from any field of mathematics, including but not limited to algebra, geometry, number theory, combinatorics, prealgebra, probability, statistics, and calculus. "
@@ -192,17 +188,10 @@ class RLHFDataset(Dataset):
                         "</question>\n\n"
                         r"\boxed{final_answer}"
                         "\n\n"
-                        "Do NOT output anything else—no explanations, no extra markup."
-                    ),
-                },
-                {
-                    "role": "user",
-                    "content": (
+                        "Do NOT output anything else—no explanations, no extra markup."), }, {
+                    "role": "user", "content": (
                         "Generate one new, challenging reasoning question now. "
-                        "Remember to format the output exactly as instructed."
-                    ),
-                },
-            ]
+                        "Remember to format the output exactly as instructed."), }, ]
         if "solver_format" in self.format_prompt:
             return [
                 {
@@ -324,16 +313,18 @@ class RLHFDataset(Dataset):
             left_pad=True,
             truncation=self.truncation,
         )
-        raw_prompt_ids = self.tokenizer.encode(prompt, add_special_tokens=False)
+        raw_prompt_ids = self.tokenizer.encode(
+            prompt, add_special_tokens=False)
         if len(raw_prompt_ids) > self.max_prompt_length:
             if self.truncation == "left":
-                raw_prompt_ids = raw_prompt_ids[-self.max_prompt_length :]
+                raw_prompt_ids = raw_prompt_ids[-self.max_prompt_length:]
             elif self.truncation == "right":
                 raw_prompt_ids = raw_prompt_ids[: self.max_prompt_length]
             elif self.truncation == "error":
                 raise RuntimeError(
-                    f"Prompt length {len(raw_prompt_ids)} is longer than {self.max_prompt_length}."
-                )
+                    f"Prompt length {
+                        len(raw_prompt_ids)} is longer than {
+                        self.max_prompt_length}.")
 
         example["input_ids"] = input_ids
         example["attention_mask"] = attention_mask

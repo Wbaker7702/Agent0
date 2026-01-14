@@ -85,14 +85,14 @@ def _get_model_runner_workers(vllm_config, init_ray: bool = True):
     # sort actor names by pg_index and local_rank
     actor_names = sorted(actor_names, key=get_pg_index_and_local_rank)
     actor_names = actor_names[
-        vllm_dp_rank * vllm_tp_size : (vllm_dp_rank + 1) * vllm_tp_size
+        vllm_dp_rank * vllm_tp_size: (vllm_dp_rank + 1) * vllm_tp_size
     ]
     workers: list[WorkerWrapperBase] = [
         ray.get_actor(actor_name) for actor_name in actor_names
     ]
     print(
-        f"instance_id: {vllm_config.instance_id} initializes with external actors: {actor_names}"
-    )
+        f"instance_id: {
+            vllm_config.instance_id} initializes with external actors: {actor_names}")
 
     return workers
 
@@ -117,7 +117,9 @@ class ExternalRayDistributedExecutor(Executor):
         self.collective_rpc("init_worker", args=([kwargs],))
         self.collective_rpc("init_device")
         self.collective_rpc("load_model")
-        print(f"instance_id: {self.vllm_config.instance_id} initializes finished.")
+        print(
+            f"instance_id: {
+                self.vllm_config.instance_id} initializes finished.")
 
     def collective_rpc(
         self,
@@ -134,12 +136,8 @@ class ExternalRayDistributedExecutor(Executor):
         del method
 
         # ~3ms overhead per schedule step due to SchedulerOutput/ModelRunnerOutput serialization/deserialization.
-        outputs = ray.get(
-            [
-                worker.execute_method.remote(sent_method, *args, **(kwargs or {}))
-                for worker in self.workers
-            ]
-        )
+        outputs = ray.get([worker.execute_method.remote(
+            sent_method, *args, **(kwargs or {})) for worker in self.workers])
         return outputs
 
     def check_health(self):
@@ -215,8 +213,11 @@ class AsyncvLLMServer(AsyncServerBase):
     """
 
     def __init__(
-        self, config: DictConfig, vllm_dp_size: int, vllm_dp_rank: int, wg_prefix: str
-    ):
+            self,
+            config: DictConfig,
+            vllm_dp_size: int,
+            vllm_dp_rank: int,
+            wg_prefix: str):
         """
         Args:
             config: DictConfig.
@@ -298,8 +299,12 @@ class AsyncvLLMServer(AsyncServerBase):
 
         # build serving chat
         model_config = self.engine.model_config
-        BASE_MODEL_PATHS = [BaseModelPath(name=model_name, model_path=model_path)]
-        models = OpenAIServingModels(self.engine, model_config, BASE_MODEL_PATHS)
+        BASE_MODEL_PATHS = [
+            BaseModelPath(
+                name=model_name,
+                model_path=model_path)]
+        models = OpenAIServingModels(
+            self.engine, model_config, BASE_MODEL_PATHS)
         self.openai_serving_chat = OpenAIServingChat(
             self.engine,
             model_config,
@@ -316,15 +321,18 @@ class AsyncvLLMServer(AsyncServerBase):
         vllm_config = engine_args.create_engine_config()
         namespace = ray.get_runtime_context().namespace
         vllm_config.instance_id = (
-            f"{namespace}:{self.wg_prefix}:{self.vllm_dp_size}:{self.vllm_dp_rank}"
-        )
+            f"{namespace}:{
+                self.wg_prefix}:{
+                self.vllm_dp_size}:{
+                self.vllm_dp_rank}")
 
         # VERL_VLLM_ZMQ_ADDRESSES
         if (
             engine_args.distributed_executor_backend
             == ExternalZeroMQDistributedExecutor
         ):
-            workers = _get_model_runner_workers(vllm_config=vllm_config, init_ray=False)
+            workers = _get_model_runner_workers(
+                vllm_config=vllm_config, init_ray=False)
             zmq_addresses = ray.get(
                 [worker.get_zeromq_address.remote() for worker in workers]
             )
@@ -349,20 +357,26 @@ class AsyncvLLMServer(AsyncServerBase):
                 content=generator.model_dump(), status_code=generator.code
             )
         if request.stream:
-            return StreamingResponse(content=generator, media_type="text/event-stream")
+            return StreamingResponse(
+                content=generator,
+                media_type="text/event-stream")
         else:
             assert isinstance(generator, ChatCompletionResponse)
             return JSONResponse(content=generator.model_dump())
 
-    async def generate(
-        self, prompt_ids: list[int], sampling_params: dict[str, Any], request_id: str
-    ) -> list[int]:
+    async def generate(self,
+                       prompt_ids: list[int],
+                       sampling_params: dict[str,
+                                             Any],
+                       request_id: str) -> list[int]:
         max_tokens = self.max_model_len - len(prompt_ids)
-        sampling_params = SamplingParams(max_tokens=max_tokens, **sampling_params)
+        sampling_params = SamplingParams(
+            max_tokens=max_tokens, **sampling_params)
         prompt = TokensPrompt(prompt_token_ids=prompt_ids)
         generator = self.engine.generate(
-            prompt=prompt, sampling_params=sampling_params, request_id=request_id
-        )
+            prompt=prompt,
+            sampling_params=sampling_params,
+            request_id=request_id)
 
         # Get final response
         final_res: Optional[RequestOutput] = None

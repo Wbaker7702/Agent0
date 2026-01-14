@@ -88,7 +88,8 @@ def rollout_trace_attr(sample_index=None, step=None, rollout_n=None):
         attributes["step"] = step
     if rollout_n is not None:
         attributes["rollout_n"] = rollout_n
-    attributes["experiment_name"] = RolloutTraceConfig.get_instance().experiment_name
+    attributes["experiment_name"] = RolloutTraceConfig.get_instance(
+    ).experiment_name
 
     if not attributes or backend is None:
         yield

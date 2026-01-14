@@ -82,8 +82,10 @@ class Qwen2_5VLSelfAttention(SelfAttention):
         else:
             assert rotary_pos_cos is None and rotary_pos_sin is None
 
-        # For self attention we just duplicate the rotary_pos_emb if it isn't already
-        if rotary_pos_emb is not None and not isinstance(rotary_pos_emb, tuple):
+        # For self attention we just duplicate the rotary_pos_emb if it isn't
+        # already
+        if rotary_pos_emb is not None and not isinstance(
+                rotary_pos_emb, tuple):
             rotary_pos_emb = (rotary_pos_emb,) * 2
 
         # =====================
@@ -100,7 +102,8 @@ class Qwen2_5VLSelfAttention(SelfAttention):
         # ===================================================
 
         # This branch only runs in the decode phase of flash decoding and returns after the linear
-        # projection. This conditional is not used in the prefill phase or non-flash-decoding cases.
+        # projection. This conditional is not used in the prefill phase or
+        # non-flash-decoding cases.
         if (
             self.config.flash_decode
             and inference_context is not None
@@ -168,16 +171,14 @@ class Qwen2_5VLSelfAttention(SelfAttention):
                 # TODO VIJAY: simplify
                 if inference_context is None or inference_context.is_static_batching():
                     query = apply_rotary_pos_emb_absolute(
-                        query, q_pos_emb, config=self.config, cu_seqlens=cu_seqlens_q
-                    )
+                        query, q_pos_emb, config=self.config, cu_seqlens=cu_seqlens_q)
                 else:
                     query = inference_context.apply_rotary_emb_query(
                         query, q_pos_emb, self.config, cu_seqlens_q
                     )
             if k_pos_emb is not None:
                 key = apply_rotary_pos_emb_absolute(
-                    key, k_pos_emb, config=self.config, cu_seqlens=cu_seqlens_kv
-                )
+                    key, k_pos_emb, config=self.config, cu_seqlens=cu_seqlens_kv)
 
             # TODO, can apply positional embedding to value_layer so it has
             # absolute positional embedding.
@@ -218,10 +219,10 @@ class Qwen2_5VLSelfAttention(SelfAttention):
                 cu_kv_lengths, max_seqlen_k = inference_context.cu_kv_lengths()
 
                 core_attn_out = self.flash_decode_and_prefill(
-                    q, k, v, max_seqlen_q, max_seqlen_k, cu_query_lengths, cu_kv_lengths
-                )
+                    q, k, v, max_seqlen_q, max_seqlen_k, cu_query_lengths, cu_kv_lengths)
                 core_attn_out = core_attn_out.squeeze(0).unsqueeze(1)
-                core_attn_out = rearrange(core_attn_out, "s b h d -> s b (h d)")
+                core_attn_out = rearrange(
+                    core_attn_out, "s b h d -> s b (h d)")
 
         if packed_seq_params is not None and packed_seq_params.qkv_format == "thd":
             # reshape to same output shape as unpacked case

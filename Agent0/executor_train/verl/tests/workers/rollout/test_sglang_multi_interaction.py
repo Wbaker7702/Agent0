@@ -106,7 +106,8 @@ def create_mock_config_with_multi_interactions():
 def setup_distributed():
     """Initialize distributed environment if not already initialized."""
     if not dist.is_initialized():
-        dist.init_process_group(backend="nccl" if torch.cuda.is_available() else "gloo")
+        dist.init_process_group(
+            backend="nccl" if torch.cuda.is_available() else "gloo")
 
 
 class TestSGLangMultiInteraction:
@@ -116,7 +117,8 @@ class TestSGLangMultiInteraction:
         config, temp_config_path = create_mock_config_with_multi_interactions()
 
         try:
-            # Mock SGLang engine and initialization methods like the reference test
+            # Mock SGLang engine and initialization methods like the reference
+            # test
             with (
                 patch.object(SGLangRollout, "_init_distributed_env", return_value=None),
                 patch.object(
@@ -157,7 +159,8 @@ class TestSGLangMultiInteraction:
                 assert "mock_agent1" in rollout.interaction_map
                 assert "mock_agent2" in rollout.interaction_map
 
-                # Use class name comparison instead of isinstance for multi-process compatibility
+                # Use class name comparison instead of isinstance for
+                # multi-process compatibility
                 assert (
                     rollout.interaction_map["mock_agent1"].__class__.__name__
                     == "MockInteraction"
@@ -167,7 +170,8 @@ class TestSGLangMultiInteraction:
                     == "MockInteraction"
                 )
 
-                # Also check that they are instances of BaseInteraction (which should work across processes)
+                # Also check that they are instances of BaseInteraction (which
+                # should work across processes)
                 assert isinstance(
                     rollout.interaction_map["mock_agent1"], BaseInteraction
                 )
@@ -229,8 +233,13 @@ class TestSGLangMultiInteraction:
                 req = AsyncRolloutRequest(
                     request_id="test_req",
                     state=AsyncRolloutRequestStateEnum.INTERACTING,
-                    messages=[Message(role="user", content="test message")],
-                    interaction_kwargs={"name": "mock_agent2", "test_param": "value"},
+                    messages=[
+                        Message(
+                            role="user",
+                            content="test message")],
+                    interaction_kwargs={
+                        "name": "mock_agent2",
+                        "test_param": "value"},
                     input_ids=None,
                     prompt_ids=None,
                     response_ids=None,
@@ -273,9 +282,7 @@ class TestSGLangMultiInteraction:
                     "name": "gsm8k",
                     "class_name": "tests.workers.rollout.test_sglang_multi_interaction.MockInteraction",
                     "config": {},
-                }
-            ]
-        }
+                }]}
 
         with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
             OmegaConf.save(interaction_config, f.name)
@@ -340,7 +347,8 @@ class TestSGLangMultiInteraction:
 
                 # Test that default interaction name works
                 interaction_kwargs_without_name = {"test_param": "value"}
-                default_name = interaction_kwargs_without_name.get("name", "gsm8k")
+                default_name = interaction_kwargs_without_name.get(
+                    "name", "gsm8k")
                 assert default_name == "gsm8k"
                 assert default_name in rollout.interaction_map
 

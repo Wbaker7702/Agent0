@@ -32,10 +32,14 @@ class ToRLRewardManager:
     name = "torl"
 
     def __init__(
-        self, tokenizer, num_examine, compute_score=None, reward_fn_key="data_source"
-    ) -> None:
+            self,
+            tokenizer,
+            num_examine,
+            compute_score=None,
+            reward_fn_key="data_source") -> None:
         self.tokenizer = tokenizer
-        self.num_examine = num_examine  # the number of batches of decoded responses to print to the console
+        # the number of batches of decoded responses to print to the console
+        self.num_examine = num_examine
         # self.compute_score = compute_score if compute_score else _default_compute_score
         self.compute_score = torl_compute_score
         self.reward_fn_key = reward_fn_key
@@ -51,7 +55,8 @@ class ToRLRewardManager:
         self.add_no_tool_interact_penalty = (
             False  # -0.25 if the traj's num turn is 0, no interaction at all
         )
-        self.add_code_exec_penalty = False  # -0.25 if the execution has an error.
+        # -0.25 if the execution has an error.
+        self.add_code_exec_penalty = False
 
     def add_additional_penalties(self, response: str, data_i, scores_i: dict):
         # 1.4 format penalty
@@ -150,14 +155,16 @@ class ToRLRewardManager:
         if data.meta_info.get("global_step", None) is not None:
             self.step = data.meta_info["global_step"]
 
-        # If there is rm score, we directly return rm score. Otherwise, we compute via rm_score_fn
+        # If there is rm score, we directly return rm score. Otherwise, we
+        # compute via rm_score_fn
         if "rm_scores" in data.batch.keys():
             if return_dict:
                 return {"reward_tensor": data.batch["rm_scores"]}
             else:
                 return data.batch["rm_scores"]
 
-        reward_tensor = torch.zeros_like(data.batch["responses"], dtype=torch.float32)
+        reward_tensor = torch.zeros_like(
+            data.batch["responses"], dtype=torch.float32)
         reward_extra_info = defaultdict(list)
 
         already_print_data_sources = {}
@@ -184,7 +191,7 @@ class ToRLRewardManager:
             if "loss_mask" in data_item.batch:
                 loss_mask = data_item.batch["loss_mask"]
                 valid_response_ids_with_loss_mask = torch.where(
-                    loss_mask[prompt_length : prompt_length + valid_response_length]
+                    loss_mask[prompt_length: prompt_length + valid_response_length]
                     == 1,
                     valid_response_ids,
                     self.tokenizer.pad_token_id,
@@ -216,14 +223,16 @@ class ToRLRewardManager:
             score["score"] = torl_score
 
             # add additional penalty
-            score = self.add_additional_penalties(response_str, data_item, score)
+            score = self.add_additional_penalties(
+                response_str, data_item, score)
 
             if score["accuracy"] > 0:
                 reward_extra_info["correct_response_length"].append(
                     valid_response_length
                 )
             else:
-                reward_extra_info["wrong_response_length"].append(valid_response_length)
+                reward_extra_info["wrong_response_length"].append(
+                    valid_response_length)
 
             if isinstance(score, dict):
                 reward = score["score"]
@@ -297,9 +306,11 @@ class ToRLRewardManager:
         if save_record:
             # Save the records to a file
             if self.num_examine == 1:
-                temp_file = self.record_dir / f"{self.name}-step-val-{self.step}.json"
+                temp_file = self.record_dir / \
+                    f"{self.name}-step-val-{self.step}.json"
             else:
-                temp_file = self.record_dir / f"{self.name}-step-{self.step}.json"
+                temp_file = self.record_dir / \
+                    f"{self.name}-step-{self.step}.json"
             self.step += 1
             if temp_file.exists():
                 with open(temp_file, "r") as f:
@@ -325,9 +336,8 @@ class ToRLRewardManager:
         reward_extra_info["correct_response_length"] = [
             correct_response_length_mean
         ] * len(reward_tensor)
-        reward_extra_info["wrong_response_length"] = [wrong_response_length_mean] * len(
-            reward_tensor
-        )
+        reward_extra_info["wrong_response_length"] = [
+            wrong_response_length_mean] * len(reward_tensor)
 
         if return_dict:
             return {

@@ -49,7 +49,8 @@ def normalize_answer(answer):
 
 def pixel_reasoner_score(solution_str, ground_truth):
     if isinstance(ground_truth, list):
-        return max([pixel_reasoner_score(solution_str, gt) for gt in ground_truth])
+        return max([pixel_reasoner_score(solution_str, gt)
+                   for gt in ground_truth])
     solution_str = normalize_answer(solution_str)
     if "\\boxed" in ground_truth:
         ground_truth = normalize_answer(ground_truth)
@@ -57,7 +58,10 @@ def pixel_reasoner_score(solution_str, ground_truth):
         ground_truth = f"\\boxed{{{ground_truth}}}"
     verify_result = verify(parse(solution_str), parse(ground_truth))
     if not verify_result:
-        verify_result = verify(parse(solution_str.lower()), parse(ground_truth.lower()))
+        verify_result = verify(
+            parse(
+                solution_str.lower()), parse(
+                ground_truth.lower()))
     if verify_result:
         return 1.0
     else:
@@ -74,17 +78,23 @@ class PixelReasonerRewardManager:
     name = "pixel_reasoner"
 
     def __init__(
-        self, tokenizer, num_examine, compute_score=None, reward_fn_key="data_source"
-    ) -> None:
+            self,
+            tokenizer,
+            num_examine,
+            compute_score=None,
+            reward_fn_key="data_source") -> None:
         self.tokenizer = tokenizer
-        self.num_examine = num_examine  # the number of batches of decoded responses to print to the console
+        # the number of batches of decoded responses to print to the console
+        self.num_examine = num_examine
         self.compute_score = pixel_reasoner_score
         self.reward_fn_key = reward_fn_key
         self.step = None
         self.add_curiousity_penalty = True
         self.add_action_redundancy_penalty = True
         self.group_tool_call_rate_lower_bound = 0.3  # H in the paper
-        self.action_redundancy_limit = 1  # n_{vo} in the paper, add penalty if the number of redundant actions is larger than this limit
+        # n_{vo} in the paper, add penalty if the number of redundant actions
+        # is larger than this limit
+        self.action_redundancy_limit = 1
         self.alpha = 0.5
         self.beta = 0.05
 
@@ -132,7 +142,10 @@ class PixelReasonerRewardManager:
                 scores_i["score"] += penalty
                 scores_i["curiousity_penalty"] = penalty
             if self.add_action_redundancy_penalty:
-                penalty = min(self.action_redundancy_limit - num_valid_action, 0)
+                penalty = min(
+                    self.action_redundancy_limit -
+                    num_valid_action,
+                    0)
                 penalty *= self.beta
                 scores_i["score"] += penalty
                 scores_i["action_redundancy_penalty"] = penalty
@@ -177,14 +190,16 @@ class PixelReasonerRewardManager:
         if data.meta_info.get("global_step", None) is not None:
             self.step = data.meta_info["global_step"]
 
-        # If there is rm score, we directly return rm score. Otherwise, we compute via rm_score_fn
+        # If there is rm score, we directly return rm score. Otherwise, we
+        # compute via rm_score_fn
         if "rm_scores" in data.batch.keys():
             if return_dict:
                 return {"reward_tensor": data.batch["rm_scores"]}
             else:
                 return data.batch["rm_scores"]
 
-        reward_tensor = torch.zeros_like(data.batch["responses"], dtype=torch.float32)
+        reward_tensor = torch.zeros_like(
+            data.batch["responses"], dtype=torch.float32)
         reward_extra_info = defaultdict(list)
 
         already_print_data_sources = {}
@@ -212,7 +227,7 @@ class PixelReasonerRewardManager:
             if "loss_mask" in data_item.batch:
                 loss_mask = data_item.batch["loss_mask"]
                 valid_response_ids_with_loss_mask = torch.where(
-                    loss_mask[prompt_length : prompt_length + valid_response_length]
+                    loss_mask[prompt_length: prompt_length + valid_response_length]
                     == 1,
                     valid_response_ids,
                     self.tokenizer.pad_token_id,
@@ -256,7 +271,8 @@ class PixelReasonerRewardManager:
                     valid_response_length
                 )
             else:
-                reward_extra_info["wrong_response_length"].append(valid_response_length)
+                reward_extra_info["wrong_response_length"].append(
+                    valid_response_length)
 
             if isinstance(score, dict):
                 reward = score["score"]
@@ -318,11 +334,9 @@ class PixelReasonerRewardManager:
             )
             if "responses_with_loss_mask" in data_item.batch:
                 to_save_response_with_loss_mask = self.tokenizer.decode(
-                    valid_response_ids_with_loss_mask, skip_special_tokens=False
-                )
+                    valid_response_ids_with_loss_mask, skip_special_tokens=False)
                 to_save_response_with_loss_mask = replace_consecutive_tokens(
-                    to_save_response_with_loss_mask, token=self.tokenizer.pad_token
-                )
+                    to_save_response_with_loss_mask, token=self.tokenizer.pad_token)
             to_save_records.append(
                 {
                     "id": (
@@ -356,9 +370,11 @@ class PixelReasonerRewardManager:
         if save_record:
             # Save the records to a file
             if self.num_examine == 1:
-                temp_file = self.record_dir / f"{self.name}-step-val-{self.step}.json"
+                temp_file = self.record_dir / \
+                    f"{self.name}-step-val-{self.step}.json"
             else:
-                temp_file = self.record_dir / f"{self.name}-step-{self.step}.json"
+                temp_file = self.record_dir / \
+                    f"{self.name}-step-{self.step}.json"
             self.step += 1
             if temp_file.exists():
                 with open(temp_file, "r") as f:
@@ -381,9 +397,8 @@ class PixelReasonerRewardManager:
         reward_extra_info["correct_response_length"] = [
             correct_response_length_mean
         ] * len(reward_tensor)
-        reward_extra_info["wrong_response_length"] = [wrong_response_length_mean] * len(
-            reward_tensor
-        )
+        reward_extra_info["wrong_response_length"] = [
+            wrong_response_length_mean] * len(reward_tensor)
 
         if return_dict:
             return {

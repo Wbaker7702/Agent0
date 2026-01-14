@@ -19,7 +19,8 @@ from .utils import check_correctness as apps_check_correctness
 
 
 def compute_score(completion, test_cases, continuous=False):
-    # try to get code solution from completion. if the completion is pure code, this will not take effect.
+    # try to get code solution from completion. if the completion is pure
+    # code, this will not take effect.
     solution = completion.split("```python")[-1].split("```")[0]
     try:
         try:
@@ -28,7 +29,8 @@ def compute_score(completion, test_cases, continuous=False):
         except Exception as e:
             print(f"Error:{e}")
 
-        # Complete check on all in-out pairs first. If there is no failure, per-sample test can be skipped.
+        # Complete check on all in-out pairs first. If there is no failure,
+        # per-sample test can be skipped.
         try:
             res, metadata = apps_check_correctness(
                 in_outs=test_cases, generation=solution, timeout=5, debug=False
@@ -44,17 +46,18 @@ def compute_score(completion, test_cases, continuous=False):
         inputs = test_cases["inputs"]
         outputs = test_cases["outputs"]
         for i in range(len(inputs)):
-            test_cases_list.append({"inputs": [inputs[i]], "outputs": [outputs[i]]})
+            test_cases_list.append(
+                {"inputs": [inputs[i]], "outputs": [outputs[i]]})
 
         if continuous:
             # per sample test: if continuous score is needed, test first 10 samples regardless of failures
-            # do not test all samples cuz some problems have enormous test cases
+            # do not test all samples cuz some problems have enormous test
+            # cases
             metadata_list = []
             res_list = []
             for test_case_id, test_case in enumerate(test_cases_list):
                 res, metadata = apps_check_correctness(
-                    in_outs=test_case, generation=solution, timeout=10, debug=False
-                )
+                    in_outs=test_case, generation=solution, timeout=10, debug=False)
                 try:
                     metadata = dict(enumerate(metadata))[
                         0

@@ -58,7 +58,9 @@ class VerlToolChatCompletionScheduler(ChatCompletionScheduler):
         self.max_concurrent_trajectories = self.agent_config.max_concurrent_trajectories
         self.tokenizer = self.agent_actor_manager.tokenizer
         self.over_sampling = self.agent_config.over_sampling
-        print(f"AgentActorManager initialized with config: {self.agent_config}")
+        print(
+            f"AgentActorManager initialized with config: {
+                self.agent_config}")
 
     async def _chat_completions_openai(
         self, address: str, **chat_complete_request
@@ -88,13 +90,18 @@ class VerlToolChatCompletionScheduler(ChatCompletionScheduler):
                 data = await resp.json()
                 if resp.status != 200:
                     raise ValueError(
-                        f"Request failed with status {data.get('code', 'unknown')}: {data}"
-                    )
+                        f"Request failed with status {
+                            data.get(
+                                'code',
+                                'unknown')}: {data}")
                 return ChatCompletion(**data)
         finally:
             await session.close()
 
-    async def _completions_openai(self, address: str, **complete_request) -> Completion:
+    async def _completions_openai(
+            self,
+            address: str,
+            **complete_request) -> Completion:
         client = AsyncOpenAI(
             base_url=f"http://{address}/v1",
             api_key="token-abc123",
@@ -120,8 +127,10 @@ class VerlToolChatCompletionScheduler(ChatCompletionScheduler):
                 data = await resp.json()
                 if resp.status != 200:
                     raise ValueError(
-                        f"Request failed with status {data.get('code', 'unknown')}: {data}"
-                    )
+                        f"Request failed with status {
+                            data.get(
+                                'code',
+                                'unknown')}: {data}")
                 return Completion(**data)
         finally:
             await session.close()
@@ -138,8 +147,9 @@ class VerlToolChatCompletionScheduler(ChatCompletionScheduler):
                 data = await resp.json()
                 if resp.status != 200:
                     raise ValueError(
-                        f"Abort request failed with status {data.get('code', 'unknown')}: {data}"
-                    )
+                        f"Abort request failed with status {
+                            data.get(
+                                'code', 'unknown')}: {data}")
                 return data
         finally:
             await session.close()
@@ -156,7 +166,9 @@ class VerlToolChatCompletionScheduler(ChatCompletionScheduler):
             if request_id not in self.request_id_to_address:
                 address = self.weighted_addresses[0][1]
                 self.weighted_addresses[0][0] += 1
-                heapq.heapreplace(self.weighted_addresses, self.weighted_addresses[0])
+                heapq.heapreplace(
+                    self.weighted_addresses,
+                    self.weighted_addresses[0])
                 self.request_id_to_address[request_id] = address
             assert request_id in self.request_id_to_address
             address = self.request_id_to_address.pop(request_id)
@@ -208,13 +220,16 @@ class VerlToolChatCompletionScheduler(ChatCompletionScheduler):
                 sampling_params["max_tokens"] = self.max_model_len - prompt_len
                 if sampling_params["max_tokens"] <= 0:
                     raise ValueError(
-                        f"max_tokens {sampling_params['max_tokens']} is too small for prompt length {prompt_len} and max model length {self.max_model_len}."
-                    )
+                        f"max_tokens {
+                            sampling_params['max_tokens']} is too small for prompt length {prompt_len} and max model length {
+                            self.max_model_len}.")
                 logger.debug(
-                    f"Adjusted max_tokens to {sampling_params['max_tokens']} for prompt length {prompt_len} and max model length {self.max_model_len}."
-                )
+                    f"Adjusted max_tokens to {
+                        sampling_params['max_tokens']} for prompt length {prompt_len} and max model length {
+                        self.max_model_len}.")
         try:
-            # NOTE: OpenAI client uses httpx, seems to have performance issue in high concurrency requests.
+            # NOTE: OpenAI client uses httpx, seems to have performance issue
+            # in high concurrency requests.
             completion = await self._completions_aiohttp(
                 address,
                 prompt=prompt,
@@ -232,7 +247,8 @@ class VerlToolChatCompletionScheduler(ChatCompletionScheduler):
         info["__depth__"] -= 1
 
         if exception is not None:
-            logger.exception(f"chat completion failed with exception: {exception}")
+            logger.exception(
+                f"chat completion failed with exception: {exception}")
 
         # No more ongoing completion requests
         if info["__depth__"] == 0:
@@ -249,7 +265,9 @@ class VerlToolChatCompletionScheduler(ChatCompletionScheduler):
             if request_id not in self.request_id_to_address:
                 address = self.weighted_addresses[0][1]
                 self.weighted_addresses[0][0] += 1
-                heapq.heapreplace(self.weighted_addresses, self.weighted_addresses[0])
+                heapq.heapreplace(
+                    self.weighted_addresses,
+                    self.weighted_addresses[0])
                 self.request_id_to_address[request_id] = address
             assert request_id in self.request_id_to_address
             address = self.request_id_to_address.pop(request_id)
@@ -315,7 +333,8 @@ class VerlToolChatCompletionScheduler(ChatCompletionScheduler):
             extra_body["add_generation_prompt"] = False
 
         try:
-            # NOTE: OpenAI client uses httpx, seems to have performance issue in high concurrency requests.
+            # NOTE: OpenAI client uses httpx, seems to have performance issue
+            # in high concurrency requests.
             chat_completion = await self._chat_completions_aiohttp(
                 address,
                 messages=messages,
@@ -337,14 +356,17 @@ class VerlToolChatCompletionScheduler(ChatCompletionScheduler):
         info["__depth__"] -= 1
 
         if exception is not None:
-            logger.exception(f"chat completion failed with exception: {exception}")
+            logger.exception(
+                f"chat completion failed with exception: {exception}")
 
         # No more ongoing completion requests
         if info["__depth__"] == 0:
             info["__done__"].set()
 
         if not isinstance(chat_completion, ChatCompletion):
-            raise ValueError(f"Expected ChatCompletion, got {type(chat_completion)}")
+            raise ValueError(
+                f"Expected ChatCompletion, got {
+                    type(chat_completion)}")
 
         return (
             chat_completion.choices[0].message.content
@@ -352,7 +374,10 @@ class VerlToolChatCompletionScheduler(ChatCompletionScheduler):
             else None
         )
 
-    def simple_postprocess(self, batch: DataProto, responses: List[str]) -> DataProto:
+    def simple_postprocess(
+            self,
+            batch: DataProto,
+            responses: List[str]) -> DataProto:
         prompt_ids = batch.batch["input_ids"]
         prompt_attention_mask = batch.batch["attention_mask"]
         responses = self.tokenizer(
@@ -399,7 +424,8 @@ class VerlToolChatCompletionScheduler(ChatCompletionScheduler):
                 )
             )
 
-    async def simple_generate_sequences(self, batch: DataProto, **kwargs) -> DataProto:
+    async def simple_generate_sequences(
+            self, batch: DataProto, **kwargs) -> DataProto:
         t_start = time.time()
         kwargs.update(
             {
@@ -448,11 +474,16 @@ class VerlToolChatCompletionScheduler(ChatCompletionScheduler):
             disable=(len(tasks) < 10) or not self.agent_config.enable_tqdm,
         )
         output_batch = self.simple_postprocess(batch, responses)
-        output_batch.meta_info["timing"] = {"generate_sequences": time.time() - t_start}
+        output_batch.meta_info["timing"] = {
+            "generate_sequences": time.time() - t_start}
         return output_batch
 
-    async def generate_sequences(self, batch: DataProto, **kwargs) -> DataProto:
-        logger.info("[VerlToolChatCompletionScheduler] generate_sequences start")
+    async def generate_sequences(
+            self,
+            batch: DataProto,
+            **kwargs) -> DataProto:
+        logger.info(
+            "[VerlToolChatCompletionScheduler] generate_sequences start")
         t_start = time.time()
         kwargs.update(
             {
@@ -476,8 +507,8 @@ class VerlToolChatCompletionScheduler(ChatCompletionScheduler):
         repeated_chunk_batch = repeated_batch.chunk(len(repeated_batch))
         # repeated_batch = [repeated_batch] # for debug
         logger.warning(
-            f"[VerlToolChatCompletionScheduler] generate_sequences number of chunks: {len(repeated_chunk_batch)}"
-        )
+            f"[VerlToolChatCompletionScheduler] generate_sequences number of chunks: {
+                len(repeated_chunk_batch)}")
         tasks = []
         if self.agent_config.enable_agent:
             if (
@@ -493,7 +524,9 @@ class VerlToolChatCompletionScheduler(ChatCompletionScheduler):
                         )
 
                 for batch_index in range(len(repeated_chunk_batch)):
-                    tasks.append(asyncio.create_task(run_with_semaphore(batch_index)))
+                    tasks.append(
+                        asyncio.create_task(
+                            run_with_semaphore(batch_index)))
             else:
                 for batch_index in range(len(repeated_chunk_batch)):
                     tasks.append(
@@ -516,11 +549,11 @@ class VerlToolChatCompletionScheduler(ChatCompletionScheduler):
             output_batch = await self.simple_generate_sequences(
                 repeated_batch, **kwargs
             )
-        output_batch.meta_info["timing"] = {"generate_sequences": time.time() - t_start}
+        output_batch.meta_info["timing"] = {
+            "generate_sequences": time.time() - t_start}
         logger.info(
             "[VerlToolChatCompletionScheduler] generate_sequences for {} number of trajectories done, took {:.2f} seconds".format(
                 len(repeated_batch),
                 output_batch.meta_info["timing"]["generate_sequences"],
-            )
-        )
+            ))
         return output_batch

@@ -19,7 +19,8 @@ import regex as re
 from typing import Union, List
 
 
-def deepsearch_compute_score(solution_str, ground_truth: Union[List[str], str]):
+def deepsearch_compute_score(
+        solution_str, ground_truth: Union[List[str], str]):
     if isinstance(ground_truth, str):
         ground_truth = [ground_truth]
     score = 0.0
@@ -38,22 +39,28 @@ class PixelReasonerRewardManager(ToRLRewardManager):
     name = "deepsearch"
 
     def __init__(
-        self, tokenizer, num_examine, compute_score=None, reward_fn_key="data_source"
-    ) -> None:
+            self,
+            tokenizer,
+            num_examine,
+            compute_score=None,
+            reward_fn_key="data_source") -> None:
         self.tokenizer = tokenizer
-        self.num_examine = num_examine  # the number of batches of decoded responses to print to the console
+        # the number of batches of decoded responses to print to the console
+        self.num_examine = num_examine
         self.compute_score = deepsearch_compute_score
         self.reward_fn_key = reward_fn_key
         self.step = None
         self.add_tool_call_reward = True  # +0.1 if the response contains a tool call
-        self.add_format_penalty = True  # -0.5 if the response does not start with <think> and end with </think>
+        # -0.5 if the response does not start with <think> and end with </think>
+        self.add_format_penalty = True
 
     def add_additional_penalties(self, response: str, data_i, scores_i: dict):
         # 1.4 format penalty
         if self.add_format_penalty:
             # check if <think> exists in the response
             #  and if \\boxed{} exists in the response
-            think_match = re.search(r"<think>(.*?)</think>", response, re.DOTALL)
+            think_match = re.search(
+                r"<think>(.*?)</think>", response, re.DOTALL)
             answer_match = re.search(r"\\boxed\{.*?\}", response)
             if not think_match or not answer_match:
                 scores_i["score"] = -1

@@ -139,7 +139,8 @@ class TestComputeTimingMetrics(unittest.TestCase):
         # Create a mock DataProto object
         self.batch = MagicMock()
         self.batch.batch = {
-            "responses": torch.zeros((2, 3)),  # 2 samples, 3 response tokens each
+            # 2 samples, 3 response tokens each
+            "responses": torch.zeros((2, 3)),
             "attention_mask": torch.tensor(
                 [
                     [1, 1, 1, 1, 1, 1],  # 3 prompt tokens, 3 response tokens
@@ -210,7 +211,9 @@ class TestComputeThroughputMetrics(unittest.TestCase):
 
         self.assertEqual(metrics["perf/total_num_tokens"], 600)
         self.assertEqual(metrics["perf/time_per_step"], 2.0)
-        self.assertEqual(metrics["perf/throughput"], 600 / 2.0)  # 300 tokens/sec
+        self.assertEqual(
+            metrics["perf/throughput"],
+            600 / 2.0)  # 300 tokens/sec
 
         # Test with 2 GPUs
         metrics = compute_throughout_metrics(self.batch, timing_raw, n_gpus=2)
@@ -232,8 +235,11 @@ class TestBootstrapMetric(unittest.TestCase):
 
         # Use a fixed seed for reproducibility
         result = bootstrap_metric(
-            data, subset_size=3, reduce_fns=reduce_fns, n_bootstrap=100, seed=42
-        )
+            data,
+            subset_size=3,
+            reduce_fns=reduce_fns,
+            n_bootstrap=100,
+            seed=42)
 
         # Check that we get two results (one for each reduce_fn)
         self.assertEqual(len(result), 2)
@@ -247,7 +253,8 @@ class TestBootstrapMetric(unittest.TestCase):
         self.assertAlmostEqual(mean_result[0], 3.0, delta=0.3)
 
         # The mean of maxes should be close to the expected value for samples of size 3
-        # For samples of size 3 from [1,2,3,4,5], the expected max is around 4.0-4.5
+        # For samples of size 3 from [1,2,3,4,5], the expected max is around
+        # 4.0-4.5
         self.assertGreater(max_result[0], 3.5)
         self.assertLess(max_result[0], 5.0)
 

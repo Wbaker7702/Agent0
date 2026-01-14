@@ -35,7 +35,9 @@ import ray
 from .prime_ray_trainer import RayPRIMETrainer
 
 
-@hydra.main(config_path="config", config_name="prime_trainer", version_base=None)
+@hydra.main(config_path="config",
+            config_name="prime_trainer",
+            version_base=None)
 def main(config):
     run_prime(config)
 
@@ -45,8 +47,9 @@ def run_prime(config, compute_score=None):
         # this is for local ray cluster
         ray.init(
             runtime_env={
-                "env_vars": {"TOKENIZERS_PARALLELISM": "true", "NCCL_DEBUG": "WARN"}
-            },
+                "env_vars": {
+                    "TOKENIZERS_PARALLELISM": "true",
+                    "NCCL_DEBUG": "WARN"}},
             num_cpus=config.ray_init.num_cpus,
         )
 
@@ -101,7 +104,9 @@ def main_task(config, compute_score=None):
 
     global_pool_id = "global_pool"
     resource_pool_spec = {
-        global_pool_id: [config.trainer.n_gpus_per_node] * config.trainer.nnodes,
+        global_pool_id: [
+            config.trainer.n_gpus_per_node] *
+        config.trainer.nnodes,
     }
     mapping = {
         Role.ActorRollout: global_pool_id,
@@ -115,7 +120,8 @@ def main_task(config, compute_score=None):
     if config.reward_model.enable:
         from .prime_fsdp_workers import PRIMERewardModelWorker
 
-        role_worker_mapping[Role.RewardModel] = ray.remote(PRIMERewardModelWorker)
+        role_worker_mapping[Role.RewardModel] = ray.remote(
+            PRIMERewardModelWorker)
         mapping[Role.RewardModel] = global_pool_id
 
     reward_manager_name = config.reward_model.get("reward_manager", "naive")

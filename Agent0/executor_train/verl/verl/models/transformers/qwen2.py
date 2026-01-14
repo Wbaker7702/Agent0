@@ -54,9 +54,11 @@ def qwen2_flash_attn_forward(
     key_states = self.k_proj(hidden_states)
     value_states = self.v_proj(hidden_states)
 
-    query_states = query_states.view(bsz, q_len, -1, self.head_dim).transpose(1, 2)
+    query_states = query_states.view(
+        bsz, q_len, -1, self.head_dim).transpose(1, 2)
     key_states = key_states.view(bsz, q_len, -1, self.head_dim).transpose(1, 2)
-    value_states = value_states.view(bsz, q_len, -1, self.head_dim).transpose(1, 2)
+    value_states = value_states.view(
+        bsz, q_len, -1, self.head_dim).transpose(1, 2)
 
     ########## AlltoAll for Ulysses ##########
     ulysses_sp_size = get_ulysses_sequence_parallel_world_size()
@@ -65,9 +67,12 @@ def qwen2_flash_attn_forward(
         validate_ulysses_config(self.num_heads, ulysses_sp_size)
 
         # (bsz, n_head, seq_len/n, head_dim) -> (bsz, n_head/n, seq_len, head_dim)
-        query_states = gather_seq_scatter_heads(query_states, seq_dim=2, head_dim=1)
-        key_states = gather_seq_scatter_heads(key_states, seq_dim=2, head_dim=1)
-        value_states = gather_seq_scatter_heads(value_states, seq_dim=2, head_dim=1)
+        query_states = gather_seq_scatter_heads(
+            query_states, seq_dim=2, head_dim=1)
+        key_states = gather_seq_scatter_heads(
+            key_states, seq_dim=2, head_dim=1)
+        value_states = gather_seq_scatter_heads(
+            value_states, seq_dim=2, head_dim=1)
 
     full_q_len = query_states.size(2)  # full seq length
 
@@ -76,12 +81,12 @@ def qwen2_flash_attn_forward(
             "The attention layers in this model are transitioning from computing the RoPE embeddings internally "
             "through `position_ids` (2D tensor with the indexes of the tokens), to using externally computed "
             "`position_embeddings` (Tuple of tensors, containing cos and sin). In v4.46 `position_ids` will be "
-            "removed and `position_embeddings` will be mandatory."
-        )
+            "removed and `position_embeddings` will be mandatory.")
         cos, sin = self.rotary_emb(value_states, position_ids)
     else:
         cos, sin = position_embeddings
-    query_states, key_states = apply_rotary_pos_emb(query_states, key_states, cos, sin)
+    query_states, key_states = apply_rotary_pos_emb(
+        query_states, key_states, cos, sin)
 
     if past_key_value is not None:
         cache_kwargs = {
@@ -149,10 +154,12 @@ def qwen2_flash_attn_forward(
     )
 
     # use full_q_len to reshape
-    attn_output = attn_output.reshape(bsz, full_q_len, -1, self.head_dim).contiguous()
+    attn_output = attn_output.reshape(
+        bsz, full_q_len, -1, self.head_dim).contiguous()
     ########## AlltoAll for Ulysses ##########
     if ulysses_sp_size > 1:
-        attn_output = gather_heads_scatter_seq(attn_output, seq_dim=1, head_dim=2)
+        attn_output = gather_heads_scatter_seq(
+            attn_output, seq_dim=1, head_dim=2)
     attn_output = attn_output.reshape(bsz, q_len, -1).contiguous()
     attn_output = self.o_proj(attn_output)
 
@@ -181,29 +188,41 @@ def qwen2_attn_forward(
     bsz, q_len, _ = hidden_states.shape
     hidden_shape = (bsz, q_len, -1, self.head_dim)
 
-    query_states = self.q_proj(hidden_states).view(hidden_shape).transpose(1, 2)
+    query_states = self.q_proj(hidden_states).view(
+        hidden_shape).transpose(1, 2)
     key_states = self.k_proj(hidden_states).view(hidden_shape).transpose(1, 2)
-    value_states = self.v_proj(hidden_states).view(hidden_shape).transpose(1, 2)
+    value_states = self.v_proj(hidden_states).view(
+        hidden_shape).transpose(1, 2)
 
     ########## AlltoAll for Ulysses ##########
     ulysses_sp_size = get_ulysses_sequence_parallel_world_size()
 
     if ulysses_sp_size > 1:
-        validate_ulysses_config(self.config.num_attention_heads, ulysses_sp_size)
+        validate_ulysses_config(
+            self.config.num_attention_heads,
+            ulysses_sp_size)
 
         # (bsz, n_head, seq_len/n, head_dim) -> (bsz, n_head/n, seq_len, head_dim)
-        query_states = gather_seq_scatter_heads(query_states, seq_dim=2, head_dim=1)
-        key_states = gather_seq_scatter_heads(key_states, seq_dim=2, head_dim=1)
-        value_states = gather_seq_scatter_heads(value_states, seq_dim=2, head_dim=1)
+        query_states = gather_seq_scatter_heads(
+            query_states, seq_dim=2, head_dim=1)
+        key_states = gather_seq_scatter_heads(
+            key_states, seq_dim=2, head_dim=1)
+        value_states = gather_seq_scatter_heads(
+            value_states, seq_dim=2, head_dim=1)
 
     full_q_len = query_states.size(2)
 
     cos, sin = position_embeddings
-    query_states, key_states = apply_rotary_pos_emb(query_states, key_states, cos, sin)
+    query_states, key_states = apply_rotary_pos_emb(
+        query_states, key_states, cos, sin)
 
     if past_key_value is not None:
-        # sin and cos are specific to RoPE models; cache_position needed for the static cache
-        cache_kwargs = {"sin": sin, "cos": cos, "cache_position": cache_position}
+        # sin and cos are specific to RoPE models; cache_position needed for
+        # the static cache
+        cache_kwargs = {
+            "sin": sin,
+            "cos": cos,
+            "cache_position": cache_position}
         key_states, value_states = past_key_value.update(
             key_states, value_states, self.layer_idx, cache_kwargs
         )
@@ -226,8 +245,7 @@ def qwen2_attn_forward(
             logger.warning_once(
                 "`torch.nn.functional.scaled_dot_product_attention` does not support `output_attentions=True`. "
                 "Falling back to eager attention. This warning can be removed using the argument "
-                '`attn_implementation="eager"` when loading the model.'
-            )
+                '`attn_implementation="eager"` when loading the model.')
         else:
             attention_interface = ALL_ATTENTION_FUNCTIONS[
                 self.config._attn_implementation
@@ -245,11 +263,13 @@ def qwen2_attn_forward(
         **kwargs,
     )
 
-    attn_output = attn_output.reshape(bsz, full_q_len, -1, self.head_dim).contiguous()
+    attn_output = attn_output.reshape(
+        bsz, full_q_len, -1, self.head_dim).contiguous()
     ########## AlltoAll for Ulysses ##########
     if ulysses_sp_size > 1:
         # (bsz, seq_len, n_head/n, head_dim) -> (bsz, seq_len/n, n_head, head_dim)
-        attn_output = gather_heads_scatter_seq(attn_output, seq_dim=1, head_dim=2)
+        attn_output = gather_heads_scatter_seq(
+            attn_output, seq_dim=1, head_dim=2)
     attn_output = attn_output.reshape(bsz, q_len, -1).contiguous()
     attn_output = self.o_proj(attn_output)
     return attn_output, attn_weights

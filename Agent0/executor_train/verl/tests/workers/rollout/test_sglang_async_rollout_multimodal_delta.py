@@ -125,9 +125,8 @@ def _test_add_tool_response_messages_image_delta(
     req.add_assistant_message(processor, content=description_list[-1])
 
     messages = [msg.model_dump() for msg in req.messages]
-    tools = (
-        [tool.model_dump() for tool in req.tool_schemas] if req.tool_schemas else None
-    )
+    tools = ([tool.model_dump()
+              for tool in req.tool_schemas] if req.tool_schemas else None)
     full_prompt_info = req._handle_apply_chat_template(
         processor,
         messages,
@@ -147,7 +146,8 @@ def _test_add_tool_response_messages_image_delta(
     full_prompt_multi_modal_inputs.pop("attention_mask", None)
 
     for key in full_prompt_multi_modal_inputs:
-        assert full_prompt_multi_modal_inputs[key].eq(req.multi_modal_inputs[key]).all()
+        assert full_prompt_multi_modal_inputs[key].eq(
+            req.multi_modal_inputs[key]).all()
 
 
 @pytest.mark.skipif(
@@ -164,15 +164,18 @@ def test_add_tool_response_messages_image_delta():
     img_1_description = "A woman sits on the beach at sunset, smiling as she shares a high five with her large dog."
     # GitHub Logo
     img_2_url = {
-        "image": "https://github.githubassets.com/assets/GitHub-Mark-ea2971cee799.png"
-    }
+        "image": "https://github.githubassets.com/assets/GitHub-Mark-ea2971cee799.png"}
     img_2_description = "A GitHub Logo image"
     # Octocat
-    img_3_url = {"image": "https://octodex.github.com/images/orderedlistocat.png"}
+    img_3_url = {
+        "image": "https://octodex.github.com/images/orderedlistocat.png"}
     img_3_description = "An Octocat image"
 
     image_list = [img_1_url, img_2_url, img_3_url]
-    description_list = [img_1_description, img_2_description, img_3_description]
+    description_list = [
+        img_1_description,
+        img_2_description,
+        img_3_description]
     _test_add_tool_response_messages_image_delta(
         processor, image_list, description_list, resize_image=False
     )
@@ -192,15 +195,18 @@ def test_add_tool_response_messages_image_delta_resize_image():
     img_1_description = "A woman sits on the beach at sunset, smiling as she shares a high five with her large dog."
     # GitHub Logo
     img_2_url = {
-        "image": "https://github.githubassets.com/assets/GitHub-Mark-ea2971cee799.png"
-    }
+        "image": "https://github.githubassets.com/assets/GitHub-Mark-ea2971cee799.png"}
     img_2_description = "A GitHub Logo image"
     # Octocat
-    img_3_url = {"image": "https://octodex.github.com/images/orderedlistocat.png"}
+    img_3_url = {
+        "image": "https://octodex.github.com/images/orderedlistocat.png"}
     img_3_description = "An Octocat image"
 
     image_list = [img_1_url, img_2_url, img_3_url]
-    description_list = [img_1_description, img_2_description, img_3_description]
+    description_list = [
+        img_1_description,
+        img_2_description,
+        img_3_description]
     _test_add_tool_response_messages_image_delta(
         processor, image_list, description_list, resize_image=True
     )

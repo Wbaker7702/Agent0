@@ -107,7 +107,8 @@ class GoogleSearchEngine:
             cache_dir = pathlib.Path.home() / ".verl_cache"
             cache_dir.mkdir(exist_ok=True)
             suffix = "with_summ" if self.process_snippets else "basic"
-            self._cache_file = cache_dir / f"google_search_{suffix}_cache.jsonl"
+            self._cache_file = cache_dir / \
+                f"google_search_{suffix}_cache.jsonl"
         else:
             self._cache_file = pathlib.Path(cache_file)
             self._cache_file.parent.mkdir(parents=True, exist_ok=True)
@@ -129,7 +130,9 @@ class GoogleSearchEngine:
                         except json.JSONDecodeError:
                             continue
 
-                print(f"Loaded {cache_entries} cache entries from {self._cache_file}")
+                print(
+                    f"Loaded {cache_entries} cache entries from {
+                        self._cache_file}")
 
         except Exception as e:
             print(f"Failed to load cache: {e}")
@@ -139,7 +142,10 @@ class GoogleSearchEngine:
     ) -> None:
         """Append to persistent cache asynchronously."""
         try:
-            entry = {"query": query, "result": result, "timestamp": time.time()}
+            entry = {
+                "query": query,
+                "result": result,
+                "timestamp": time.time()}
 
             async with aiofiles.open(self._cache_file, "a", encoding="utf-8") as f:
                 await f.write(json.dumps(entry, ensure_ascii=False) + "\n")
@@ -171,7 +177,13 @@ class GoogleSearchEngine:
         """
         hl, gl = await self._detect_language(query)
 
-        payload = {"q": query, "hl": hl, "gl": gl, "num": min(self._max_results, 100)}
+        payload = {
+            "q": query,
+            "hl": hl,
+            "gl": gl,
+            "num": min(
+                self._max_results,
+                100)}
 
         headers = {
             "X-API-KEY": self._api_key,
@@ -181,8 +193,10 @@ class GoogleSearchEngine:
             "Accept-Encoding": "gzip, deflate",
         }
 
-        # Create a new session for each request - simpler and avoids connection issues
-        timeout_config = aiohttp.ClientTimeout(total=timeout if timeout else 30)
+        # Create a new session for each request - simpler and avoids connection
+        # issues
+        timeout_config = aiohttp.ClientTimeout(
+            total=timeout if timeout else 30)
 
         # Retry logic for transient failures
         max_retries = 2
@@ -200,7 +214,8 @@ class GoogleSearchEngine:
                             return await response.json()
                         elif response.status == 429:  # Rate limited
                             if attempt < max_retries:
-                                await asyncio.sleep(2**attempt)  # Exponential backoff
+                                # Exponential backoff
+                                await asyncio.sleep(2**attempt)
                                 continue
                             else:
                                 raise Exception(
@@ -230,9 +245,8 @@ class GoogleSearchEngine:
                     else:
                         raise
 
-    async def execute(
-        self, query: str, timeout: int = None, prev_steps: Union[List[str], str] = None
-    ) -> str:
+    async def execute(self, query: str, timeout: int = None,
+                      prev_steps: Union[List[str], str] = None) -> str:
         """
         Execute search with comprehensive error handling and caching.
         """
@@ -289,8 +303,9 @@ class GoogleSearchEngine:
 
             # Persistent cache
             cache_item = (
-                data if isinstance(data, str) else json.dumps(data, ensure_ascii=False)
-            )
+                data if isinstance(
+                    data, str) else json.dumps(
+                    data, ensure_ascii=False))
             await self._append_to_persistent_cache(query, cache_item)
 
             self._search_count += 1
@@ -318,7 +333,9 @@ class GoogleSearchEngine:
         for idx, result in enumerate(data["organic"][: self._max_results], 1):
             title = result.get("title", "No title").strip()
             link = result.get("link", "").strip()
-            snippet = result.get("snippet", result.get("description", "")).strip()
+            snippet = result.get(
+                "snippet", result.get(
+                    "description", "")).strip()
 
             # Skip duplicates and empty snippets
             if snippet and snippet not in seen_snippets:
@@ -338,8 +355,7 @@ class GoogleSearchEngine:
         """Process snippets with full content extraction asynchronously."""
         max_doc_len = self._max_doc_len if self.summ_model_url else self._result_length
         do_summarization = (
-            self.summ_model_url is not None and self.summ_model_path is not None
-        )
+            self.summ_model_url is not None and self.summ_model_path is not None)
 
         # Extract info in thread pool (CPU-bound)
         loop = asyncio.get_event_loop()
@@ -628,7 +644,13 @@ class GoogleSearchTool(BaseTool):
         observation = f"<result>{observation}</result>"
 
         # Update and save environment
-        self.update_env(trajectory_id, env, action, is_valid, extra_field, observation)
+        self.update_env(
+            trajectory_id,
+            env,
+            action,
+            is_valid,
+            extra_field,
+            observation)
         self.save_env(trajectory_id, env)
 
         return observation, done, valid
@@ -644,7 +666,8 @@ class GoogleSearchTool(BaseTool):
             # Try to get the current event loop
             loop = asyncio.get_event_loop()
             if loop.is_running():
-                # If loop is already running, create a new thread to run async code
+                # If loop is already running, create a new thread to run async
+                # code
                 import concurrent.futures
                 import threading
 
@@ -679,8 +702,8 @@ class GoogleSearchTool(BaseTool):
             else:
                 # Use existing loop if not running
                 return loop.run_until_complete(
-                    self._conduct_action_async(trajectory_id, action, extra_field)
-                )
+                    self._conduct_action_async(
+                        trajectory_id, action, extra_field))
         except RuntimeError:
             # No event loop exists, create one
             return asyncio.run(

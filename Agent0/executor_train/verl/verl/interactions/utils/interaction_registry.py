@@ -58,12 +58,14 @@ def initialize_interactions_from_config(interaction_config_file):
         # Extract config and name
         config = OmegaConf.to_container(interaction_item.config, resolve=True)
 
-        # Get the interaction name - either from config or derive from class name
+        # Get the interaction name - either from config or derive from class
+        # name
         name = interaction_item.get("name", None)
         if name is None:
             # If no name is specified, use the class name as default
             class_simple_name = cls_name.split(".")[-1]
-            # Remove "Interaction" suffix if present, otherwise use full class name
+            # Remove "Interaction" suffix if present, otherwise use full class
+            # name
             if class_simple_name.endswith("Interaction"):
                 name = class_simple_name[
                     :-11
@@ -74,8 +76,7 @@ def initialize_interactions_from_config(interaction_config_file):
         # Check for duplicate names
         if name in interaction_map:
             raise ValueError(
-                f"Duplicate interaction name '{name}' found. Each interaction must have a unique name."
-            )
+                f"Duplicate interaction name '{name}' found. Each interaction must have a unique name.")
 
         # Inject the name into the config
         config["name"] = name
@@ -84,6 +85,7 @@ def initialize_interactions_from_config(interaction_config_file):
         interaction = interaction_cls(config=config)
         interaction_map[name] = interaction
 
-        logger.info(f"Initialized interaction '{name}' with class '{cls_name}'")
+        logger.info(
+            f"Initialized interaction '{name}' with class '{cls_name}'")
 
     return interaction_map

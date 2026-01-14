@@ -32,7 +32,8 @@ class TestAlgoConfig(unittest.TestCase):
 
     def setUp(self):
         """Set up test fixtures."""
-        # Create a sample algorithm config as DictConfig (similar to what comes from YAML)
+        # Create a sample algorithm config as DictConfig (similar to what comes
+        # from YAML)
         self.config_dict = {
             "_target_": "verl.trainer.config.AlgoConfig",
             "gamma": 0.99,
@@ -189,7 +190,9 @@ class TestAlgoCompute(unittest.TestCase):
 
     def test_grpo_advantage_estimator_with_cfg(self):
         """Test integration with GRPO advantage estimator."""
-        grpo_config = AlgoConfig(adv_estimator="grpo", norm_adv_by_std_in_grpo=True)
+        grpo_config = AlgoConfig(
+            adv_estimator="grpo",
+            norm_adv_by_std_in_grpo=True)
 
         # Test GRPO advantage computation
         batch_size, seq_len = 4, 3

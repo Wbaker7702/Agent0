@@ -23,8 +23,9 @@ logger = logging.getLogger(__name__)
 
 
 def create_app(
-    server_config: ServerConfig, model_config: ModelConfig, tool_config: ToolConfig
-) -> FastAPI:
+        server_config: ServerConfig,
+        model_config: ModelConfig,
+        tool_config: ToolConfig) -> FastAPI:
     """
     Create and configure the FastAPI application
 
@@ -84,12 +85,16 @@ def create_app(
         """
         try:
             request_body = await request.json()
-            logger.debug(f"Received completions request: {json.dumps(request_body)}")
+            logger.debug(
+                f"Received completions request: {
+                    json.dumps(request_body)}")
             response = await app.state.model_service.completions_async(request_body)
             return response
         except Exception as e:
             error_details = traceback.format_exc()
-            logger.error(f"Error in completions endpoint: {str(e)}\n{error_details}")
+            logger.error(
+                f"Error in completions endpoint: {
+                    str(e)}\n{error_details}")
             raise HTTPException(
                 status_code=500, detail=f"Internal server error: {str(e)}"
             )
@@ -104,8 +109,8 @@ def create_app(
         try:
             request_body = await request.json()
             logger.debug(
-                f"Received chat completions request: {json.dumps(request_body)}"
-            )
+                f"Received chat completions request: {
+                    json.dumps(request_body)}")
             response = await app.state.model_service.chat_completions_async(
                 request_body
             )
@@ -113,8 +118,8 @@ def create_app(
         except Exception as e:
             error_details = traceback.format_exc()
             logger.error(
-                f"Error in chat completions endpoint: {str(e)}\n{error_details}"
-            )
+                f"Error in chat completions endpoint: {
+                    str(e)}\n{error_details}")
             raise HTTPException(
                 status_code=500, detail=f"Internal server error: {str(e)}"
             )
@@ -141,11 +146,13 @@ async def main_async():
         app,
         host=server_config.host,
         port=server_config.port,
-        log_level=server_config.log_level,  # Changed from "error" to "debug" for better visibility
+        log_level=server_config.log_level,
+        # Changed from "error" to "debug" for better visibility
         ws_max_queue=server_config.ws_max_queue,
         workers=server_config.workers * model_config.num_models,
         access_log=True,
-        timeout_keep_alive=server_config.timeout_keep_alive,  # Added keep-alive timeout setting
+        # Added keep-alive timeout setting
+        timeout_keep_alive=server_config.timeout_keep_alive,
     )
     server = uvicorn.Server(config)
     await server.serve()

@@ -60,7 +60,11 @@ def plot_entropy_bar(
 
     # Bar plot with clear separation for each token part
     for i in range(len(entropy)):
-        plt.bar(i, clipped_entropy[i], color=token_colors[i], alpha=alpha_values[i])
+        plt.bar(
+            i,
+            clipped_entropy[i],
+            color=token_colors[i],
+            alpha=alpha_values[i])
 
     plt.title(title)
     plt.xlabel("Token Index")
@@ -108,23 +112,24 @@ def main(
     print(data)
 
     full_inputs = [x["prompt"] + x["response"] for x in data]
-    full_inputs_with_mask = [x["prompt"] + x["response_with_loss_mask"] for x in data]
+    full_inputs_with_mask = [x["prompt"] +
+                             x["response_with_loss_mask"] for x in data]
 
     # Tokenize the inputs
     vis_dir = Path(vis_dir)
     vis_dir.mkdir(parents=True, exist_ok=True)
     vis_paths = []
-    entropy_avgs = (
-        []
-    )  # list of sum entropy values, [0] for prompt, [1] for action 1, [2] for obs 1, [3] for action 2, [4] for obs 2, ...
+    # list of sum entropy values, [0] for prompt, [1] for action 1, [2] for
+    # obs 1, [3] for action 2, [4] for obs 2, ...
+    entropy_avgs = ([])
     for i in tqdm(
         range(0, len(full_inputs), batch_size),
         desc="Processing batches",
         total=len(full_inputs) // batch_size,
     ):
-        prompts = data["prompt"][i : i + batch_size]
-        batch = full_inputs[i : i + batch_size]
-        batch_with_mask = full_inputs_with_mask[i : i + batch_size]
+        prompts = data["prompt"][i: i + batch_size]
+        batch = full_inputs[i: i + batch_size]
+        batch_with_mask = full_inputs_with_mask[i: i + batch_size]
         inputs = tokenizer(batch, return_tensors="pt", padding="longest").to(
             model.device
         )
@@ -138,19 +143,22 @@ def main(
             outputs = model(**inputs)
 
         logits = outputs.logits  # [batch_size, seq_len, vocab_size]
-        probs = torch.softmax(logits, dim=-1)  # [batch_size, seq_len, vocab_size]
-        log_probs = torch.log(probs + 1e-9)  # [batch_size, seq_len, vocab_size]
+        # [batch_size, seq_len, vocab_size]
+        probs = torch.softmax(logits, dim=-1)
+        # [batch_size, seq_len, vocab_size]
+        log_probs = torch.log(probs + 1e-9)
         batch_entropy = -(probs * log_probs * attention_mask.unsqueeze(-1)).sum(
             dim=-1
         )  # [batch_size, seq_len]
         entrypy_list = []
         for j in tqdm(
             range(len(batch_entropy)),
-            desc=f"Processing batch {i//batch_size}",
+            desc=f"Processing batch {i // batch_size}",
             leave=False,
             total=len(batch_entropy),
         ):
-            effective_entry = batch_entropy[j][attention_mask[j] == 1].cpu().numpy()
+            effective_entry = batch_entropy[j][attention_mask[j] == 1].cpu(
+            ).numpy()
             labels = ["prompt"] * len(
                 tokenizer.encode(prompts[j], add_special_tokens=False)
             )
@@ -160,7 +168,8 @@ def main(
             for k in range(len(labels)):
                 if masks[k] == 0:
                     labels[k] = "obs"
-            save_path = vis_dir / f"entropy_plot_sample_{i* batch_size + j}.png"
+            save_path = vis_dir / \
+                f"entropy_plot_sample_{i * batch_size + j}.png"
             # plot_entropy_bar(effective_entry.cpu().numpy(), labels, title=f"Token Entropy for Batch {i//batch_size}, Sample {j}", save_path=save_path)
             # print(f"Saved plot to {save_path}")
             # Calculate average entropy for each type
@@ -169,7 +178,8 @@ def main(
             avg_entropy = []
             for k in range(len(labels)):
                 if labels[k] != last_label:
-                    avg_entropy.append(effective_entry[last_idx:k].mean().item())
+                    avg_entropy.append(
+                        effective_entry[last_idx:k].mean().item())
                     last_idx = k
                     last_label = labels[k]
             for k in range(len(avg_entropy)):
@@ -185,9 +195,9 @@ def main(
         if i == 0:
             print(f"Average prompt entropy: {avg:.4f}")
         elif i % 2 == 1:
-            print(f"Average action {i//2 + 1} entropy: {avg:.4f}")
+            print(f"Average action {i // 2 + 1} entropy: {avg:.4f}")
         else:
-            print(f"Average obs {i//2} entropy: {avg:.4f}")
+            print(f"Average obs {i // 2} entropy: {avg:.4f}")
 
 
 if __name__ == "__main__":

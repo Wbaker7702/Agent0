@@ -316,7 +316,8 @@ exit $COMMAND_EXIT_CODE
 """
 
         # Write the script
-        script_path = os.path.join(self.temp_dir, f"cmd_{uuid.uuid4().hex[:8]}.sh")
+        script_path = os.path.join(
+            self.temp_dir, f"cmd_{uuid.uuid4().hex[:8]}.sh")
         try:
             with open(script_path, "w") as f:
                 f.write(script_content)
@@ -435,12 +436,12 @@ exit $COMMAND_EXIT_CODE
             if self.current_dir == self.home_dir:
                 path_display = "~"
             elif self.current_dir.startswith(self.home_dir):
-                path_display = "~" + self.current_dir[len(self.home_dir) :]
+                path_display = "~" + self.current_dir[len(self.home_dir):]
             else:
                 path_display = self.current_dir
 
             return f"user@bash-session:{path_display}$ "
-        except:
+        except BaseException:
             return "user@bash-session:~$ "
 
     def get_history(self) -> List[str]:
@@ -448,9 +449,10 @@ exit $COMMAND_EXIT_CODE
         try:
             if os.path.exists(self.history_file):
                 with open(self.history_file, "r") as f:
-                    return [line.strip() for line in f.readlines() if line.strip()]
+                    return [line.strip()
+                            for line in f.readlines() if line.strip()]
             return []
-        except:
+        except BaseException:
             return []
 
     def cleanup(self):

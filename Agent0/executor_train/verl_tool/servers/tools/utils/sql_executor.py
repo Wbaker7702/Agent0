@@ -30,21 +30,39 @@ def extract_sql_from_markdown(text: str) -> str:
     matches = re.findall(program_pattern, text, re.DOTALL | re.IGNORECASE)
     if matches:
         query = matches[-1].strip()
-        return query.replace("> =", ">=").replace("< =", "<=").replace("! =", "!=")
+        return query.replace(
+            "> =",
+            ">=").replace(
+            "< =",
+            "<=").replace(
+            "! =",
+            "!=")
 
     # Try <sql>...</sql> tags
     sql_tag_pattern = r"<sql>(.*?)</sql>"
     matches = re.findall(sql_tag_pattern, text, re.DOTALL | re.IGNORECASE)
     if matches:
         query = matches[-1].strip()
-        return query.replace("> =", ">=").replace("< =", "<=").replace("! =", "!=")
+        return query.replace(
+            "> =",
+            ">=").replace(
+            "< =",
+            "<=").replace(
+            "! =",
+            "!=")
 
     # Try <solution>...</solution> tags for final turn compatibility
     solution_pattern = r"<solution>(.*?)</solution>"
     matches = re.findall(solution_pattern, text, re.DOTALL | re.IGNORECASE)
     if matches:
         query = matches[-1].strip()
-        return query.replace("> =", ">=").replace("< =", "<=").replace("! =", "!=")
+        return query.replace(
+            "> =",
+            ">=").replace(
+            "< =",
+            "<=").replace(
+            "! =",
+            "!=")
 
     # Fallback: clean the original text
     return text.replace("> =", ">=").replace("< =", "<=").replace("! =", "!=")
@@ -54,9 +72,8 @@ def replace_current_year(query: str) -> str:
     """
     Replaces YEAR(CURDATE()) with a fixed year (2020) for consistent evaluation.
     """
-    return re.sub(
-        r"YEAR\s*\(\s*CURDATE\s*\(\s*\)\s*\)", "2020", query, flags=re.IGNORECASE
-    )
+    return re.sub(r"YEAR\s*\(\s*CURDATE\s*\(\s*\)\s*\)",
+                  "2020", query, flags=re.IGNORECASE)
 
 
 # --- Database Manager Class ---
@@ -75,9 +92,11 @@ class DatabaseManager:
         """Provides a database connection from the pool."""
         if db_path not in self._connection_pool:
             try:
-                # Use immutable=1 for read-only access, which is safer and faster.
+                # Use immutable=1 for read-only access, which is safer and
+                # faster.
                 uri_path = f"file:{db_path}?immutable=1"
-                conn = sqlite3.connect(uri_path, uri=True, check_same_thread=False)
+                conn = sqlite3.connect(
+                    uri_path, uri=True, check_same_thread=False)
                 # Performance and cleanup pragmas
                 conn.execute("PRAGMA journal_mode=DELETE;")  # Avoid WAL files
                 conn.execute("PRAGMA synchronous=OFF;")
@@ -185,12 +204,10 @@ class ExecutionEvaluator:
             return False
 
         # Quick rejection test
-        s1 = {
-            tuple(sorted(row, key=lambda x: str(x) + str(type(x)))) for row in result1
-        }
-        s2 = {
-            tuple(sorted(row, key=lambda x: str(x) + str(type(x)))) for row in result2
-        }
+        s1 = {tuple(sorted(row, key=lambda x: str(x) + str(type(x))))
+              for row in result1}
+        s2 = {tuple(sorted(row, key=lambda x: str(x) + str(type(x))))
+              for row in result2}
         if s1 != s2:
             return False
 
@@ -209,9 +226,11 @@ class ExecutionEvaluator:
             if len(perm) != len(set(perm)):
                 continue
 
-            result2_permuted = [tuple(element[i] for i in perm) for element in result2]
+            result2_permuted = [tuple(element[i] for i in perm)
+                                for element in result2]
 
-            if ExecutionEvaluator._are_multisets_equal(result1, result2_permuted):
+            if ExecutionEvaluator._are_multisets_equal(
+                    result1, result2_permuted):
                 return True
 
         return False
@@ -278,7 +297,8 @@ def score(
             cache_dir = os.getenv("SQL_CACHE_DIR", "data/nl2sql/cache")
             db_path = os.path.join(cache_dir, ground_truth_info["db_id"])
 
-        gt_sql = ground_truth_info.get("gold_sql") or ground_truth_info.get("gt_sql")
+        gt_sql = ground_truth_info.get(
+            "gold_sql") or ground_truth_info.get("gt_sql")
 
         if gt_sql is None:
             return 0.0, "", "No ground truth SQL provided in ground_truth_info"
@@ -297,7 +317,8 @@ def score(
         if not predicted_sql:
             return 0.0, "", ""
 
-        pred_error, pred_results = db_manager.execute_query(db_path, predicted_sql)
+        pred_error, pred_results = db_manager.execute_query(
+            db_path, predicted_sql)
         if pred_error:
             return 0.0, "", ""
 

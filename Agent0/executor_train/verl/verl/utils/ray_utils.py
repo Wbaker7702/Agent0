@@ -42,7 +42,8 @@ def ray_noset_visible_devices(env_vars=os.environ):
         "RAY_EXPERIMENTAL_NOSET_TPU_VISIBLE_CHIPS",
         "RAY_EXPERIMENTAL_NOSET_ONEAPI_DEVICE_SELECTOR",
     ]
-    return any(env_vars.get(env_var) for env_var in NOSET_VISIBLE_DEVICES_ENV_VARS_LIST)
+    return any(env_vars.get(env_var)
+               for env_var in NOSET_VISIBLE_DEVICES_ENV_VARS_LIST)
 
 
 def parallel_put(data_list: list[Any], max_workers: Optional[int] = None):
@@ -68,8 +69,11 @@ def parallel_put(data_list: list[Any], max_workers: Optional[int] = None):
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
         data_list_f = [
-            executor.submit(put_data, i, data) for i, data in enumerate(data_list)
-        ]
+            executor.submit(
+                put_data,
+                i,
+                data) for i,
+            data in enumerate(data_list)]
         res_lst = []
         for future in concurrent.futures.as_completed(data_list_f):
             res_lst.append(future.result())

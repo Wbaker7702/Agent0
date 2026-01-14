@@ -70,7 +70,11 @@ INPUT_OUTPUT_VALID = {
 
 INPUT_OUTPUT_SINGLE = {"inputs": ["input1"], "outputs": ["output1\n"]}
 
-INPUT_OUTPUT_MISMATCH = {"inputs": ["input1"], "outputs": ["output1\n", "output2\n"]}
+INPUT_OUTPUT_MISMATCH = {
+    "inputs": ["input1"],
+    "outputs": [
+        "output1\n",
+        "output2\n"]}
 
 INPUT_OUTPUT_INVALID_MISSING_KEY = {"inputs": ["input1"]}
 
@@ -121,7 +125,8 @@ def test_integration_runtime_error():
     )
     assert results == [-2]
     assert metadata_list[0]["status"] == "runtime_error"
-    # More assertions can be added based on the actual API response, e.g., exit_code, stderr
+    # More assertions can be added based on the actual API response, e.g.,
+    # exit_code, stderr
 
 
 @pytest.mark.skipif(skip_condition, reason=skip_reason)
@@ -133,7 +138,8 @@ def test_integration_runtime_timeout():
     )
     assert results == [-3]
     assert metadata_list[0]["status"] == "timeout"
-    # More assertions can be added based on the actual API response, e.g., run_status
+    # More assertions can be added based on the actual API response, e.g.,
+    # run_status
 
 
 @pytest.mark.skipif(skip_condition, reason=skip_reason)
@@ -168,7 +174,9 @@ def test_integration_concurrency_high_load():
             high_load_outputs.append(f"output_{i}\n")
             expected_results_map[i] = True  # Expect success
 
-    high_load_in_outs = {"inputs": high_load_inputs, "outputs": high_load_outputs}
+    high_load_in_outs = {
+        "inputs": high_load_inputs,
+        "outputs": high_load_outputs}
 
     # Code that handles normal inputs, and sleeps on specific "timeout" inputs
     code_mixed_concurrent = """
@@ -183,8 +191,11 @@ elif data.startswith('input_'):
 else:
     print("unknown_input\\n", end='')
 """
-    # Set a reasonable timeout per case (must be less than the sleep time in the code)
-    test_timeout = 15  # Allow slightly more time due to potential API load, but less than 20s sleep
+    # Set a reasonable timeout per case (must be less than the sleep time in
+    # the code)
+    # Allow slightly more time due to potential API load, but less than 20s
+    # sleep
+    test_timeout = 15
 
     start_time = time.time()
     results, metadata_list = check_correctness(
@@ -196,9 +207,10 @@ else:
     end_time = time.time()
     duration = end_time - start_time
     print(
-        f"\nHigh concurrency test ({concurrency_level} cases with {len(wrong_answer_indices)} wrong answers, "
-        f"{len(timeout_indices)} timeouts) duration: {duration:.2f} seconds"
-    )
+        f"\nHigh concurrency test ({concurrency_level} cases with {
+            len(wrong_answer_indices)} wrong answers, " f"{
+            len(timeout_indices)} timeouts) duration: {
+                duration:.2f} seconds")
 
     # Verify results against the expected map
     assert (
@@ -226,8 +238,8 @@ else:
         f"{concurrency_level - len(wrong_answer_indices) - len(timeout_indices)}"
     )
     print(
-        f"Expected wrong answers (False, correctly identified): {wrong_count}/{len(wrong_answer_indices)}"
-    )
+        f"Expected wrong answers (False, correctly identified): {wrong_count}/{
+            len(wrong_answer_indices)}")
     print(
         f"Expected timeouts (-3, correctly identified): {timeout_count}/{len(timeout_indices)}"
     )
@@ -238,9 +250,11 @@ else:
             :10
         ]:  # Print first 10 unexpected
             print(
-                f"  Index {idx}: Got {res}, {expected_str}. Metadata: {metadata_list[idx]}"
-            )
-        raise AssertionError(f"Found {len(unexpected_results)} unexpected results.")
+                f"  Index {idx}: Got {res}, {expected_str}. Metadata: {
+                    metadata_list[idx]}")
+        raise AssertionError(
+            f"Found {
+                len(unexpected_results)} unexpected results.")
 
     assert correct_count == concurrency_level - len(wrong_answer_indices) - len(
         timeout_indices
@@ -427,7 +441,8 @@ SIMULATED_API_CALL_DURATION_TEST = 0.2  # seconds
 
 
 # --- Mock API call function for concurrency tracking ---
-# This function will replace the real call_sandbox_api and use shared variables to track concurrency
+# This function will replace the real call_sandbox_api and use shared
+# variables to track concurrency
 def _mock_api_call_for_concurrency_tracking(
     active_calls_counter,  # multiprocessing.Value
     max_calls_tracker,  # multiprocessing.Value
@@ -448,16 +463,19 @@ def _mock_api_call_for_concurrency_tracking(
             max_calls_tracker.value = active_calls_counter.value
         # Optional debug log:
         # print(f"[PID:{os.getpid()}-TID:{threading.get_ident()}] API Call Start. Active: "
-        #       f"{active_calls_counter.value}, Max Observed: {max_calls_tracker.value}, Input: {stdin}")
+        # f"{active_calls_counter.value}, Max Observed:
+        # {max_calls_tracker.value}, Input: {stdin}")
 
-    time.sleep(SIMULATED_API_CALL_DURATION_TEST)  # Simulate actual work duration
+    # Simulate actual work duration
+    time.sleep(SIMULATED_API_CALL_DURATION_TEST)
 
     # exit_time = time.time() # For detailed logging
     with call_lock:
         active_calls_counter.value -= 1
         # Optional debug log:
         # print(f"[PID:{os.getpid()}-TID:{threading.get_ident()}] API Call End. Active: "
-        #       f"{active_calls_counter.value}, Input: {stdin}, Duration: {exit_time - entry_time:.2f}s")
+        # f"{active_calls_counter.value}, Input: {stdin}, Duration: {exit_time
+        # - entry_time:.2f}s")
 
     # Return a simulated successful API response
     return {
@@ -484,8 +502,16 @@ def _process_pool_worker_for_concurrency_test(
     max_calls_tracker,
     call_lock,
 ):
-    # Corrected lambda to accept keyword arguments matching call_sandbox_api's usage
-    curried_mock_api_call = lambda sandbox_fusion_url, code, stdin, compile_timeout, run_timeout, memory_limit_mb, language: (
+    # Corrected lambda to accept keyword arguments matching call_sandbox_api's
+    # usage
+    def curried_mock_api_call(
+        sandbox_fusion_url,
+        code,
+        stdin,
+        compile_timeout,
+        run_timeout,
+        memory_limit_mb,
+        language): return (
         _mock_api_call_for_concurrency_tracking(
             active_calls_counter,
             max_calls_tracker,
@@ -497,8 +523,7 @@ def _process_pool_worker_for_concurrency_test(
             run_timeout,
             memory_limit_mb,
             language,
-        )
-    )
+        ))
 
     # ---- START DEBUG PRINTS ----
     import os
@@ -522,7 +547,10 @@ def _process_pool_worker_for_concurrency_test(
             f"{verl.utils.reward_score.sandbox_fusion.utils.call_sandbox_api}",
             flush=True,
         )
-        print(f"[Worker PID:{os.getpid()}] Mock object: {mock_obj}", flush=True)
+        print(
+            f"[Worker PID:{
+                os.getpid()}] Mock object: {mock_obj}",
+            flush=True)
         # ---- END DEBUG PRINTS ----
         results, metadata_list = check_correctness(
             sandbox_fusion_url=sandbox_url,
@@ -531,10 +559,12 @@ def _process_pool_worker_for_concurrency_test(
             timeout=timeout,
             memory_limit_mb=memory_limit_mb,
             language=language,
-            concurrent_semaphore=mp_semaphore_for_check_correctness,  # Pass multiprocessing.Semaphore
+            # Pass multiprocessing.Semaphore
+            concurrent_semaphore=mp_semaphore_for_check_correctness,
         )
         # print(f"Process {os.getpid()} finished check_correctness. Processed {len(results)} tasks.")
-    return len(results)  # Return the number of processed tasks for basic validation
+    # Return the number of processed tasks for basic validation
+    return len(results)
 
 
 # --- The actual test case for multiprocess concurrency control ---
@@ -546,14 +576,16 @@ def test_multiprocess_global_concurrency_limit_with_semaphore():
     via check_correctness's internal ThreadPoolExecutor.
     """
     manager = multiprocessing.Manager()
-    active_calls_counter = manager.Value("i", 0)  # Current active mock API calls
+    active_calls_counter = manager.Value(
+        "i", 0)  # Current active mock API calls
     max_calls_tracker = manager.Value(
         "i", 0
     )  # Observed maximum concurrent mock API calls
     call_lock = manager.Lock()  # Lock to protect counters
 
     # Create a multiprocessing.Semaphore instance, this is the global semaphore we are testing.
-    # It will be passed to check_correctness and used by _process_single_case to limit calls to call_sandbox_api.
+    # It will be passed to check_correctness and used by _process_single_case
+    # to limit calls to call_sandbox_api.
     global_mp_semaphore = manager.Semaphore(MAX_GLOBAL_CONCURRENCY_LIMIT_TEST)
 
     mock_sandbox_url = "mock_url_for_concurrency_test"
@@ -565,11 +597,12 @@ def test_multiprocess_global_concurrency_limit_with_semaphore():
     mock_timeout = 5  # Timeout setting, not critical for mock calls
 
     # Input/output data for each process
-    # NUM_TASKS_PER_PROCESS_TEST tasks will be handled by check_correctness's internal ThreadPoolExecutor
+    # NUM_TASKS_PER_PROCESS_TEST tasks will be handled by check_correctness's
+    # internal ThreadPoolExecutor
     process_in_outs = {
-        "inputs": [f"task_input_{i}" for i in range(NUM_TASKS_PER_PROCESS_TEST)],
-        "outputs": [f"task_output_{i}" for i in range(NUM_TASKS_PER_PROCESS_TEST)],
-    }
+        "inputs": [
+            f"task_input_{i}" for i in range(NUM_TASKS_PER_PROCESS_TEST)], "outputs": [
+            f"task_output_{i}" for i in range(NUM_TASKS_PER_PROCESS_TEST)], }
 
     futures = []
     total_tasks_expected_to_run = NUM_PROCESSES_TEST * NUM_TASKS_PER_PROCESS_TEST
@@ -623,7 +656,8 @@ def test_multiprocess_global_concurrency_limit_with_semaphore():
         max_calls_tracker.value > 0
     ), "The mocked API call_sandbox_api was not called."
 
-    # Core assertion: Observed maximum concurrent calls should not exceed the semaphore's limit
+    # Core assertion: Observed maximum concurrent calls should not exceed the
+    # semaphore's limit
     assert max_calls_tracker.value <= MAX_GLOBAL_CONCURRENCY_LIMIT_TEST, (
         f"Observed concurrency ({max_calls_tracker.value}) exceeded semaphore limit "
         f"({MAX_GLOBAL_CONCURRENCY_LIMIT_TEST})."
@@ -711,8 +745,8 @@ if __name__ == "__main__":
     end_time = time.time()
     duration = end_time - start_time
     print(
-        f"\nHigh concurrency all timeout test ({concurrency_level} cases) duration: {duration:.2f} seconds"
-    )
+        f"\nHigh concurrency all timeout test ({concurrency_level} cases) duration: {
+            duration:.2f} seconds")
 
     # Verify all results are -3 (timeout)
     assert (
@@ -767,7 +801,7 @@ class Solution:
     )
     # from verl.utils.reward_score.prime_code import apps_check_correctness
     # results, metadata_list = apps_check_correctness(in_outs=in_outs, generation=generation_code,
-    #                                                        timeout=50000, debug=True)
+    # timeout=50000, debug=True)
 
     assert results == [True, True]
     assert "error" not in metadata_list[0]

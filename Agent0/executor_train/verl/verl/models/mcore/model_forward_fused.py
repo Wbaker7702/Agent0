@@ -80,7 +80,8 @@ def fused_forward_gptmodel(
         input_ids, attention_mask, pre_process=pre_process
     )
     input_ids_rmpad = input_ids_rmpad.contiguous()
-    labels_rmpad, _ = preprocess_packed_seqs(labels, attention_mask, pre_process=True)
+    labels_rmpad, _ = preprocess_packed_seqs(
+        labels, attention_mask, pre_process=True)
     labels_mask_rmpad, _ = preprocess_packed_seqs(
         labels_mask, attention_mask, pre_process=True
     )
@@ -139,7 +140,8 @@ def fused_forward_qwen2_5_vl(
     input_ids_rmpad, packed_seq_params = preprocess_packed_seqs(
         input_ids, attention_mask, pre_process=True
     )
-    labels_rmpad, _ = preprocess_packed_seqs(labels, attention_mask, pre_process=True)
+    labels_rmpad, _ = preprocess_packed_seqs(
+        labels, attention_mask, pre_process=True)
     labels_mask_rmpad, _ = preprocess_packed_seqs(
         labels_mask, attention_mask, pre_process=True
     )
@@ -194,19 +196,22 @@ def _fused_GPTModel_forward(
     """
 
     # If decoder_input is provided (not None), then input_ids and position_ids are ignored.
-    # Otherwise, apply embedding layer on input_ids and position_ids to get decoder_input.
+    # Otherwise, apply embedding layer on input_ids and position_ids to get
+    # decoder_input.
 
     # Decoder embedding.
     if decoder_input is not None:
         pass
     elif self.pre_process:
-        decoder_input = self.embedding(input_ids=input_ids, position_ids=position_ids)
+        decoder_input = self.embedding(
+            input_ids=input_ids, position_ids=position_ids)
     else:
         # intermediate stage of pipeline
         # decoder will get hidden_states from encoder.input_tensor
         decoder_input = None
 
-    # Rotary positional embeddings (embedding is None for PP intermediate devices)
+    # Rotary positional embeddings (embedding is None for PP intermediate
+    # devices)
     rotary_pos_emb = None
     rotary_pos_cos = None
     rotary_pos_sin = None
@@ -220,9 +225,8 @@ def _fused_GPTModel_forward(
             ), "GPTModel currently only supports static inference batching."
             # Flash decoding uses precomputed cos and sin for RoPE
             rotary_pos_cos, rotary_pos_sin = self.rotary_pos_emb_cache.setdefault(
-                inference_context.max_sequence_length,
-                self.rotary_pos_emb.get_cos_sin(inference_context.max_sequence_length),
-            )
+                inference_context.max_sequence_length, self.rotary_pos_emb.get_cos_sin(
+                    inference_context.max_sequence_length), )
         else:
             rotary_seq_len = self.rotary_pos_emb.get_rotary_seq_len(
                 inference_context,
@@ -241,7 +245,8 @@ def _fused_GPTModel_forward(
         and not self.config.multi_latent_attention
     ):
         if self.training or not self.config.flash_decode:
-            rotary_pos_emb = self.rotary_pos_emb(position_ids, self.mrope_section)
+            rotary_pos_emb = self.rotary_pos_emb(
+                position_ids, self.mrope_section)
         else:
             # Flash decoding uses precomputed cos and sin for RoPE
             raise NotImplementedError(

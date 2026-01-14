@@ -41,11 +41,15 @@ async def send_request(client, problem_text, request_id):
         )
 
         end_time = time.time()
-        print(f"Request {request_id} completed in {end_time - start_time:.2f} seconds")
+        print(
+            f"Request {request_id} completed in {
+                end_time -
+                start_time:.2f} seconds")
 
         # Print a shortened version of the response for verification
         response_content = completion.choices[0].message.content
-        print(f"Request {request_id} response (truncated): {response_content}...\n")
+        print(
+            f"Request {request_id} response (truncated): {response_content}...\n")
 
         return {
             "request_id": request_id,
@@ -55,8 +59,10 @@ async def send_request(client, problem_text, request_id):
     except Exception as e:
         end_time = time.time()
         print(
-            f"Request {request_id} failed after {end_time - start_time:.2f} seconds: {str(e)}"
-        )
+            f"Request {request_id} failed after {
+                end_time -
+                start_time:.2f} seconds: {
+                str(e)}")
         return {
             "request_id": request_id,
             "duration": end_time - start_time,
@@ -66,7 +72,9 @@ async def send_request(client, problem_text, request_id):
 
 async def run_concurrent_test(num_concurrent=5, num_total=10):
     """Run multiple concurrent requests to test server performance"""
-    client = AsyncOpenAI(api_key="sk-proj-1234567890", base_url="http://0.0.0.0:5000")
+    client = AsyncOpenAI(
+        api_key="sk-proj-1234567890",
+        base_url="http://0.0.0.0:5000")
 
     print(
         f"Starting concurrent test with {num_concurrent} concurrent requests, {num_total} total requests"
@@ -82,7 +90,7 @@ async def run_concurrent_test(num_concurrent=5, num_total=10):
     # Run requests in batches of num_concurrent
     results = []
     for i in range(0, len(tasks), num_concurrent):
-        batch = tasks[i : i + num_concurrent]
+        batch = tasks[i: i + num_concurrent]
         batch_results = await asyncio.gather(*batch)
         results.extend(batch_results)
 
@@ -94,9 +102,8 @@ async def run_concurrent_test(num_concurrent=5, num_total=10):
     failed_requests = [r for r in results if "error" in r]
 
     if successful_requests:
-        avg_request_time = sum(r["duration"] for r in successful_requests) / len(
-            successful_requests
-        )
+        avg_request_time = sum(
+            r["duration"] for r in successful_requests) / len(successful_requests)
     else:
         avg_request_time = 0
 
@@ -117,15 +124,18 @@ async def run_concurrent_test(num_concurrent=5, num_total=10):
 
 async def sequential_test_for_comparison(num_requests=5):
     """Run sequential requests as a baseline for comparison"""
-    client = AsyncOpenAI(api_key="sk-proj-1234567890", base_url="http://0.0.0.0:5000")
+    client = AsyncOpenAI(
+        api_key="sk-proj-1234567890",
+        base_url="http://0.0.0.0:5000")
 
-    print(f"\nStarting sequential test with {num_requests} requests for comparison")
+    print(
+        f"\nStarting sequential test with {num_requests} requests for comparison")
     start_time = time.time()
 
     results = []
     for i in range(num_requests):
         problem = math_problems[i % len(math_problems)]
-        result = await send_request(client, problem, f"seq-{i+1}")
+        result = await send_request(client, problem, f"seq-{i + 1}")
         results.append(result)
 
     end_time = time.time()
@@ -135,9 +145,8 @@ async def sequential_test_for_comparison(num_requests=5):
     successful_requests = [r for r in results if "error" not in r]
 
     if successful_requests:
-        avg_request_time = sum(r["duration"] for r in successful_requests) / len(
-            successful_requests
-        )
+        avg_request_time = sum(
+            r["duration"] for r in successful_requests) / len(successful_requests)
     else:
         avg_request_time = 0
 

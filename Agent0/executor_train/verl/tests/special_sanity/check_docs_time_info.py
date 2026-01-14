@@ -77,8 +77,7 @@ def main():
         print(f"\nTotal missing: {len(missing)}\n", file=sys.stderr)
         raise AssertionError(
             "Some documentation files lack a 'Last updated' line. Please include info such as "
-            "'Last updated: mm/dd/yyyy' to indicate the last update time of the document."
-        )
+            "'Last updated: mm/dd/yyyy' to indicate the last update time of the document.")
     else:
         print("✅ All checked files contain 'Last updated'.")
 

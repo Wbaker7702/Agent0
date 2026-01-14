@@ -26,7 +26,10 @@ from verl.utils.logger import print_rank_0
 from verl.utils.megatron_utils import unwrap_model
 
 
-def _megatron_calc_global_rank(tp_rank: int = 0, dp_rank: int = 0, pp_rank: int = 0):
+def _megatron_calc_global_rank(
+        tp_rank: int = 0,
+        dp_rank: int = 0,
+        pp_rank: int = 0):
     """given TP,DP,PP rank to get the global rank."""
 
     tp_size = mpu.get_tensor_model_parallel_world_size()
@@ -53,14 +56,16 @@ def _megatron_calc_layer_map(config):
 
     layer_map = dict()
     num_layers_per_model = config.num_hidden_layers // pp_size // virtual_pp_size
-    assert num_layers_per_model * pp_size * virtual_pp_size == config.num_hidden_layers
+    assert num_layers_per_model * pp_size * \
+        virtual_pp_size == config.num_hidden_layers
 
     for pp_rank_idx in range(pp_size):
         for virtual_pp_rank_idx in range(virtual_pp_size):
-            layer_offset = (
-                virtual_pp_rank_idx * (config.num_hidden_layers // virtual_pp_size)
-                + pp_rank_idx * num_layers_per_model
-            )
+            layer_offset = (virtual_pp_rank_idx *
+                            (config.num_hidden_layers //
+                             virtual_pp_size) +
+                            pp_rank_idx *
+                            num_layers_per_model)
             for layer_idx in range(num_layers_per_model):
                 layer_map[layer_offset + layer_idx] = (
                     pp_rank_idx,
@@ -71,8 +76,11 @@ def _megatron_calc_layer_map(config):
 
 
 def merge_megatron_ckpt_llama(
-    wrapped_models, config, dtype, is_value_model=False, tie_word_embeddings=False
-):
+        wrapped_models,
+        config,
+        dtype,
+        is_value_model=False,
+        tie_word_embeddings=False):
     """Merge sharded parameters of a Megatron module into a merged checkpoint.
 
     Args:
@@ -99,7 +107,8 @@ def merge_megatron_ckpt_llama(
     mp_group = mpu.get_model_parallel_group()
 
     if dist.get_rank() == 0:
-        assert mp_group.rank() == 0, f"mp_rank:[{mp_group.rank}] != 0 on rank #0"
+        assert mp_group.rank() == 0, f"mp_rank:[{
+            mp_group.rank}] != 0 on rank #0"
         assert pp_rank == 0, f"pp_rank:[{pp_rank}] != 0 on rank #0"
         assert dp_rank == 0, f"dp_rank:[{dp_rank}] != 0 on rank #0"
 
@@ -108,12 +117,14 @@ def merge_megatron_ckpt_llama(
 
     assert len(wrapped_models) == virtual_pp_size
     num_layers_per_model = config.num_hidden_layers // pp_size // virtual_pp_size
-    assert num_layers_per_model * pp_size * virtual_pp_size == config.num_hidden_layers
+    assert num_layers_per_model * pp_size * \
+        virtual_pp_size == config.num_hidden_layers
 
     models = [None] * len(wrapped_models)
 
     for i, wrapped_model in enumerate(wrapped_models):
-        models[i] = unwrap_model(wrapped_model, (torchDDP, LocalDDP, Float16Module))
+        models[i] = unwrap_model(
+            wrapped_model, (torchDDP, LocalDDP, Float16Module))
         assert (
             len(models[i].model.layers) == num_layers_per_model
         ), "len model layers {} not equal to num_layers_per_model {}".format(
@@ -133,7 +144,8 @@ def merge_megatron_ckpt_llama(
         """broadcast tensor across mp_group"""
         nonlocal state_dict
         nonlocal mp_group
-        src_rank = _megatron_calc_global_rank(tp_rank=0, dp_rank=0, pp_rank=src_pp_rank)
+        src_rank = _megatron_calc_global_rank(
+            tp_rank=0, dp_rank=0, pp_rank=src_pp_rank)
 
         if torch.distributed.get_rank() == src_rank:
             if tensor is None:
@@ -175,7 +187,8 @@ def merge_megatron_ckpt_llama(
         nonlocal state_dict
         nonlocal mp_group
         tp_size = mpu.get_tensor_model_parallel_world_size()
-        src_rank = _megatron_calc_global_rank(tp_rank=0, dp_rank=0, pp_rank=src_pp_rank)
+        src_rank = _megatron_calc_global_rank(
+            tp_rank=0, dp_rank=0, pp_rank=src_pp_rank)
 
         chunk_shape = tensor.shape if torch.distributed.get_rank() == src_rank else None
 
@@ -184,7 +197,8 @@ def merge_megatron_ckpt_llama(
         chunk_shape = obj_list[0]
         if chunk_shape is None:
             # all or none ranks in the mp_group should reach here
-            print_rank_0(f"tp_shard tensor:[{name}] not exist, skip collecting")
+            print_rank_0(
+                f"tp_shard tensor:[{name}] not exist, skip collecting")
             return
 
         buffer_tensor = torch.empty(
@@ -223,7 +237,8 @@ def merge_megatron_ckpt_llama(
         nonlocal state_dict
         nonlocal mp_group
         tp_size = mpu.get_tensor_model_parallel_world_size()
-        src_rank = _megatron_calc_global_rank(tp_rank=0, dp_rank=0, pp_rank=src_pp_rank)
+        src_rank = _megatron_calc_global_rank(
+            tp_rank=0, dp_rank=0, pp_rank=src_pp_rank)
 
         chunk_shape = tensor.shape if torch.distributed.get_rank() == src_rank else None
 
@@ -233,8 +248,9 @@ def merge_megatron_ckpt_llama(
         if chunk_shape is None:
             # all or none ranks in the mp_group should reach here
             print_rank_0(
-                f"tp_shard tensor:[{gate_name, up_name}] not exist, skip collecting"
-            )
+                f"tp_shard tensor:[{
+                    gate_name,
+                    up_name}] not exist, skip collecting")
             return
 
         buffer_tensor = torch.empty(
@@ -266,9 +282,8 @@ def merge_megatron_ckpt_llama(
             gate_weight_list = []
             up_weight_list = []
             for i in range(tp_size):
-                gate_up_weight_tp = full_tensor[
-                    intermediate_size_tp * 2 * i : intermediate_size_tp * 2 * (i + 1)
-                ]
+                gate_up_weight_tp = full_tensor[intermediate_size_tp *
+                                                2 * i: intermediate_size_tp * 2 * (i + 1)]
                 gate_weight_tp = gate_up_weight_tp[:intermediate_size_tp]
                 up_weight_tp = gate_up_weight_tp[intermediate_size_tp:]
                 gate_weight_list.append(gate_weight_tp)
@@ -277,12 +292,14 @@ def merge_megatron_ckpt_llama(
             state_dict[gate_name] = torch.cat(gate_weight_list, dim=0)
             state_dict[up_name] = torch.cat(up_weight_list, dim=0)
 
-    def _broadcast_tp_shard_tensor_qkv(tensor, q_name, k_name, v_name, src_pp_rank):
+    def _broadcast_tp_shard_tensor_qkv(
+            tensor, q_name, k_name, v_name, src_pp_rank):
         """broadcast tensor in tp shards across mp_group"""
         nonlocal state_dict
         nonlocal mp_group
         tp_size = mpu.get_tensor_model_parallel_world_size()
-        src_rank = _megatron_calc_global_rank(tp_rank=0, dp_rank=0, pp_rank=src_pp_rank)
+        src_rank = _megatron_calc_global_rank(
+            tp_rank=0, dp_rank=0, pp_rank=src_pp_rank)
 
         chunk_shape = tensor.shape if torch.distributed.get_rank() == src_rank else None
 
@@ -291,7 +308,8 @@ def merge_megatron_ckpt_llama(
         chunk_shape = obj_list[0]
         if chunk_shape is None:
             # all or none ranks in the mp_group should reach here
-            print_rank_0(f"tp_shard tensor:[{q_name}] not exist, skip collecting")
+            print_rank_0(
+                f"tp_shard tensor:[{q_name}] not exist, skip collecting")
             return
 
         buffer_tensor = torch.empty(
@@ -327,14 +345,16 @@ def merge_megatron_ckpt_llama(
             if config.num_key_value_heads >= tp_size:
                 q_size_tp = config.hidden_size // tp_size
                 kv_size_tp = (
-                    hidden_size_per_head * config.num_key_value_heads // tp_size
-                )
+                    hidden_size_per_head *
+                    config.num_key_value_heads //
+                    tp_size)
                 total_size = q_size_tp + 2 * kv_size_tp
                 for i in range(tp_size):
-                    qkv_part = full_tensor[i * total_size : (i + 1) * total_size]
+                    qkv_part = full_tensor[i *
+                                           total_size: (i + 1) * total_size]
                     q_part = qkv_part[:q_size_tp]
-                    k_part = qkv_part[q_size_tp : q_size_tp + kv_size_tp]
-                    v_part = qkv_part[q_size_tp + kv_size_tp : total_size]
+                    k_part = qkv_part[q_size_tp: q_size_tp + kv_size_tp]
+                    v_part = qkv_part[q_size_tp + kv_size_tp: total_size]
                     q_weight_list.append(q_part)
                     k_weight_list.append(k_part)
                     v_weight_list.append(v_part)
@@ -343,10 +363,11 @@ def merge_megatron_ckpt_llama(
                 kv_size_tp = hidden_size_per_head
                 total_size = q_size_tp + 2 * kv_size_tp
                 for i in range(tp_size):
-                    qkv_part = full_tensor[i * total_size : (i + 1) * total_size]
+                    qkv_part = full_tensor[i *
+                                           total_size: (i + 1) * total_size]
                     q_part = qkv_part[:q_size_tp]
-                    k_part = qkv_part[q_size_tp : q_size_tp + kv_size_tp]
-                    v_part = qkv_part[q_size_tp + kv_size_tp : total_size]
+                    k_part = qkv_part[q_size_tp: q_size_tp + kv_size_tp]
+                    v_part = qkv_part[q_size_tp + kv_size_tp: total_size]
                     q_weight_list.append(q_part)
                     if i * config.num_key_value_heads % tp_size == 0:
                         k_weight_list.append(k_part)
@@ -438,22 +459,25 @@ def merge_megatron_ckpt_llama(
         if is_value_model:
             if pp_rank == pp_size - 1:
                 print(
-                    f"gpt_model_module.lm_head.weight: {gpt_model_module.lm_head.weight.shape}"
-                )
+                    f"gpt_model_module.lm_head.weight: {
+                        gpt_model_module.lm_head.weight.shape}")
             _broadcast_tensor(
-                gpt_model_module.lm_head.weight if pp_rank == pp_size - 1 else None,
+                gpt_model_module.lm_head.weight if pp_rank == pp_size -
+                1 else None,
                 "lm_head.weight",
-                src_pp_rank=pp_size - 1,
+                src_pp_rank=pp_size -
+                1,
             )
             _broadcast_tensor(
                 (
-                    gpt_model_module.reward_head.weight
-                    if pp_rank == pp_size - 1
-                    and getattr(gpt_model_module, "reward_weight", None) is not None
-                    else None
-                ),
+                    gpt_model_module.reward_head.weight if pp_rank == pp_size -
+                    1 and getattr(
+                        gpt_model_module,
+                        "reward_weight",
+                        None) is not None else None),
                 "reward_head.weight",
-                src_pp_rank=pp_size - 1,
+                src_pp_rank=pp_size -
+                1,
             )
 
         else:
@@ -478,5 +502,8 @@ def merge_megatron_ckpt_llama(
             if dtype != v.dtype:
                 state_dict[k] = v.to(dtype)
 
-    print_rank_0(f"merge megatron ckpt done, time elapsed {time.time() - start_time}s")
+    print_rank_0(
+        f"merge megatron ckpt done, time elapsed {
+            time.time() -
+            start_time}s")
     return state_dict

@@ -120,9 +120,7 @@ def test_async_sglang_rollout_w_interaction():
                 "name": "gsm8k",
                 "class_name": "verl.interactions.gsm8k_interaction.Gsm8kInteraction",
                 "config": {},
-            }
-        ]
-    }
+            }]}
 
     with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
         OmegaConf.save(interaction_config, f.name)
@@ -188,7 +186,8 @@ def test_async_sglang_rollout_w_interaction():
         print(f"postprocessed {output.batch['responses'].shape=}")
         sglang_output = output.to("cpu")
 
-    sglang_response_tokens = tokenizer.batch_decode(sglang_output.batch["responses"])
+    sglang_response_tokens = tokenizer.batch_decode(
+        sglang_output.batch["responses"])
 
     print(f"hf response: {hf_response_tokens}")
     print(f"sglang response: {sglang_response_tokens}")

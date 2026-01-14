@@ -41,10 +41,10 @@ from collections import deque
 def main():
     data = sys.stdin.read().split()
     it = iter(data)
-    
+
     # Read start and target positions
     x0, y0, x1, y1 = int(next(it)), int(next(it)), int(next(it)), int(next(it))
-    
+
     n = int(next(it))
     allowed = set()
     # The total number of allowed cells is at most 10^5.
@@ -54,21 +54,21 @@ def main():
         b = int(next(it))
         for c in range(a, b + 1):
             allowed.add((r, c))
-    
+
     # Directions for the king (8 neighboring cells)
     directions = [(-1, -1), (-1, 0), (-1, 1),
                   (0, -1),           (0, 1),
                   (1, -1),  (1, 0),  (1, 1)]
-    
+
     start = (x0, y0)
     target = (x1, y1)
-    
+
     # BFS initialization
     queue = deque()
     queue.append((x0, y0, 0))
     # Mark the starting cell as visited by removing it from allowed set.
     allowed.discard(start)
-    
+
     while queue:
         x, y, moves = queue.popleft()
         if (x, y) == target:
@@ -79,7 +79,7 @@ def main():
             if (nx, ny) in allowed:
                 allowed.remove((nx, ny))
                 queue.append((nx, ny, moves + 1))
-    
+
     print(-1)
 
 if __name__ == '__main__':
@@ -146,7 +146,8 @@ def test_prime_code_sandbox_fusion():
     Test PRIME code on sandbox fusion. Skips if SANDBOX_FUSION_URL is not set.
     """
     data_source = "codecontests"
-    # Get the URL from the environment variable, as skipif ensures it is set at this point
+    # Get the URL from the environment variable, as skipif ensures it is set
+    # at this point
     sandbox_fusion_url = os.environ.get("SANDBOX_FUSION_URL")
     # Removed the previous 'if not sandbox_url' check block
 
@@ -172,7 +173,8 @@ def test_continuous_score_consistency():
     Uses a test case where the first 9 out of 11 sub-cases pass (expected score 0.9).
     """
     completion = prime_code_answers[1]  # Use the second sample
-    ground_truth = prime_code_gts[1]  # Use the second sample (9/11 pass, first 9 pass)
+    # Use the second sample (9/11 pass, first 9 pass)
+    ground_truth = prime_code_gts[1]
     expected_continuous_score = 0.9
 
     # 1. Calculate score using prime_code (default) with continuous=True
@@ -185,7 +187,8 @@ def test_continuous_score_consistency():
     )
 
     # 2. Calculate score using sandbox_fusion with continuous=True
-    # Ensure the extra_info key triggers the sandbox_fusion path in default_compute_score
+    # Ensure the extra_info key triggers the sandbox_fusion path in
+    # default_compute_score
     fusion_score, _ = prime_code.compute_score(
         completion, ground_truth, continuous=True
     )
@@ -206,8 +209,7 @@ def test_check_correctness():
         "outputs": ground_truth["outputs"][:1],
     }
     res, meta = apps_check_correctness(
-        in_outs=ground_truth_single, generation=completion, timeout=5, debug=False
-    )
+        in_outs=ground_truth_single, generation=completion, timeout=5, debug=False)
     print(res, meta)
 
 

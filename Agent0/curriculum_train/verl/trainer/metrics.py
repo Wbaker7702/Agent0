@@ -24,7 +24,8 @@ def reduce_metrics(metrics: Dict[str, List[Any]]) -> Dict[str, Any]:
     return {key: np.mean(value) for key, value in metrics.items()}
 
 
-def compute_data_metrics(batch: DataProto, use_critic: bool = False) -> Dict[str, Any]:
+def compute_data_metrics(
+        batch: DataProto, use_critic: bool = False) -> Dict[str, Any]:
     sequence_score = batch.batch["token_level_scores"].sum(-1)
     sequence_reward = batch.batch["token_level_rewards"].sum(-1)
 
@@ -33,8 +34,10 @@ def compute_data_metrics(batch: DataProto, use_critic: bool = False) -> Dict[str
 
     max_response_length = batch.batch["responses"].size(-1)
 
-    prompt_mask = batch.batch["attention_mask"][:, :-max_response_length].bool()
-    response_mask = batch.batch["attention_mask"][:, -max_response_length:].bool()
+    prompt_mask = batch.batch["attention_mask"][:,
+                                                :-max_response_length].bool()
+    response_mask = batch.batch["attention_mask"][:, -
+                                                  max_response_length:].bool()
 
     max_prompt_length = prompt_mask.size(-1)
     prompt_length = prompt_mask.sum(-1).float()

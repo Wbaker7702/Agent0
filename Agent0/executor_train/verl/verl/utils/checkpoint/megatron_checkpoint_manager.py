@@ -153,9 +153,8 @@ class MegatronCheckpointManager(BaseCheckpointManager):
 
         self.weight_saver = get_weight_saver(self.arch)
 
-    def get_rng_state(
-        self, use_dist_ckpt: bool = True, data_parallel_random_init: bool = False
-    ):
+    def get_rng_state(self, use_dist_ckpt: bool = True,
+                      data_parallel_random_init: bool = False):
         """collect rng state across data parallel ranks"""
         rng_state = {
             "random_rng_state": random.getstate(),
@@ -175,7 +174,9 @@ class MegatronCheckpointManager(BaseCheckpointManager):
             and mpu.get_data_parallel_world_size() > 1
             and data_parallel_random_init
         ):
-            rng_state_list = [None for i in range(mpu.get_data_parallel_world_size())]
+            rng_state_list = [
+                None for i in range(
+                    mpu.get_data_parallel_world_size())]
             torch.distributed.all_gather_object(
                 rng_state_list, rng_state, group=mpu.get_data_parallel_group()
             )
@@ -228,13 +229,17 @@ class MegatronCheckpointManager(BaseCheckpointManager):
         # optimizer, then the optimizer's path must additionally include the
         # data parallel rank.
 
-        # due to the fact that models are identical across cp ranks, cp rank is not used in the checkpoint path
+        # due to the fact that models are identical across cp ranks, cp rank is
+        # not used in the checkpoint path
         if not pipeline_parallel:
-            common_path = os.path.join(checkpoints_path, f"mp_rank_{tensor_rank:02d}")
+            common_path = os.path.join(
+                checkpoints_path, f"mp_rank_{
+                    tensor_rank:02d}")
         else:
             common_path = os.path.join(
-                checkpoints_path, f"mp_rank_{tensor_rank:02d}_{pipeline_rank:03d}"
-            )
+                checkpoints_path, f"mp_rank_{
+                    tensor_rank:02d}_{
+                    pipeline_rank:03d}")
 
         if expert_parallel:
             common_path = common_path + f"_{expert_rank:03d}"
@@ -251,11 +256,13 @@ class MegatronCheckpointManager(BaseCheckpointManager):
 
         # All ranks Save Model to reduce memory pressure
         if self.should_save_model or self.should_load_model:
-            # Get sharded state dict, notice that state_dict will collect among dp groups, causing memory pressure
+            # Get sharded state dict, notice that state_dict will collect among
+            # dp groups, causing memory pressure
             for vpp_rank, model in enumerate(self.model):
                 if len(self.model) > 1:
                     mpu.set_virtual_pipeline_model_parallel_rank(vpp_rank)
-                    key = f"model{vpp_rank}" if len(self.model) > 1 else "model"
+                    key = f"model{vpp_rank}" if len(
+                        self.model) > 1 else "model"
                 else:
                     key = "model"
                 if hasattr(model, "module"):
@@ -265,7 +272,8 @@ class MegatronCheckpointManager(BaseCheckpointManager):
         # Optimizer State Dict
         if self.should_save_optimizer or self.should_load_optimizer:
             torch.distributed.barrier()
-            optimizer_sharded_states = self.optimizer.sharded_state_dict(state_dict)
+            optimizer_sharded_states = self.optimizer.sharded_state_dict(
+                state_dict)
             state_dict["optimizer"] = optimizer_sharded_states
 
             if self.lr_scheduler is not None:
@@ -305,8 +313,10 @@ class MegatronCheckpointManager(BaseCheckpointManager):
         )
 
     def load_checkpoint(
-        self, local_path: str, hdfs_path: str = None, del_local_after_load=False
-    ):
+            self,
+            local_path: str,
+            hdfs_path: str = None,
+            del_local_after_load=False):
         if local_path is not None:
             assert os.path.exists(
                 local_path
@@ -331,7 +341,8 @@ class MegatronCheckpointManager(BaseCheckpointManager):
                 )
             else:
                 log_with_rank(
-                    f"Generated state dict for saving: {sharded_state_dict['model'].keys()}",
+                    f"Generated state dict for saving: {
+                        sharded_state_dict['model'].keys()}",
                     rank=self.rank,
                     logger=logger,
                 )
@@ -344,8 +355,10 @@ class MegatronCheckpointManager(BaseCheckpointManager):
 
         if self.should_load_model and self.use_dist_checkpointing:
             assert "model" in state_dict or any(
-                f"model{vpp_rank}" in state_dict for vpp_rank in range(len(self.model))
-            ), f"Model state dict not found in {state_dict.keys()}. Please check the checkpoint file {local_path}."
+                f"model{vpp_rank}" in state_dict for vpp_rank in range(
+                    len(
+                        self.model))), f"Model state dict not found in {
+                state_dict.keys()}. Please check the checkpoint file {local_path}."
             for vpp_rank, model in enumerate(self.model):
                 if len(self.model) == 1:
                     model_state_dict = state_dict["model"]
@@ -372,8 +385,8 @@ class MegatronCheckpointManager(BaseCheckpointManager):
 
         if self.should_load_optimizer:
             assert (
-                "optimizer" in state_dict
-            ), f"Optimizer state dict not found in {state_dict.keys()}. Please check the checkpoint file {local_path}."
+                "optimizer" in state_dict), f"Optimizer state dict not found in {
+                state_dict.keys()}. Please check the checkpoint file {local_path}."
             optimizer_state_dict = state_dict["optimizer"]
             self.optimizer.load_state_dict(optimizer_state_dict)
             log_with_rank(
@@ -382,10 +395,8 @@ class MegatronCheckpointManager(BaseCheckpointManager):
                 logger=logger,
             )
             if self.use_checkpoint_opt_param_scheduler:
-                assert "lr_scheduler" in state_dict, (
-                    f"LR scheduler state dict not found in {state_dict.keys()}. Please check the checkpoint file "
-                    f"{local_path}."
-                )
+                assert "lr_scheduler" in state_dict, (f"LR scheduler state dict not found in {
+                    state_dict.keys()}. Please check the checkpoint file " f"{local_path}.")
                 lr_scheduler_state_dict = state_dict["lr_scheduler"]
                 if self.lr_scheduler is not None:
                     self.lr_scheduler.load_state_dict(lr_scheduler_state_dict)
@@ -397,13 +408,14 @@ class MegatronCheckpointManager(BaseCheckpointManager):
 
         if self.should_load_extra:
             assert (
-                "rng_state" in state_dict
-            ), f"RNG state dict not found in {state_dict.keys()}. Please check the checkpoint file {local_path}."
+                "rng_state" in state_dict), f"RNG state dict not found in {
+                state_dict.keys()}. Please check the checkpoint file {local_path}."
             rng_state = state_dict["rng_state"]
             self.load_rng_states(rng_state)
             log_with_rank(
-                f"Loaded RNG states from {local_path}", rank=self.rank, logger=logger
-            )
+                f"Loaded RNG states from {local_path}",
+                rank=self.rank,
+                logger=logger)
 
         if del_local_after_load:
             try:
@@ -433,7 +445,8 @@ class MegatronCheckpointManager(BaseCheckpointManager):
             and len(self.previous_saved_paths) >= max_ckpt_to_keep
         ):
             keep_start = len(self.previous_saved_paths) - max_ckpt_to_keep + 1
-            self.remove_previous_save_local_path(self.previous_saved_paths[:keep_start])
+            self.remove_previous_save_local_path(
+                self.previous_saved_paths[:keep_start])
             self.previous_saved_paths = self.previous_saved_paths[keep_start:]
 
         local_path = local_mkdir_safe(local_path)
@@ -457,7 +470,8 @@ class MegatronCheckpointManager(BaseCheckpointManager):
                     )
                 else:
                     log_with_rank(
-                        f"Generated state dict for saving: {state_dict['model'].keys()}",
+                        f"Generated state dict for saving: {
+                            state_dict['model'].keys()}",
                         rank=self.rank,
                         logger=logger,
                     )
@@ -496,7 +510,8 @@ class MegatronCheckpointManager(BaseCheckpointManager):
             # No matter whether we save hf model or not
             if self.rank == 0:
                 # Save tokenizer
-                hf_config_tokenizer_path = get_hf_model_checkpoint_path(local_path)
+                hf_config_tokenizer_path = get_hf_model_checkpoint_path(
+                    local_path)
                 self.processing_class.save_pretrained(hf_config_tokenizer_path)
                 # Save huggingface config
                 self.hf_config.save_pretrained(hf_config_tokenizer_path)
@@ -508,9 +523,11 @@ class MegatronCheckpointManager(BaseCheckpointManager):
                         generation_config = GenerationConfig.from_pretrained(
                             self.hf_config.name_or_path
                         )
-                        generation_config.save_pretrained(hf_config_tokenizer_path)
+                        generation_config.save_pretrained(
+                            hf_config_tokenizer_path)
                     except Exception:
-                        # if the generation config isn't available, we don't save it
+                        # if the generation config isn't available, we don't
+                        # save it
                         pass
                 log_with_rank(
                     f"Saved Huggingface config and tokenizer to {hf_config_tokenizer_path}",
@@ -530,8 +547,7 @@ class MegatronCheckpointManager(BaseCheckpointManager):
                 for key, value in transformer_config_dict.items():
                     if type(value) in to_convert_types:
                         transformer_config_dict[key] = to_convert_types[type(value)](
-                            value
-                        )
+                            value)
                     if type(value) in ignore_types:
                         pop_keys.append(key)
                     if callable(value):
@@ -539,8 +555,7 @@ class MegatronCheckpointManager(BaseCheckpointManager):
                 for key in pop_keys:
                     transformer_config_dict.pop(key)
                 transformer_config_path = get_transformer_config_checkpoint_path(
-                    local_path
-                )
+                    local_path)
                 with open(transformer_config_path, "w") as f:
                     json.dump(transformer_config_dict, f, indent=2)
 
@@ -576,7 +591,8 @@ class MegatronCheckpointManager(BaseCheckpointManager):
                         model = AutoModelForCausalLM.from_pretrained(
                             self.config.model.path, torch_dtype="auto"
                         )
-                model.save_pretrained(hf_model_ckpt_path, state_dict=state_dict)
+                model.save_pretrained(
+                    hf_model_ckpt_path, state_dict=state_dict)
                 log_with_rank(
                     f"Saved Huggingface config and tokenizer to {hf_model_ckpt_path}",
                     rank=self.rank,
@@ -595,8 +611,9 @@ class MegatronCheckpointManager(BaseCheckpointManager):
 
                     hdfs_io.makedirs(hdfs_path, exist_ok=True)
                     hdfs_io.copy(
-                        src=hf_model_ckpt_path, dst=hdfs_path, dirs_exist_ok=True
-                    )
+                        src=hf_model_ckpt_path,
+                        dst=hdfs_path,
+                        dirs_exist_ok=True)
                     log_with_rank(
                         f"HDFS checkpoint uploaded to {hdfs_path}",
                         rank=self.rank,
@@ -622,11 +639,13 @@ class MegatronCheckpointManager(BaseCheckpointManager):
 
                     hdfs_io.makedirs(hdfs_path, exist_ok=True)
                     hdfs_io.copy(
-                        src=dist_checkpoint_path, dst=hdfs_path, dirs_exist_ok=True
-                    )
+                        src=dist_checkpoint_path,
+                        dst=hdfs_path,
+                        dirs_exist_ok=True)
                     hdfs_io.copy(
-                        src=hf_config_tokenizer_path, dst=hdfs_path, dirs_exist_ok=True
-                    )
+                        src=hf_config_tokenizer_path,
+                        dst=hdfs_path,
+                        dirs_exist_ok=True)
 
         if self.checkpoint_config.async_save:
             assert (

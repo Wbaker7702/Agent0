@@ -56,8 +56,9 @@ def _init_args():
         "--test", action="store_true", help="Whether to test the conversion"
     )
     parser.add_argument(
-        "--trust_remote_code", action="store_true", help="Whether to trust remote code"
-    )
+        "--trust_remote_code",
+        action="store_true",
+        help="Whether to trust remote code")
     args = parser.parse_args()
     return args
 
@@ -116,19 +117,26 @@ def test_conversion(megatron_model_provider, tfconfig, output_path, model):
     print("Conversion test passed!")
 
 
-def convert_checkpoint_from_transformers_to_megatron(hf_model, model, hf_config):
+def convert_checkpoint_from_transformers_to_megatron(
+        hf_model, model, hf_config):
     num_attention_heads = hf_config.num_attention_heads
     num_key_value_heads = hf_config.num_key_value_heads
     hidden_dim = hf_config.hidden_size
-    head_dim = getattr(hf_config, "head_dim", hidden_dim // num_attention_heads)
+    head_dim = getattr(
+        hf_config,
+        "head_dim",
+        hidden_dim //
+        num_attention_heads)
     if num_attention_heads != num_key_value_heads:
         print("[WARNING] Converting GQA model")
     has_qkv_bias = getattr(hf_config, "qkv_bias", False) or getattr(
         hf_config, "attention_bias", False
     )
-    has_share_expert = getattr(hf_config, "shared_expert_intermediate_size", None)
+    has_share_expert = getattr(
+        hf_config, "shared_expert_intermediate_size", None)
     with torch.no_grad():
-        model.embedding.word_embeddings.weight.copy_(hf_model.model.embed_tokens.weight)
+        model.embedding.word_embeddings.weight.copy_(
+            hf_model.model.embed_tokens.weight)
         for layer, hf_layer in zip(
             model.decoder.layers, hf_model.model.layers, strict=True
         ):
@@ -153,12 +161,14 @@ def convert_checkpoint_from_transformers_to_megatron(hf_model, model, hf_config)
             layer.self_attention.linear_qkv.weight.copy_(qkv)
 
             if has_qkv_bias:
-                q_bias = hf_layer.self_attn.q_proj.bias.view([num_key_value_heads, -1])
-                k_bias = hf_layer.self_attn.k_proj.bias.view([num_key_value_heads, -1])
-                v_bias = hf_layer.self_attn.v_proj.bias.view([num_key_value_heads, -1])
-                qkv_bias = (
-                    torch.cat([q_bias, k_bias, v_bias], dim=1).view(-1).contiguous()
-                )
+                q_bias = hf_layer.self_attn.q_proj.bias.view(
+                    [num_key_value_heads, -1])
+                k_bias = hf_layer.self_attn.k_proj.bias.view(
+                    [num_key_value_heads, -1])
+                v_bias = hf_layer.self_attn.v_proj.bias.view(
+                    [num_key_value_heads, -1])
+                qkv_bias = (torch.cat(
+                    [q_bias, k_bias, v_bias], dim=1).view(-1).contiguous())
                 layer.self_attention.linear_qkv.bias.copy_(qkv_bias)
 
             if hasattr(hf_layer.self_attn, "q_norm"):
@@ -199,7 +209,8 @@ def convert_checkpoint_from_transformers_to_megatron(hf_model, model, hf_config)
                         hf_layer.mlp.shared_expert.up_proj.weight,
                     ]
                 )
-                layer.mlp.shared_experts.linear_fc1.weight.copy_(shared_fc1_weight)
+                layer.mlp.shared_experts.linear_fc1.weight.copy_(
+                    shared_fc1_weight)
                 layer.mlp.shared_experts.linear_fc2.weight.copy_(
                     hf_layer.mlp.shared_expert.down_proj.weight
                 )
@@ -216,8 +227,9 @@ def safe_copy(
     if not skip_dtype_assert:
         if src_tensor.dtype != dst_tensor.dtype:
             raise ValueError(
-                f"Get source dtype {src_tensor.dtype}, but target dtype {dst_tensor.dtype}"
-            )
+                f"Get source dtype {
+                    src_tensor.dtype}, but target dtype {
+                    dst_tensor.dtype}")
     assert src_tensor.shape == dst_tensor.shape
     dst_tensor.data.copy_(src_tensor.data)
     return src_tensor.numel()
@@ -241,15 +253,16 @@ def convert_checkpoint_from_transformers_to_megatron_qwen2_5_vl(
     vision_num_query_groups = mgvision.config.num_query_groups
     vision_head_dim = vision_hidden_size // mgvision.config.num_attention_heads
     copied_numel = 0
-    safe_copy(hfvision.rotary_pos_emb.inv_freq, mgvision.rotary_pos_emb.inv_freq)
+    safe_copy(hfvision.rotary_pos_emb.inv_freq,
+              mgvision.rotary_pos_emb.inv_freq)
     copied_numel += safe_copy(
         hfvision.patch_embed.proj.weight, mgvision.patch_embed.proj.weight
     )
-    for hfblock, mgblock in zip(hfvision.blocks, mgvision.decoder.layers, strict=True):
+    for hfblock, mgblock in zip(
+            hfvision.blocks, mgvision.decoder.layers, strict=True):
         # norm1 --> linear_qkv.norm
-        copied_numel += safe_copy(
-            hfblock.norm1.weight, mgblock.self_attention.linear_qkv.layer_norm_weight
-        )
+        copied_numel += safe_copy(hfblock.norm1.weight,
+                                  mgblock.self_attention.linear_qkv.layer_norm_weight)
         # norm2 --> mlp.linear_fc1.norm
         copied_numel += safe_copy(
             hfblock.norm2.weight, mgblock.mlp.linear_fc1.layer_norm_weight
@@ -257,13 +270,17 @@ def convert_checkpoint_from_transformers_to_megatron_qwen2_5_vl(
         # qkv --> self_attention.linear_qkv
         converted_weight = (
             hfblock.attn.qkv.weight.view(
-                3, vision_num_query_groups, -1, vision_head_dim, vision_hidden_size
-            )
-            .transpose(0, 1)
-            .flatten(1, 2)
-            .reshape(-1, vision_hidden_size)
-            .contiguous()
-        )
+                3,
+                vision_num_query_groups,
+                -1,
+                vision_head_dim,
+                vision_hidden_size) .transpose(
+                0,
+                1) .flatten(
+                1,
+                2) .reshape(
+                    -1,
+                vision_hidden_size) .contiguous())
         copied_numel += safe_copy(
             converted_weight, mgblock.self_attention.linear_qkv.weight
         )
@@ -288,7 +305,8 @@ def convert_checkpoint_from_transformers_to_megatron_qwen2_5_vl(
         fc1_weight = torch.cat(
             [hfblock.mlp.gate_proj.weight, hfblock.mlp.up_proj.weight]
         )
-        fc1_bias = torch.cat([hfblock.mlp.gate_proj.bias, hfblock.mlp.up_proj.bias])
+        fc1_bias = torch.cat(
+            [hfblock.mlp.gate_proj.bias, hfblock.mlp.up_proj.bias])
         copied_numel += safe_copy(fc1_weight, mgblock.mlp.linear_fc1.weight)
         copied_numel += safe_copy(fc1_bias, mgblock.mlp.linear_fc1.bias)
         copied_numel += safe_copy(
@@ -326,7 +344,8 @@ def convert_checkpoint_from_transformers_to_megatron_qwen2_5_vl(
     copied_numel += safe_copy(
         hfllm.embed_tokens.weight, mgllm.embedding.word_embeddings.weight
     )
-    for mglayer, hflayer in zip(mgllm.decoder.layers, hfllm.layers, strict=True):
+    for mglayer, hflayer in zip(
+            mgllm.decoder.layers, hfllm.layers, strict=True):
         copied_numel += safe_copy(
             hflayer.input_layernorm.weight,
             mglayer.self_attention.linear_qkv.layer_norm_weight,
@@ -346,7 +365,8 @@ def convert_checkpoint_from_transformers_to_megatron_qwen2_5_vl(
             .view(-1, hidden_size)
             .contiguous()
         )
-        copied_numel += safe_copy(qkv_proj, mglayer.self_attention.linear_qkv.weight)
+        copied_numel += safe_copy(qkv_proj,
+                                  mglayer.self_attention.linear_qkv.weight)
 
         q_proj_bias = hflayer.self_attn.q_proj.bias.view(num_query_groups, -1)
         k_proj_bias = hflayer.self_attn.k_proj.bias.view(num_query_groups, -1)
@@ -356,10 +376,10 @@ def convert_checkpoint_from_transformers_to_megatron_qwen2_5_vl(
             .view(-1)
             .contiguous()
         )
-        copied_numel += safe_copy(qkv_bias, mglayer.self_attention.linear_qkv.bias)
-        copied_numel += safe_copy(
-            hflayer.self_attn.o_proj.weight, mglayer.self_attention.linear_proj.weight
-        )
+        copied_numel += safe_copy(qkv_bias,
+                                  mglayer.self_attention.linear_qkv.bias)
+        copied_numel += safe_copy(hflayer.self_attn.o_proj.weight,
+                                  mglayer.self_attention.linear_proj.weight)
 
         fc1_weight = torch.cat(
             [hflayer.mlp.gate_proj.weight, hflayer.mlp.up_proj.weight]
@@ -374,7 +394,8 @@ def convert_checkpoint_from_transformers_to_megatron_qwen2_5_vl(
             mglayer.mlp.linear_fc1.layer_norm_weight,
         )
 
-    copied_numel += safe_copy(hfllm.norm.weight, mgllm.decoder.final_layernorm.weight)
+    copied_numel += safe_copy(hfllm.norm.weight,
+                              mgllm.decoder.final_layernorm.weight)
     if not hf_config.tie_word_embeddings:
         safe_copy(hfmodel.lm_head.weight, mgllm.output_layer.weight)
 
@@ -389,9 +410,8 @@ def convert_checkpoint_from_transformers_to_megatron_dpskv3(
 ):
     warnings.warn("MTP model is not supported yet", stacklevel=2)
     numel: int = 0
-    numel += safe_copy(
-        hf_model.model.embed_tokens.weight, model.embedding.word_embeddings.weight
-    )
+    numel += safe_copy(hf_model.model.embed_tokens.weight,
+                       model.embedding.word_embeddings.weight)
     print(f"{numel=}")
     for layer_idx, (layer, hf_layer) in enumerate(
         zip(model.decoder.layers, hf_model.model.layers, strict=True)
@@ -432,9 +452,8 @@ def convert_checkpoint_from_transformers_to_megatron_dpskv3(
             hf_layer.self_attn.kv_a_layernorm.weight,
             layer.self_attention.linear_kv_up_proj.layer_norm_weight,
         )
-        numel += safe_copy(
-            hf_layer.self_attn.o_proj.weight, layer.self_attention.linear_proj.weight
-        )
+        numel += safe_copy(hf_layer.self_attn.o_proj.weight,
+                           layer.self_attention.linear_proj.weight)
 
         if not hasattr(layer.mlp, "router"):
             numel += safe_copy(
@@ -449,9 +468,11 @@ def convert_checkpoint_from_transformers_to_megatron_dpskv3(
                 hf_layer.mlp.down_proj.weight, layer.mlp.linear_fc2.weight
             )
         else:
-            numel += safe_copy(hf_layer.mlp.gate.weight, layer.mlp.router.weight)
+            numel += safe_copy(hf_layer.mlp.gate.weight,
+                               layer.mlp.router.weight)
             # NOTE: the e_score_correction_bias in mcore model will be initialized with bfloat16 and \
-            # recover to fp32 in the first forward. There is always a diff in the bias between two models (~0.3%)
+            # recover to fp32 in the first forward. There is always a diff in
+            # the bias between two models (~0.3%)
             numel += safe_copy(
                 hf_layer.mlp.gate.e_score_correction_bias,
                 layer.mlp.router.expert_bias,
@@ -469,7 +490,8 @@ def convert_checkpoint_from_transformers_to_megatron_dpskv3(
                     linear_fc2_weighti = getattr(
                         layer.mlp.experts.linear_fc2, "weight" + str(i)
                     )
-                    numel += safe_copy(hf_expert.down_proj.weight, linear_fc2_weighti)
+                    numel += safe_copy(hf_expert.down_proj.weight,
+                                       linear_fc2_weighti)
             else:
                 for i, hf_expert in enumerate(hf_layer.mlp.experts):
                     expert = layer.mlp.experts.local_experts[i]
@@ -480,9 +502,8 @@ def convert_checkpoint_from_transformers_to_megatron_dpskv3(
                     numel += safe_copy(
                         hf_expert.down_proj.weight, expert.linear_fc2.weight
                     )
-            numel += safe_copy(
-                hf_layer.post_attention_layernorm.weight, layer.pre_mlp_layernorm.weight
-            )
+            numel += safe_copy(hf_layer.post_attention_layernorm.weight,
+                               layer.pre_mlp_layernorm.weight)
             shared_fc1_weight = torch.cat(
                 [
                     hf_layer.mlp.shared_experts.gate_proj.weight,
@@ -498,7 +519,8 @@ def convert_checkpoint_from_transformers_to_megatron_dpskv3(
             )
             print(f"{layer_idx=} {numel=} numel this layer={numel - numel_cur}")
 
-    numel += safe_copy(hf_model.model.norm.weight, model.decoder.final_layernorm.weight)
+    numel += safe_copy(hf_model.model.norm.weight,
+                       model.decoder.final_layernorm.weight)
 
     if not hf_config.tie_word_embeddings:
         numel += safe_copy(hf_model.lm_head.weight, model.output_layer.weight)

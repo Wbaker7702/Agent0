@@ -12,7 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Borrowed from: https://huggingface.co/spaces/codeparrot/apps_metric/blob/main/utils.py
+# Borrowed from:
+# https://huggingface.co/spaces/codeparrot/apps_metric/blob/main/utils.py
 
 import multiprocessing
 import os
@@ -40,7 +41,11 @@ def _temp_run(sample, generation, debug, result, metadata_list, timeout):
             metadata_list.append({})
 
 
-def check_correctness(in_outs: Optional[dict], generation, timeout=10, debug=True):
+def check_correctness(
+        in_outs: Optional[dict],
+        generation,
+        timeout=10,
+        debug=True):
     """Check correctness of code generation with a global timeout.
     The global timeout is to catch some extreme/rare cases not handled by the timeouts
     inside `run_test`"""

@@ -103,7 +103,8 @@ def compute_score(
             if num_to_consider == 0:
                 score = 0.0
             else:
-                passed_count = sum(1 for r in res_list[:num_to_consider] if r is True)
+                passed_count = sum(
+                    1 for r in res_list[:num_to_consider] if r is True)
                 score = passed_count / num_to_consider
             # Return all metadata, even if score is based on the first N
             final_metadata = metadata_list
@@ -118,7 +119,8 @@ def compute_score(
         logger.error(f"Error during compute_score: {e}")
         traceback.print_exc()
         score = 0.0
-        # Try to return partial metadata if available, otherwise return error info
+        # Try to return partial metadata if available, otherwise return error
+        # info
         final_metadata = (
             metadata_list
             if "metadata_list" in locals()
@@ -126,6 +128,5 @@ def compute_score(
         )
 
     # Ensure float and list are returned
-    return float(score), (
-        final_metadata if isinstance(final_metadata, list) else [final_metadata]
-    )
+    return float(score), (final_metadata if isinstance(
+        final_metadata, list) else [final_metadata])

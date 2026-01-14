@@ -57,8 +57,10 @@ def _get_logit_bias(
 
 class vLLMRollout(BaseRollout):
     def __init__(
-        self, model_path: str, config: RolloutConfig, tokenizer: PreTrainedTokenizer
-    ):
+            self,
+            model_path: str,
+            config: RolloutConfig,
+            tokenizer: PreTrainedTokenizer):
         """A vLLM rollout. It requires the module is supported by the vllm.
 
         Args:
@@ -71,7 +73,8 @@ class vLLMRollout(BaseRollout):
         self.config = config
         self.pad_token_id = tokenizer.pad_token_id
         if config.tensor_parallel_size > torch.distributed.get_world_size():
-            raise ValueError("Tensor parallelism size should be less than world size.")
+            raise ValueError(
+                "Tensor parallelism size should be less than world size.")
 
         if (
             config.max_num_batched_tokens
@@ -83,7 +86,8 @@ class vLLMRollout(BaseRollout):
 
         engine_kwargs = {}
         if config.limit_images:
-            engine_kwargs["limit_mm_per_prompt"] = {"image": config.limit_images}
+            engine_kwargs["limit_mm_per_prompt"] = {
+                "image": config.limit_images}
 
         self.inference_engine = LLM(
             model=model_path,
@@ -149,7 +153,8 @@ class vLLMRollout(BaseRollout):
             # traceback.print_stack()
             # exit()
         # left-padded attention_mask
-        input_ids: torch.Tensor = prompts.batch["input_ids"]  # (bs, prompt_length)
+        # (bs, prompt_length)
+        input_ids: torch.Tensor = prompts.batch["input_ids"]
         attention_mask: torch.Tensor = prompts.batch["attention_mask"]
         position_ids: torch.Tensor = prompts.batch["position_ids"]
         eos_token_id: int = prompts.meta_info["eos_token_id"]
@@ -190,27 +195,31 @@ class vLLMRollout(BaseRollout):
                 for output in completion.outputs
             ]
             response_ids = VF.pad_2d_list_to_length(
-                response_ids, self.pad_token_id, max_length=self.config.response_length
-            ).to(input_ids.device)
+                response_ids,
+                self.pad_token_id,
+                max_length=self.config.response_length).to(
+                input_ids.device)
 
             if self.sampling_params.n > 1:
                 batch_size = batch_size * self.sampling_params.n
-                input_ids = _repeat_interleave(input_ids, self.sampling_params.n)
+                input_ids = _repeat_interleave(
+                    input_ids, self.sampling_params.n)
                 attention_mask = _repeat_interleave(
                     attention_mask, self.sampling_params.n
                 )
-                position_ids = _repeat_interleave(position_ids, self.sampling_params.n)
+                position_ids = _repeat_interleave(
+                    position_ids, self.sampling_params.n)
 
         sequence_ids = torch.cat([input_ids, response_ids], dim=-1)
         response_length = response_ids.size(1)
         delta_position_id = torch.arange(
             1, response_length + 1, device=position_ids.device
         )
-        delta_position_id = delta_position_id.view(1, -1).expand(batch_size, -1)
+        delta_position_id = delta_position_id.view(
+            1, -1).expand(batch_size, -1)
         if position_ids.dim() == 3:  # qwen2vl mrope
-            delta_position_id = delta_position_id.view(batch_size, 1, -1).expand(
-                batch_size, 3, -1
-            )
+            delta_position_id = delta_position_id.view(
+                batch_size, 1, -1).expand(batch_size, 3, -1)
 
         # prompt: left pad + response: right pad
         # attention_mask: [0,0,0,0,1,1,1,1 | 1,1,1,0,0,0,0,0]
@@ -223,7 +232,8 @@ class vLLMRollout(BaseRollout):
             dtype=attention_mask.dtype,
         )
         attention_mask = torch.cat((attention_mask, response_mask), dim=-1)
-        # all the tp ranks should contain the same data here. data in all ranks are valid
+        # all the tp ranks should contain the same data here. data in all ranks
+        # are valid
         batch = TensorDict(
             {
                 "prompts": input_ids,

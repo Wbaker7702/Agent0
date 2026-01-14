@@ -58,7 +58,9 @@ class Runner:
         }
         global_pool_id = "global_pool"
         resource_pool_spec = {
-            global_pool_id: [config.trainer.n_gpus_per_node] * config.trainer.nnodes,
+            global_pool_id: [
+                config.trainer.n_gpus_per_node] *
+            config.trainer.nnodes,
         }
         mapping = {
             Role.ActorRollout: global_pool_id,
@@ -82,7 +84,8 @@ class Runner:
             num_cpus=config.worker.reward.num_cpus
         )
         reward_fn = RemoteRewardManager.remote(config.worker.reward, tokenizer)
-        val_reward_fn = RemoteRewardManager.remote(config.worker.reward, tokenizer)
+        val_reward_fn = RemoteRewardManager.remote(
+            config.worker.reward, tokenizer)
 
         train_dataloader, val_dataloader = create_dataloader(
             config.data, tokenizer, processor

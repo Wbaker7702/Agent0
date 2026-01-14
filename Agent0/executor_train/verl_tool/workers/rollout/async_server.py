@@ -11,6 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import verl.workers.rollout.async_server
+import verl.experimental.agent_loop
 import asyncio
 import logging
 from typing import Type
@@ -36,16 +38,18 @@ class VerlToolAsyncLLMServerManager(AsyncLLMServerManager):
         self.chat_scheduler_ready.set()
         self.chat_scheduler_loop.run_forever()
 
-    def generate_sequences(self, prompts: DataProto, **sampling_params) -> DataProto:
+    def generate_sequences(self, prompts: DataProto, **
+                           sampling_params) -> DataProto:
         self.wake_up()
         result = super().generate_sequences(prompts, **sampling_params)
         self.sleep()
         return result
 
 
-# here are the hacky parts to replace the original AsyncLLMServerManager with VerlToolAsyncLLMServerManager
-import verl.experimental.agent_loop
-import verl.workers.rollout.async_server
+# here are the hacky parts to replace the original AsyncLLMServerManager
+# with VerlToolAsyncLLMServerManager
 
-verl.experimental.agent_loop.AgentLoopManager = VerlToolAsyncLLMServerManager  # replace the original AgentLoopManager with VerlToolAsyncLLMServerManager
-verl.workers.rollout.async_server.AsyncLLMServerManager = VerlToolAsyncLLMServerManager  # replace the original AsyncLLMServerManager with VerlToolAsyncLLMServerManager
+# replace the original AgentLoopManager with VerlToolAsyncLLMServerManager
+verl.experimental.agent_loop.AgentLoopManager = VerlToolAsyncLLMServerManager
+# replace the original AsyncLLMServerManager with VerlToolAsyncLLMServerManager
+verl.workers.rollout.async_server.AsyncLLMServerManager = VerlToolAsyncLLMServerManager

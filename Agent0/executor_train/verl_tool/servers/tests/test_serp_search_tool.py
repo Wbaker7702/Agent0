@@ -46,13 +46,14 @@ async def test_serp_search_tool(url: str):
                 for i, (obs, done, valid) in enumerate(
                     zip(observations, dones, valids)
                 ):
-                    print(f"\n--- Test {i+1} ---")
+                    print(f"\n--- Test {i + 1} ---")
                     print(f"Query: {test_data['actions'][i]}")
                     print(f"Valid: {valid}")
                     print(f"Done: {done}")
                     print(f"Observation (first 800 chars): {obs[:800]}...")
                     if len(obs) > 800:
-                        print(f"[Truncated - Total length: {len(obs)} characters]")
+                        print(
+                            f"[Truncated - Total length: {len(obs)} characters]")
                     print("-" * 40)
 
             else:
@@ -63,7 +64,9 @@ async def test_serp_search_tool(url: str):
 
 def main():
     parser = argparse.ArgumentParser(description="Test SERP Search Tool")
-    parser.add_argument("tool_name", help="Tool name (should be 'serp_search')")
+    parser.add_argument(
+        "tool_name",
+        help="Tool name (should be 'serp_search')")
     parser.add_argument(
         "--url",
         default="http://localhost:5500/get_observation",
@@ -73,7 +76,9 @@ def main():
     args = parser.parse_args()
 
     if args.tool_name != "serp_search":
-        print(f"Warning: Expected tool name 'serp_search', got '{args.tool_name}'")
+        print(
+            f"Warning: Expected tool name 'serp_search', got '{
+                args.tool_name}'")
 
     print("Testing SERP Search Tool")
     print(f"Server URL: {args.url}")

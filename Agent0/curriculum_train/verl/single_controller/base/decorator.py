@@ -26,7 +26,8 @@ if TYPE_CHECKING:
     from .worker_group import WorkerGroup
 
 
-# here we add a magic number of avoid user-defined function already have this attribute
+# here we add a magic number of avoid user-defined function already have
+# this attribute
 MAGIC_ATTR = "attrs_3141562937"
 
 
@@ -90,12 +91,12 @@ def _concat_data_proto_or_future(outputs: List[DataProto]) -> DataProto:
 
 def dispatch_dp_compute(worker_group: "WorkerGroup", *args, **kwargs):
     for arg in args:
-        assert isinstance(arg, (tuple, list)) and len(arg) == worker_group.world_size
+        assert isinstance(arg, (tuple, list)) and len(
+            arg) == worker_group.world_size
 
     for value in kwargs.values():
-        assert (
-            isinstance(value, (tuple, list)) and len(value) == worker_group.world_size
-        )
+        assert (isinstance(value, (tuple, list))
+                and len(value) == worker_group.world_size)
 
     return args, kwargs
 
@@ -107,7 +108,10 @@ def collect_dp_compute(
     return outputs
 
 
-def dispatch_dp_compute_data_proto(worker_group: "WorkerGroup", *args, **kwargs):
+def dispatch_dp_compute_data_proto(
+        worker_group: "WorkerGroup",
+        *args,
+        **kwargs):
     splitted_args, splitted_kwargs = _split_args_kwargs_data_proto(
         worker_group.world_size, *args, **kwargs
     )
@@ -117,11 +121,13 @@ def dispatch_dp_compute_data_proto(worker_group: "WorkerGroup", *args, **kwargs)
 def dispatch_dp_compute_data_proto_with_func(
     worker_group: "WorkerGroup", *args, **kwargs
 ):
-    assert type(args[0]) is FunctionType  # NOTE: The first one args is a function!
+    # NOTE: The first one args is a function!
+    assert type(args[0]) is FunctionType
     splitted_args, splitted_kwargs = _split_args_kwargs_data_proto(
         worker_group.world_size, *args[1:], **kwargs
     )
-    splitted_args_with_func = [[args[0]] * worker_group.world_size] + splitted_args
+    splitted_args_with_func = [[args[0]] *
+                               worker_group.world_size] + splitted_args
     return splitted_args_with_func, splitted_kwargs
 
 

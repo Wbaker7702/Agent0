@@ -40,8 +40,7 @@ DEFAULT_USER_CONTENT_PREFIX = (
     "</tool_response>. You can search as many times as your want. If you find no "
     "further external knowledge needed, you can directly provide the answer inside "
     "<answer> and </answer>, without detailed illustrations. For example, "
-    "<answer> Beijing </answer>. Question: "
-)
+    "<answer> Beijing </answer>. Question: ")
 
 
 def process_single_row(row, current_split_name, row_index):
@@ -67,7 +66,9 @@ def process_single_row(row, current_split_name, row_index):
 
     # Extract ground truth from reward_model or fallback to golden_answers
     reward_model_data = row.get("reward_model")
-    if isinstance(reward_model_data, dict) and "ground_truth" in reward_model_data:
+    if isinstance(
+            reward_model_data,
+            dict) and "ground_truth" in reward_model_data:
         ground_truth = reward_model_data.get("ground_truth")
     else:
         ground_truth = row.get("golden_answers", [])
@@ -121,7 +122,9 @@ def main():
 
             try:
                 # Download Parquet file from HuggingFace
-                logger.info(f"Downloading {parquet_filename} from {args.hf_repo_id}")
+                logger.info(
+                    f"Downloading {parquet_filename} from {
+                        args.hf_repo_id}")
                 local_parquet_filepath = hf_hub_download(
                     repo_id=args.hf_repo_id,
                     filename=parquet_filename,
@@ -132,7 +135,9 @@ def main():
 
                 # Load and process Parquet file
                 df_raw = pd.read_parquet(local_parquet_filepath)
-                logger.info(f"Loaded {len(df_raw)} rows from {parquet_filename}")
+                logger.info(
+                    f"Loaded {
+                        len(df_raw)} rows from {parquet_filename}")
 
                 def apply_process_row(row, split_name=split):
                     return process_single_row(
@@ -142,17 +147,18 @@ def main():
                 df_processed = df_raw.apply(apply_process_row, axis=1)
 
                 # Save processed DataFrame
-                output_file_path = os.path.join(local_save_dir, f"{split}.parquet")
+                output_file_path = os.path.join(
+                    local_save_dir, f"{split}.parquet")
                 df_processed.to_parquet(output_file_path, index=False)
                 logger.info(
-                    f"Saved {len(df_processed)} processed rows to {output_file_path}"
-                )
+                    f"Saved {
+                        len(df_processed)} processed rows to {output_file_path}")
                 processed_files.append(output_file_path)
 
             except EntryNotFoundError:
                 logger.warning(
-                    f"{parquet_filename} not found in repository {args.hf_repo_id}"
-                )
+                    f"{parquet_filename} not found in repository {
+                        args.hf_repo_id}")
             except Exception as e:
                 logger.error(f"Error processing {split} split: {e}")
 
@@ -161,8 +167,8 @@ def main():
         return
 
     logger.info(
-        f"Successfully processed {len(processed_files)} files to {local_save_dir}"
-    )
+        f"Successfully processed {
+            len(processed_files)} files to {local_save_dir}")
 
     # Copy to HDFS if specified
     if args.hdfs_dir:
@@ -176,8 +182,7 @@ def main():
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Download Search-R1 from HuggingFace, process, and save to Parquet."
-    )
+        description="Download Search-R1 from HuggingFace, process, and save to Parquet.")
     parser.add_argument(
         "--hf_repo_id",
         default="PeterJinGo/nq_hotpotqa_train",

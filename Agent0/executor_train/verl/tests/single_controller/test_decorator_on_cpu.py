@@ -69,7 +69,8 @@ class DecoratorTestWorker(Worker):
             device=data.batch["input"].device,
             dtype=data.batch["input"].dtype,
         )
-        data.batch["output_async"] = data.batch["input"] * 2 + self.value + rank_value
+        data.batch["output_async"] = data.batch["input"] * \
+            2 + self.value + rank_value
         return data
 
 
@@ -83,7 +84,8 @@ def test_decorator_dp_compute(ray_init_shutdown):
     resource_pool = RayResourcePool(
         [num_workers], use_gpu=False, max_colocate_count=1
     )  # Use CPU for simplicity
-    cls_with_args = RayClassWithInitArgs(cls=DecoratorTestWorker, initial_value=10)
+    cls_with_args = RayClassWithInitArgs(
+        cls=DecoratorTestWorker, initial_value=10)
     worker_group = RayWorkerGroup(
         resource_pool,
         cls_with_args,
@@ -124,8 +126,12 @@ def test_decorator_async_function(ray_init_shutdown):
     Verifies that the call returns a future and the result is correct after .get().
     """
     num_workers = 2
-    resource_pool = RayResourcePool([num_workers], use_gpu=False, max_colocate_count=1)
-    cls_with_args = RayClassWithInitArgs(cls=DecoratorTestWorker, initial_value=5)
+    resource_pool = RayResourcePool(
+        [num_workers],
+        use_gpu=False,
+        max_colocate_count=1)
+    cls_with_args = RayClassWithInitArgs(
+        cls=DecoratorTestWorker, initial_value=5)
     worker_group = RayWorkerGroup(
         resource_pool,
         cls_with_args,
@@ -150,14 +156,17 @@ def test_decorator_async_function(ray_init_shutdown):
     # Assert the result correctness
     assert isinstance(result_data, DataProto)
     assert "output_async" in result_data.batch.keys()
-    assert len(result_data) == len(data), "Output length should match input length"
+    assert len(result_data) == len(
+        data), "Output length should match input length"
 
     # Expected output calculation for DP_COMPUTE_PROTO with 2 workers
     # Worker 0 gets data[0:2], Worker 1 gets data[2:4]
     # Worker 0 calculates: input * 2 + initial_value(5) + rank(0)
     # Worker 1 calculates: input * 2 + initial_value(5) + rank(1)
-    expected_output_part1 = (torch.tensor([0, 1], dtype=torch.float32) * 2) + 5 + 0
-    expected_output_part2 = (torch.tensor([2, 3], dtype=torch.float32) * 2) + 5 + 1
+    expected_output_part1 = (torch.tensor(
+        [0, 1], dtype=torch.float32) * 2) + 5 + 0
+    expected_output_part2 = (torch.tensor(
+        [2, 3], dtype=torch.float32) * 2) + 5 + 1
     expected_output = torch.cat([expected_output_part1, expected_output_part2])
 
     torch.testing.assert_close(

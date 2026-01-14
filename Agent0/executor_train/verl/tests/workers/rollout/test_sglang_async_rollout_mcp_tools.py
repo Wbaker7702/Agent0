@@ -44,9 +44,9 @@ DEFAULT_USER_CONTENT_PREFIX = (
     "</tool_response>. You can search as many times as your want. If you find no "
     "further external knowledge needed, you can directly provide the answer inside "
     "<answer> and </answer>, without detailed illustrations. For example, "
-    "<answer> Beijing </answer>. Question: "
-)
-user_content = DEFAULT_USER_CONTENT_PREFIX.rstrip("\n") + "How's the weather lately?"
+    "<answer> Beijing </answer>. Question: ")
+user_content = DEFAULT_USER_CONTENT_PREFIX.rstrip(
+    "\n") + "How's the weather lately?"
 
 
 def get_search_messages():
@@ -104,10 +104,8 @@ def get_search_messages():
     }
 
     # Mock search tool responses
-    tool_return_0_msg = {
-        "role": "tool",
-        "content": [{"type": "text", "text": "Today's weather in Beijing is sunny."}],
-    }
+    tool_return_0_msg = {"role": "tool", "content": [
+        {"type": "text", "text": "Today's weather in Beijing is sunny."}], }
     tool_return_1_msg = {
         "role": "tool",
         "content": [
@@ -116,7 +114,10 @@ def get_search_messages():
     }
 
     user_prompts = [user_prompt]
-    expect_turn_array = [expect_turn_0_msg, expect_turn_1_msg, expect_turn_2_msg]
+    expect_turn_array = [
+        expect_turn_0_msg,
+        expect_turn_1_msg,
+        expect_turn_2_msg]
     tool_return_array = [tool_return_0_msg, tool_return_1_msg]
 
     return user_prompts, expect_turn_array, tool_return_array
@@ -126,7 +127,8 @@ class TestRolloutWithMCPSearchTools:
     @pytest.fixture
     def qwen_tokenizer(self):
         local_model_path = "Qwen/Qwen2.5-0.5B"
-        tokenizer = AutoTokenizer.from_pretrained(local_model_path, padding_side="left")
+        tokenizer = AutoTokenizer.from_pretrained(
+            local_model_path, padding_side="left")
         tokenizer.pad_token = tokenizer.eos_token
         return tokenizer
 
@@ -217,7 +219,11 @@ class TestRolloutWithMCPSearchTools:
         return prompts
 
     @pytest.fixture
-    def mock_rollout(self, search_rollout_config, qwen_tokenizer, qwen_model_config):
+    def mock_rollout(
+            self,
+            search_rollout_config,
+            qwen_tokenizer,
+            qwen_model_config):
         """Mock the rollout instance with sampling_params initialized."""
         tool_schema = [
             {
@@ -318,7 +324,9 @@ class TestRolloutWithMCPSearchTools:
         assert "tavily_search_tool" in mock_rollout._tool_map.keys()
         from verl.tools.mcp_search_tool import MCPSearchTool
 
-        assert isinstance(mock_rollout._tool_map["tavily_search_tool"], MCPSearchTool)
+        assert isinstance(
+            mock_rollout._tool_map["tavily_search_tool"],
+            MCPSearchTool)
         # depend on the tokenizer
         assert mock_rollout._tool_call_parser_type == "qwen25"
 
@@ -330,7 +338,11 @@ class TestRolloutWithMCPSearchTools:
         assert req_list[0].state == AsyncRolloutRequestStateEnum.PENDING
         assert len(req_list[0].tool_schemas) == 1
 
-    def test_over_size_case(self, mock_rollout, search_data_proto, search_data):
+    def test_over_size_case(
+            self,
+            mock_rollout,
+            search_data_proto,
+            search_data):
         mock_rollout.config.multi_turn.max_assistant_turns = 1
         req = mock_rollout._preprocess_prompt_to_async_rollout_requests(
             search_data_proto, n=1
@@ -340,7 +352,8 @@ class TestRolloutWithMCPSearchTools:
         req_list = [req]
 
         _, expect_turn_array, _ = search_data
-        # here we mock a meta info with 'length'. indicate the response is truncate
+        # here we mock a meta info with 'length'. indicate the response is
+        # truncate
         mock_rollout._handle_engine_call = MagicMock()
         future = asyncio.Future()
         future.set_result(
@@ -399,7 +412,8 @@ class TestRolloutWithMCPSearchTools:
 
         mock_rollout._handle_engine_call = MagicMock()
         futures = [asyncio.Future() for i in expect_turn_array]
-        for idx, (i, turn) in enumerate(zip(futures, expect_turn_array, strict=True)):
+        for idx, (i, turn) in enumerate(
+                zip(futures, expect_turn_array, strict=True)):
             i.set_result(
                 {
                     "text": turn,
@@ -421,7 +435,8 @@ class TestRolloutWithMCPSearchTools:
             )
             if idx < len(expect_turn_array) - 1:
                 assert mock_rollout._function_call_parser.has_tool_call(turn)
-                assert mock_rollout._function_call_parser.parse_non_stream(turn)
+                assert mock_rollout._function_call_parser.parse_non_stream(
+                    turn)
 
         mock_rollout._handle_engine_call.side_effect = futures
         mock_rollout._tp_rank = 0

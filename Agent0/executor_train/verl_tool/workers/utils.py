@@ -63,8 +63,7 @@ class SiblingMetaClass(ABCMeta):
             for method_name in new_methods:
                 if hasattr(sibling_class, method_name):
                     sibling_methods_record[method_name] = sibling_class.__dict__.get(
-                        method_name
-                    )
+                        method_name)
 
             # Store the dictionary in the class
             attrs["sibling_methods_record"] = sibling_methods_record
@@ -75,8 +74,10 @@ class SiblingMetaClass(ABCMeta):
             init_source = inspect.getsource(sibling_class.__init__)
 
             # Remove the super().__init__() call using regex
-            # This pattern matches "super().__init__()" with optional arguments and whitespace
-            modified_source = re.sub(r"super\(\)\.__init__\(.*?\)", "", init_source)
+            # This pattern matches "super().__init__()" with optional arguments
+            # and whitespace
+            modified_source = re.sub(
+                r"super\(\)\.__init__\(.*?\)", "", init_source)
 
             # Create the combined init function
             def combined_init(self, *args, **kwargs):
@@ -93,7 +94,8 @@ class SiblingMetaClass(ABCMeta):
                 local_vars = dict(bound.arguments)
 
                 # Execute the modified init body (skipping the def line and indentation)
-                # This executes all the code from sibling_class.__init__ except super().__init__()
+                # This executes all the code from sibling_class.__init__ except
+                # super().__init__()
                 module = sys.modules[sibling_class.__module__]
                 exec(
                     textwrap.dedent(modified_source.split("\n", 1)[1]),
@@ -109,7 +111,8 @@ class SiblingMetaClass(ABCMeta):
 
             # Copy other methods
             for method_name, method in sibling_class.__dict__.items():
-                if not method_name.startswith("__") and method_name not in attrs:
+                if not method_name.startswith(
+                        "__") and method_name not in attrs:
                     attrs[method_name] = method
 
             # Fix bases to avoid duplication

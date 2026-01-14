@@ -37,8 +37,10 @@ logger = logging.getLogger(__name__)
 
 
 def build_transform():
-    IMAGENET_INCEPTION_MEAN = (0.5, 0.5, 0.5)  # timm.data.IMAGENET_INCEPTION_MEAN
-    IMAGENET_INCEPTION_STD = (0.5, 0.5, 0.5)  # timm.data.IMAGENET_INCEPTION_STD
+    # timm.data.IMAGENET_INCEPTION_MEAN
+    IMAGENET_INCEPTION_MEAN = (0.5, 0.5, 0.5)
+    # timm.data.IMAGENET_INCEPTION_STD
+    IMAGENET_INCEPTION_STD = (0.5, 0.5, 0.5)
     return transforms.Compose(
         [
             transforms.ToTensor(),
@@ -101,8 +103,10 @@ def preprocess(
         assert "max_slice_nums" in slice_config
         assert "scale_resolution" in slice_config
     default_image_placeholder = (
-        tokenizer.im_start + tokenizer.unk_token * query_nums + tokenizer.im_end
-    )
+        tokenizer.im_start +
+        tokenizer.unk_token *
+        query_nums +
+        tokenizer.im_end)
     new_schema = False
     use_image_id = False
     if llm_type == "qwen":
@@ -190,7 +194,8 @@ def preprocess(
         truncation=truncation,
     )
     position_ids = compute_position_id_with_mask(attention_mask)
-    image_bound = build_image_bound(input_ids[0], tokenizer, new_schema, logger)
+    image_bound = build_image_bound(
+        input_ids[0], tokenizer, new_schema, logger)
 
     input_dict = {
         "input_ids": input_ids[0],
@@ -221,12 +226,16 @@ def preprocess(
 
 
 def slice_image(
-    image, max_slice_nums=9, scale_resolution=448, patch_size=14, never_split=False
-):
+        image,
+        max_slice_nums=9,
+        scale_resolution=448,
+        patch_size=14,
+        never_split=False):
     original_size = image.size
     original_width, original_height = original_size
     log_ratio = math.log(original_width / original_height)
-    ratio = original_width * original_height / (scale_resolution * scale_resolution)
+    ratio = original_width * original_height / \
+        (scale_resolution * scale_resolution)
     multiple = min(math.ceil(ratio), max_slice_nums)
 
     source_image = None
@@ -247,7 +256,8 @@ def slice_image(
             candidate_split_grids_nums.append(i)
 
         # source image, down-sampling and ensure divided by patch_size
-        best_resize = find_best_resize(original_size, scale_resolution, patch_size)
+        best_resize = find_best_resize(
+            original_size, scale_resolution, patch_size)
         source_image = image.copy().resize(best_resize, Image.Resampling.BICUBIC)
         candidate_grids = []
 
@@ -268,8 +278,11 @@ def slice_image(
                 min_error = error
 
         refine_size = get_refine_size(
-            original_size, best_grid, scale_resolution, patch_size, allow_upscale=True
-        )
+            original_size,
+            best_grid,
+            scale_resolution,
+            patch_size,
+            allow_upscale=True)
 
         refine_image = image.resize(refine_size, Image.Resampling.BICUBIC)
         patches = split_to_patches(refine_image, best_grid)
@@ -281,7 +294,11 @@ def ensure_divide(length, patch_size):
     return max(round(length / patch_size) * patch_size, patch_size)
 
 
-def find_best_resize(original_size, scale_resolution, patch_size, allow_upscale=False):
+def find_best_resize(
+        original_size,
+        scale_resolution,
+        patch_size,
+        allow_upscale=False):
     width, height = original_size
     if (width * height > scale_resolution * scale_resolution) or allow_upscale:
         r = width / height
@@ -342,8 +359,10 @@ def get_grid_placeholder(tokenizer, grid, query_num, new_schema=False):
         )
     else:
         image_placeholder = (
-            tokenizer.im_start + tokenizer.unk_token * query_num + tokenizer.im_end
-        )
+            tokenizer.im_start +
+            tokenizer.unk_token *
+            query_num +
+            tokenizer.im_end)
 
     cols = grid[0]
     rows = grid[1]
@@ -373,7 +392,9 @@ def reshape_by_patch(image_tensor, patch_size):
     )
 
     patches = patches.reshape(image_tensor.size(0), patch_size, patch_size, -1)
-    patches = patches.permute(0, 1, 3, 2).reshape(image_tensor.size(0), patch_size, -1)
+    patches = patches.permute(
+        0, 1, 3, 2).reshape(
+        image_tensor.size(0), patch_size, -1)
     return patches
 
 
@@ -482,7 +503,8 @@ class RLHFDataset(Dataset):
         self.return_raw_chat = config.get("return_raw_chat", False)
         self.return_full_prompt = config.get("return_full_prompt", False)
         self.truncation = config.get("truncation", "error")
-        self.filter_overlong_prompts = config.get("filter_overlong_prompts", True)
+        self.filter_overlong_prompts = config.get(
+            "filter_overlong_prompts", True)
 
         self.num_workers = config.get(
             "filter_overlong_prompts_workers", max(1, os.cpu_count() // 4)
@@ -501,22 +523,22 @@ class RLHFDataset(Dataset):
         from verl.utils.fs import copy_to_local
 
         data_files = (
-            self.data_files if not use_origin_parquet else self.original_data_files
-        )
+            self.data_files if not use_origin_parquet else self.original_data_files)
         for i, parquet_file in enumerate(data_files):
             self.data_files[i] = copy_to_local(
-                src=parquet_file, cache_dir=self.cache_dir, use_shm=self.use_shm
-            )
+                src=parquet_file,
+                cache_dir=self.cache_dir,
+                use_shm=self.use_shm)
 
     def _read_files_and_tokenize(self):
         dataframes = []
         for parquet_file in self.data_files:
             # read parquet files and cache
-            dataframe = datasets.load_dataset("parquet", data_files=parquet_file)[
-                "train"
-            ]
+            dataframe = datasets.load_dataset(
+                "parquet", data_files=parquet_file)["train"]
             dataframes.append(dataframe)
-        self.dataframe: datasets.Dataset = datasets.concatenate_datasets(dataframes)
+        self.dataframe: datasets.Dataset = datasets.concatenate_datasets(
+            dataframes)
 
         print(f"dataset len: {len(self.dataframe)}")
 
@@ -562,7 +584,8 @@ class RLHFDataset(Dataset):
             attention_mask = model_inputs.pop("attention_mask")
             position_ids = model_inputs.pop("position_ids")
 
-            # There's a trap here, multi_modal_inputs has to be a dict, not BatchFeature
+            # There's a trap here, multi_modal_inputs has to be a dict, not
+            # BatchFeature
             row_dict["multi_modal_data"] = multi_modal_data
             row_dict["multi_modal_inputs"] = dict(model_inputs)
         else:
@@ -580,10 +603,11 @@ class RLHFDataset(Dataset):
         row_dict["attention_mask"] = attention_mask
         row_dict["position_ids"] = position_ids
 
-        raw_prompt_ids = self.tokenizer.encode(raw_prompt, add_special_tokens=False)
+        raw_prompt_ids = self.tokenizer.encode(
+            raw_prompt, add_special_tokens=False)
         if len(raw_prompt_ids) > self.max_prompt_length:
             if self.truncation == "left":
-                raw_prompt_ids = raw_prompt_ids[-self.max_prompt_length :]
+                raw_prompt_ids = raw_prompt_ids[-self.max_prompt_length:]
             elif self.truncation == "right":
                 raw_prompt_ids = raw_prompt_ids[: self.max_prompt_length]
             elif self.truncation == "middle":
@@ -594,8 +618,9 @@ class RLHFDataset(Dataset):
                 )
             elif self.truncation == "error":
                 raise RuntimeError(
-                    f"Prompt length {len(raw_prompt_ids)} is longer than {self.max_prompt_length}."
-                )
+                    f"Prompt length {
+                        len(raw_prompt_ids)} is longer than {
+                        self.max_prompt_length}.")
 
         row_dict["raw_prompt_ids"] = raw_prompt_ids
         # encode prompts without chat template

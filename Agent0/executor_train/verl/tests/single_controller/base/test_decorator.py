@@ -72,5 +72,7 @@ def test_update_existing_dispatch_mode(reset_dispatch_registry):
     update_dispatch_mode(original_mode, new_dispatch, new_collect)
 
     # Verify update
-    assert get_predefined_dispatch_fn(original_mode)["dispatch_fn"] == new_dispatch
-    assert get_predefined_dispatch_fn(original_mode)["collect_fn"] == new_collect
+    assert get_predefined_dispatch_fn(
+        original_mode)["dispatch_fn"] == new_dispatch
+    assert get_predefined_dispatch_fn(
+        original_mode)["collect_fn"] == new_collect

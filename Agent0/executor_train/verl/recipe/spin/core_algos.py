@@ -85,17 +85,19 @@ def compute_onlinedpo_pref(
     # print(f"---- [DEBUG] Inside compute_onlinedpo_pref ----")
     if token_level_rewards.shape[0] % 2 != 0 or response_mask.shape[0] % 2 != 0:
         raise ValueError(
-            f"Input tensor batch dimension must be even for pair comparison, got shapes: "
-            f"{token_level_rewards.shape}, {response_mask.shape}"
-        )
+            f"Input tensor batch dimension must be even for pair comparison, got shapes: " f"{
+                token_level_rewards.shape}, {
+                response_mask.shape}")
     if token_level_rewards.shape != response_mask.shape:
         raise ValueError(
-            f"Shape mismatch between rewards {token_level_rewards.shape} and mask {response_mask.shape}"
-        )
+            f"Shape mismatch between rewards {
+                token_level_rewards.shape} and mask {
+                response_mask.shape}")
 
     # 1. Calculate Sequence Scores
     scores = (token_level_rewards * response_mask).sum(dim=-1)
-    # print(f"  Calculated sequence scores shape: {scores.shape}") # [batch_size * 2]
+    # print(f"  Calculated sequence scores shape: {scores.shape}") #
+    # [batch_size * 2]
 
     # 2. Reshape scores to group pairs: [batch_size, 2]
     try:
@@ -103,7 +105,9 @@ def compute_onlinedpo_pref(
     except RuntimeError as e:
         print(f"ERROR reshaping scores (shape {scores.shape}) into pairs: {e}")
         raise e
-    print(f"  Reshaped score pairs shape: {score_pairs.shape}")  # [batch_size, 2]
+    print(
+        f"  Reshaped score pairs shape: {
+            score_pairs.shape}")  # [batch_size, 2]
 
     # 3. Compare scores to find which index (0 or 1) is the winner within each pair
     #    winner_indices[i] = 0 if score_pairs[i, 0] >= score_pairs[i, 1] else 1
@@ -113,7 +117,8 @@ def compute_onlinedpo_pref(
     # Handle ties explicitly if argmax behavior isn't guaranteed (usually picks first max)
     # Alternatively: winner_mask_original = score_pairs[:, 0] >= score_pairs[:, 1]
     # print(f"  Winner indices shape: {winner_indices.shape}") # [batch_size]
-    # print(f"  Number where Response 2 (index 1) is preferred: {winner_indices.sum().item()}") # Counts number of 1s
+    # print(f"  Number where Response 2 (index 1) is preferred:
+    # {winner_indices.sum().item()}") # Counts number of 1s
 
     # 4. Create the final [batch_size * 2] mask
     num_pairs = score_pairs.shape[0]
@@ -122,7 +127,8 @@ def compute_onlinedpo_pref(
     # full_indices = torch.arange(full_batch_size, device=scores.device)
     # Create indices corresponding to the winner within each pair's original index
     # E.g., if winner_indices is [0, 1, 0], pair_indices is [0, 1, 2]
-    # winner_global_indices = (pair_indices * 2) + winner_indices -> [ (0*2)+0, (1*2)+1, (2*2)+0 ] -> [0, 3, 4]
+    # winner_global_indices = (pair_indices * 2) + winner_indices -> [
+    # (0*2)+0, (1*2)+1, (2*2)+0 ] -> [0, 3, 4]
     pair_indices = torch.arange(num_pairs, device=scores.device)
     winner_global_indices = (pair_indices * 2) + winner_indices
 
@@ -169,15 +175,15 @@ def compute_online_dpo_loss(
         losses = (logits - 1 / (2 * beta)) ** 2
     else:
         raise ValueError(
-            f"Unsupported loss_type: {loss_type}. Choose 'sigmoid', 'ipo', or 'hinge'."
-        )
+            f"Unsupported loss_type: {loss_type}. Choose 'sigmoid', 'ipo', or 'hinge'.")
 
     return losses.mean()
 
 
 def get_batch_logps(
-    logits: torch.FloatTensor, labels: torch.LongTensor, average_log_prob: bool = False
-) -> torch.FloatTensor:
+        logits: torch.FloatTensor,
+        labels: torch.LongTensor,
+        average_log_prob: bool = False) -> torch.FloatTensor:
     """
     Compute the log probabilities of the given labels under the given logits.
 

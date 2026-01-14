@@ -46,7 +46,8 @@ def repeat_kv(hidden_states: torch.Tensor, n_rep: int) -> torch.Tensor:
     hidden_states = hidden_states[:, :, :, None, :].expand(
         batch, slen, num_key_value_heads, n_rep, head_dim
     )
-    return hidden_states.reshape(batch, slen, num_key_value_heads * n_rep, head_dim)
+    return hidden_states.reshape(
+        batch, slen, num_key_value_heads * n_rep, head_dim)
 
 
 def _ulysses_flash_attention_forward(
@@ -88,9 +89,12 @@ def _ulysses_flash_attention_forward(
         value_states = repeat_kv(value_states, repeats)
 
         # (bsz, seq_len/n, n_head, head_dim) -> (bsz, seq_len, n_head/n, head_dim)
-        query_states = gather_seq_scatter_heads(query_states, seq_dim=1, head_dim=2)
-        key_states = gather_seq_scatter_heads(key_states, seq_dim=1, head_dim=2)
-        value_states = gather_seq_scatter_heads(value_states, seq_dim=1, head_dim=2)
+        query_states = gather_seq_scatter_heads(
+            query_states, seq_dim=1, head_dim=2)
+        key_states = gather_seq_scatter_heads(
+            key_states, seq_dim=1, head_dim=2)
+        value_states = gather_seq_scatter_heads(
+            value_states, seq_dim=1, head_dim=2)
 
         # TODO: all_gather position_ids because `prepare_fa2_from_position_ids` needs it, we can eliminate
         # this all_gather by passing cu_seq_lens_q, cu_seq_lens_k, max_length_k, max_length_q explicitly.
@@ -101,8 +105,9 @@ def _ulysses_flash_attention_forward(
             torch.empty_like(position_ids) for _ in range(ulysses_sp_size)
         ]
         torch.distributed.all_gather(
-            position_ids_list, position_ids, group=get_ulysses_sequence_parallel_group()
-        )
+            position_ids_list,
+            position_ids,
+            group=get_ulysses_sequence_parallel_group())
         position_ids = torch.concat(position_ids_list, dim=-1)
 
     # (bsz, seq_len, n_head/n, head_dim)
@@ -118,7 +123,8 @@ def _ulysses_flash_attention_forward(
     ########## AlltoAll for Ulysses ##########
     if ulysses_sp_size > 1:
         # (bsz, seq_len, n_head/n, head_dim) -> (bsz, seq_len/n, n_head, head_dim)
-        attn_output = gather_heads_scatter_seq(attn_output, seq_dim=1, head_dim=2)
+        attn_output = gather_heads_scatter_seq(
+            attn_output, seq_dim=1, head_dim=2)
 
     return attn_output
 
@@ -157,7 +163,9 @@ def patch_vlm_for_ulysses_input_slicing(model_class: type):
     original_forward = model_class.forward
     wrapped_forward = _create_ulysses_wrapped_decoder_forward(original_forward)
     model_class.forward = wrapped_forward
-    print(f"Monkey patch {model_class.__name__}.forward for Ulysses SP input slicing.")
+    print(
+        f"Monkey patch {
+            model_class.__name__}.forward for Ulysses SP input slicing.")
 
 
 def patch_forward_with_backends(
@@ -172,7 +180,8 @@ def patch_forward_with_backends(
         use_fused_kernels (bool): Whether to use fused kernels.
         fused_kernels_backend (str): The backend to use for fused kernels.
     """
-    if not use_fused_kernels or fused_kernels_backend not in ["triton", "torch"]:
+    if not use_fused_kernels or fused_kernels_backend not in [
+            "triton", "torch"]:
         print(
             f"Skipping monkey patch for {model.__class__.__name__} as use_fused_kernels is "
             f"{use_fused_kernels} or fused_kernels_backend is {fused_kernels_backend}"
@@ -208,14 +217,17 @@ def patch_forward_with_backends(
 
     if fused_kernels_backend == "triton":
         model.__class__.forward = forward_with_triton_backend_function
-        print(f"Using Triton backend for fused kernels in {model.__class__.__name__}")
+        print(
+            f"Using Triton backend for fused kernels in {
+                model.__class__.__name__}")
     elif fused_kernels_backend == "torch":
         model.__class__.forward = forward_with_torch_backend_function
-        print(f"Using Torch backend for fused kernels in {model.__class__.__name__}")
+        print(
+            f"Using Torch backend for fused kernels in {
+                model.__class__.__name__}")
     else:
         raise ValueError(
-            f"Unsupported fused_kernels_backend: {fused_kernels_backend}. Choose 'triton' or 'torch'."
-        )
+            f"Unsupported fused_kernels_backend: {fused_kernels_backend}. Choose 'triton' or 'torch'.")
 
 
 def apply_monkey_patch(
@@ -290,14 +302,12 @@ def apply_monkey_patch(
         if ulysses_sp_size > 1:
             if is_transformers_version_in_range(min_version="4.52.0"):
                 from transformers.models.qwen2_5_vl.modeling_qwen2_5_vl import (
-                    Qwen2_5_VLTextModel,
-                )
+                    Qwen2_5_VLTextModel, )
 
                 patch_vlm_for_ulysses_input_slicing(Qwen2_5_VLTextModel)
             else:
                 from transformers.models.qwen2_5_vl.modeling_qwen2_5_vl import (
-                    Qwen2_5_VLModel,
-                )
+                    Qwen2_5_VLModel, )
 
                 patch_vlm_for_ulysses_input_slicing(Qwen2_5_VLModel)
 
@@ -350,15 +360,17 @@ def apply_monkey_patch(
     if use_remove_padding or ulysses_sp_size > 1:
         if hasattr(module, "_flash_attention_forward"):
             module._flash_attention_forward = _ulysses_flash_attention_forward
-            print(f"Monkey patch _flash_attention_forward in {model.__module__}")
+            print(
+                f"Monkey patch _flash_attention_forward in {
+                    model.__module__}")
         else:
             # transformers>=4.48.0
             from transformers.integrations import flash_attention
 
             flash_attention._flash_attention_forward = _ulysses_flash_attention_forward
             print(
-                f"Monkey patch _flash_attention_forward in {flash_attention.__name__}"
-            )
+                f"Monkey patch _flash_attention_forward in {
+                    flash_attention.__name__}")
 
     patch_forward_with_backends(
         model,
@@ -375,7 +387,8 @@ def is_transformers_version_in_range(
         # Get the installed version of the transformers library
         transformers_version_str = importlib.metadata.version("transformers")
     except importlib.metadata.PackageNotFoundError as e:
-        raise ModuleNotFoundError("The `transformers` package is not installed.") from e
+        raise ModuleNotFoundError(
+            "The `transformers` package is not installed.") from e
 
     transformers_version = version.parse(transformers_version_str)
 

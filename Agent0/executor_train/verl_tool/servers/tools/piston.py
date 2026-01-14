@@ -108,8 +108,8 @@ PistonTool(use_local=True) or PistonTool(api_url="http://localhost:2000/api/v2")
                 async with session.get(url) as response:
                     if response.status != 200:
                         raise ConnectionError(
-                            f"Failed to connect to Piston API: HTTP {response.status}"
-                        )
+                            f"Failed to connect to Piston API: HTTP {
+                                response.status}")
 
                     # Get list of available runtimes for info
                     runtimes = await response.json()
@@ -117,8 +117,9 @@ PistonTool(use_local=True) or PistonTool(api_url="http://localhost:2000/api/v2")
                         f"{r['language']} ({r['version']})" for r in runtimes[:5]
                     ]
                     logger.info(
-                        f"Piston API connected. Available languages (showing 5 of {len(runtimes)}): {', '.join(languages)}..."
-                    )
+                        f"Piston API connected. Available languages (showing 5 of {
+                            len(runtimes)}): {
+                            ', '.join(languages)}...")
 
         except aiohttp.ClientConnectorError:
             raise ConnectionError(
@@ -165,7 +166,8 @@ PistonTool(use_local=True) or PistonTool(api_url="http://localhost:2000/api/v2")
                     filename = elem.get("name", f"file{len(parsed['files'])}")
                     content = elem.text if elem.text else ""
 
-                    parsed["files"].append({"name": filename, "content": content})
+                    parsed["files"].append(
+                        {"name": filename, "content": content})
 
             # Ensure required fields exist
             if "language" not in parsed:
@@ -203,20 +205,23 @@ PistonTool(use_local=True) or PistonTool(api_url="http://localhost:2000/api/v2")
                 or not isinstance(parsed["files"], list)
                 or len(parsed["files"]) == 0
             ):
-                logger.error("Missing file content or files field is not a valid array")
+                logger.error(
+                    "Missing file content or files field is not a valid array")
                 return None, False
 
             # Validate files structure
             for i, file in enumerate(parsed["files"]):
                 if not isinstance(file, dict) or "content" not in file:
                     logger.error(
-                        f"File #{i+1} is missing content or has invalid format"
-                    )
+                        f"File #{
+                            i +
+                            1} is missing content or has invalid format")
                     return None, False
 
                 if "name" not in file:
                     # Generate default filename
-                    extension = self._get_extension_for_language(parsed["language"])
+                    extension = self._get_extension_for_language(
+                        parsed["language"])
                     file["name"] = f"file{i}{extension}"
 
             return parsed, True
@@ -275,13 +280,15 @@ PistonTool(use_local=True) or PistonTool(api_url="http://localhost:2000/api/v2")
                     if response.status != 200:
                         # Handle rate limiting
                         if self.is_public_api and response.status == 429:
-                            retry_after = response.headers.get("Retry-After", "60")
+                            retry_after = response.headers.get(
+                                "Retry-After", "60")
                             return {
-                                "error": f"Rate limit exceeded. Try again after {retry_after} seconds."
-                            }
+                                "error": f"Rate limit exceeded. Try again after {retry_after} seconds."}
 
                         error_text = await response.text()
-                        return {"error": f"HTTP {response.status}: {error_text}"}
+                        return {
+                            "error": f"HTTP {
+                                response.status}: {error_text}"}
 
                     result = await response.json()
                     return result
@@ -346,7 +353,8 @@ def add(a, b):
                     asyncio.set_event_loop(loop)
 
                 # Execute code
-                result = loop.run_until_complete(self._execute_code(parsed_action))
+                result = loop.run_until_complete(
+                    self._execute_code(parsed_action))
 
                 # Format output
                 if "error" in result:
@@ -378,7 +386,7 @@ Version: {result.get('version', parsed_action.get('version', '*'))}
 Exit code: {code}{status_msg}
 Signal: {signal if signal else 'None'}
 CPU time: {cpu_time}ms
-Memory usage: {memory/1000000:.2f}MB
+Memory usage: {memory / 1000000:.2f}MB
 """
                     valid = True
                 elif (
@@ -403,8 +411,9 @@ Status: {result["compile"].get("status", "Unknown")}
                     valid = True
                 else:
                     observation = (
-                        f"Unknown result format: {json.dumps(result, indent=2)}"
-                    )
+                        f"Unknown result format: {
+                            json.dumps(
+                                result, indent=2)}")
                     valid = False
 
                 done = True

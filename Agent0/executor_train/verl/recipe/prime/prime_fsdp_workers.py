@@ -87,17 +87,16 @@ class PRIMERewardModelWorker(Worker):
 
         # normalize config
         self.config.mini_batch_size //= (
-            torch.distributed.get_world_size() // self.ulysses_sequence_parallel_size
-        )
+            torch.distributed.get_world_size() //
+            self.ulysses_sequence_parallel_size)
         if self.config.micro_batch_size is not None:
             self.config.micro_batch_size //= (
                 torch.distributed.get_world_size()
                 // self.ulysses_sequence_parallel_size
             )
             self.config.micro_batch_size_per_gpu = self.config.micro_batch_size
-            assert (
-                self.config.mini_batch_size % self.config.micro_batch_size_per_gpu == 0
-            )
+            assert (self.config.mini_batch_size %
+                    self.config.micro_batch_size_per_gpu == 0)
 
     def _build_reward_ref_model_optimizer(self, config):
         # the following line is necessary
@@ -156,7 +155,8 @@ class PRIMERewardModelWorker(Worker):
                 trust_remote_code=trust_remote_code,
             )
 
-            fused_kernel_options = config.model.get("fused_kernel_options", None)
+            fused_kernel_options = config.model.get(
+                "fused_kernel_options", None)
             fused_kernels_backend = (
                 fused_kernel_options.get("impl_backend", None)
                 if fused_kernel_options is not None
@@ -166,8 +166,12 @@ class PRIMERewardModelWorker(Worker):
             apply_monkey_patch(
                 model=reward_module,
                 ulysses_sp_size=self.ulysses_sequence_parallel_size,
-                use_remove_padding=config.model.get("use_remove_padding", False),
-                use_fused_kernels=config.model.get("use_fused_kernels", False),
+                use_remove_padding=config.model.get(
+                    "use_remove_padding",
+                    False),
+                use_fused_kernels=config.model.get(
+                    "use_fused_kernels",
+                    False),
                 fused_kernels_backend=fused_kernels_backend,
             )
 
@@ -207,8 +211,8 @@ class PRIMERewardModelWorker(Worker):
         )
 
         auto_wrap_policy = get_fsdp_wrap_policy(
-            module=reward_module, config=self.config.model.fsdp_config.wrap_policy
-        )
+            module=reward_module,
+            config=self.config.model.fsdp_config.wrap_policy)
 
         log_gpu_memory_usage("Before reward model FSDP", logger=None)
 
@@ -277,7 +281,8 @@ class PRIMERewardModelWorker(Worker):
             )
             num_warmup_steps = int(num_warmup_steps_ratio * total_steps)
 
-        print(f"Total steps: {total_steps}, num_warmup_steps: {num_warmup_steps}")
+        print(
+            f"Total steps: {total_steps}, num_warmup_steps: {num_warmup_steps}")
 
         from verl.utils.torch_functional import get_constant_schedule_with_warmup
 
@@ -356,9 +361,11 @@ class PRIMERewardModelWorker(Worker):
             metrics["reward_model/dpo_acc_abs"] = dpo_acc_abs.detach().item()
 
             output = DataProto.from_dict(
-                tensors={"rm_scores": rm_scores, "q": q}, meta_info={"metrics": metrics}
-            )
-            output = self.ulysses_sharding_manager.postprocess_data(data=output)
+                tensors={
+                    "rm_scores": rm_scores, "q": q}, meta_info={
+                    "metrics": metrics})
+            output = self.ulysses_sharding_manager.postprocess_data(
+                data=output)
 
         output = output.to("cpu")
         if self._is_offload_param:
@@ -405,9 +412,11 @@ class PRIMERewardModelWorker(Worker):
             metrics["reward_model/dpo_acc_abs_before"] = dpo_acc_abs.detach().item()
 
             output = DataProto.from_dict(
-                tensors={"rm_scores": rm_scores}, meta_info={"metrics": metrics}
-            )
-            output = self.ulysses_sharding_manager.postprocess_data(data=output)
+                tensors={
+                    "rm_scores": rm_scores}, meta_info={
+                    "metrics": metrics})
+            output = self.ulysses_sharding_manager.postprocess_data(
+                data=output)
 
         if self._is_offload_param:
             offload_fsdp_model_to_cpu(self.reward_module)

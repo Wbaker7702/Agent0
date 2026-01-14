@@ -17,8 +17,8 @@ class MCPInterfaceTool(BaseTool):
     tool_type = "mcp_interface"
     mcp_server_url = os.getenv("MCP_SERVER_URL", "http://localhost:8000")
     tool_schema_path = os.getenv(
-        "MCP_TOOL_SCHEMA_PATH", "verl_tool/servers/tools/mcp_interface_schema.json"
-    )
+        "MCP_TOOL_SCHEMA_PATH",
+        "verl_tool/servers/tools/mcp_interface_schema.json")
 
     def __init__(self, num_workers=1):
         super().__init__(num_workers=num_workers)
@@ -42,7 +42,8 @@ class MCPInterfaceTool(BaseTool):
         has_tool_call = False
         if action.endswith("</tool_call>"):
             # Extract the JSON part from the action
-            json_part = re.search(r"<tool_call>(.*?)</tool_call>", action, re.DOTALL)
+            json_part = re.search(
+                r"<tool_call>(.*?)</tool_call>", action, re.DOTALL)
             if json_part:
                 action = json_part.group(1)
                 action = action.strip()

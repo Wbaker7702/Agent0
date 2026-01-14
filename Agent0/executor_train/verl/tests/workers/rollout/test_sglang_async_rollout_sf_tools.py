@@ -52,29 +52,29 @@ def get_sandbox_fusion_messages():
     user_prompt = {
         "role": "user",
         "content": """
-            Solve the following problem step by step. You now have the ability to selectively 
-            write executable Python code to enhance your reasoning process. \n\n**user question:**\nThere 
-            are 152 students at Dala High School. Assume the following: \n- 100 students take a Math class \n- 94 
-            students take a Science class \n- 57 students take an English class \n- 73 students take a Math class 
-            and a Science class \n- 24 students take a Math class and an English class \n- 27 students take a Science 
-            class and an English class \n- 22 students take a Math class and a Science class and an English class\n \nHow 
-            many students take neither a Math class nor a Science class nor an Eglish class?\n\nRemember to place the final 
+            Solve the following problem step by step. You now have the ability to selectively
+            write executable Python code to enhance your reasoning process. \n\n**user question:**\nThere
+            are 152 students at Dala High School. Assume the following: \n- 100 students take a Math class \n- 94
+            students take a Science class \n- 57 students take an English class \n- 73 students take a Math class
+            and a Science class \n- 24 students take a Math class and an English class \n- 27 students take a Science
+            class and an English class \n- 22 students take a Math class and a Science class and an English class\n \nHow
+            many students take neither a Math class nor a Science class nor an Eglish class?\n\nRemember to place the final
             answer in the last part using the format: \n<answer>\n\boxed{'The final answer goes here.'}\n</answer>
         """,
     }
     expect_turn_0_msg = {
         "role": "assistant",
         "content": """
-            Okay, so I need to find out how many students at Dala High School are not taking any of the three classes: Math, 
-            Science, or English. The total number of students is 152. Let me see... I remember this is a problem about sets 
-            and maybe using the principle of inclusion-exclusion. Let me recall how that works.\n\nFirst, the inclusion-exclusion 
-            principle for three sets says that the total number of students taking at least one of the classes is equal to the 
-            sum of the numbers in each individual class, minus the sum of the numbers in each pair of classes, plus the number in 
-            all three classes. Then, subtract that total from the overall number of students to get those not taking any of the 
-            three. \n\nLet me write that down step by step. Let M be the set of students taking Math, S for Science, and E for English. 
-            Then:\n\nTotal in at least one class = |M ∪ S ∪ E| = |M| + |S| + |E| - |M ∩ S| - |M ∩ E| - |S ∩ E| + |M ∩ S ∩ E|\n\nGiven the 
-            numbers:\n\n|M| = 100\n\n|S| = 94\n\n|E| = 57\n\n|M ∩ S| = 73\n\n|M ∩ E| = 24\n\n|S ∩ E| = 27\n\n|M ∩ S ∩ E| = 22\n\nSo plugging 
-            these into the formula:\n\nTotal = 100 + 94 + 57 - 73 - 24 - 27 + 22\n\nLet me compute that step by step using code to ensure 
+            Okay, so I need to find out how many students at Dala High School are not taking any of the three classes: Math,
+            Science, or English. The total number of students is 152. Let me see... I remember this is a problem about sets
+            and maybe using the principle of inclusion-exclusion. Let me recall how that works.\n\nFirst, the inclusion-exclusion
+            principle for three sets says that the total number of students taking at least one of the classes is equal to the
+            sum of the numbers in each individual class, minus the sum of the numbers in each pair of classes, plus the number in
+            all three classes. Then, subtract that total from the overall number of students to get those not taking any of the
+            three. \n\nLet me write that down step by step. Let M be the set of students taking Math, S for Science, and E for English.
+            Then:\n\nTotal in at least one class = |M ∪ S ∪ E| = |M| + |S| + |E| - |M ∩ S| - |M ∩ E| - |S ∩ E| + |M ∩ S ∩ E|\n\nGiven the
+            numbers:\n\n|M| = 100\n\n|S| = 94\n\n|E| = 57\n\n|M ∩ S| = 73\n\n|M ∩ E| = 24\n\n|S ∩ E| = 27\n\n|M ∩ S ∩ E| = 22\n\nSo plugging
+            these into the formula:\n\nTotal = 100 + 94 + 57 - 73 - 24 - 27 + 22\n\nLet me compute that step by step using code to ensure
             accuracy.\n
         """,
         "tool_calls": [
@@ -83,12 +83,11 @@ def get_sandbox_fusion_messages():
                 "function": {
                     "name": "code_interpreter",
                     "arguments": {
-                        "code": """M = 100\\nS = 94\\nE = 57\\nM_S = 73\\nM_E = 24\\nS_E = 27\\nM_S_E = 
+                        "code": """M = 100\\nS = 94\\nE = 57\\nM_S = 73\\nM_E = 24\\nS_E = 27\\nM_S_E =
                         22\\n\\ntotal_in_any = M + S + E - M_S - M_E - S_E + M_S_E\\nstudents_neither = 152 - total_in_any\\nprint(students_neither)""",
                     },
                 },
-            }
-        ],
+            }],
     }
 
     tool_return_0_msg = {
@@ -97,27 +96,18 @@ def get_sandbox_fusion_messages():
     }
 
     expect_turn_1_msg = {
-        "role": "assistant",
-        "content": """
+        "role": "assistant", "content": """
             The code returns 3, indicating that 3 students take none of the classes. To verify, I'll break down each
             category to ensure the total matches:\n\n- Only Math and Science: 73 - 22 = 51\n- Only Math and English:
             24 - 22 = 2\n- Only Science and English: 27 - 22 = 5\n- Only Math: 100 - 51 - 2 - 22 = 25\n- Only Science:
             94 - 51 - 5 - 22 = 16\n- Only English: 57 - 2 - 5 - 22 = 28\n\nSumming all categories:\n
-        """,
-        "tool_calls": [
+        """, "tool_calls": [
             {
-                "type": "function",
-                "function": {
-                    "name": "code_interpreter",
-                    "arguments": {
+                "type": "function", "function": {
+                    "name": "code_interpreter", "arguments": {
                         "code": """only_M_S = 73 - 22\\nonly_M_E = 24 - 22\\nonly_S_E = 27 - 22\\n\\nonly_M = 100 - only_M_S -
                         only_M_E - 22\\nonly_S = 94 - only_M_S - only_S_E - 22\\nonly_E = 57 - only_M_E - only_S_E - 22\\n\\ntotal_verify
-                        = only_M + only_S + only_E + only_M_S + only_M_E + only_S_E + 22\\nprint(total_verify)""",
-                    },
-                },
-            }
-        ],
-    }
+                        = only_M + only_S + only_E + only_M_S + only_M_E + only_S_E + 22\\nprint(total_verify)""", }, }, }], }
 
     tool_return_1_msg = {
         "role": "tool",
@@ -132,7 +122,10 @@ def get_sandbox_fusion_messages():
     }
 
     user_prompts = [user_prompt]
-    expect_turn_array = [expect_turn_0_msg, expect_turn_1_msg, expect_turn_2_msg]
+    expect_turn_array = [
+        expect_turn_0_msg,
+        expect_turn_1_msg,
+        expect_turn_2_msg]
     tool_return_array = [tool_return_0_msg, tool_return_1_msg]
 
     return user_prompts, expect_turn_array, tool_return_array
@@ -154,7 +147,8 @@ class TestRolloutWithTools:
     @pytest.fixture
     def qwen_tokenizer(self):
         local_model_path = "Qwen/Qwen2.5-0.5B"
-        tokenizer = AutoTokenizer.from_pretrained(local_model_path, padding_side="left")
+        tokenizer = AutoTokenizer.from_pretrained(
+            local_model_path, padding_side="left")
         tokenizer.pad_token = tokenizer.eos_token
         return tokenizer
 
@@ -277,7 +271,9 @@ class TestRolloutWithTools:
         assert "code_interpreter" in mock_rollout._tool_map.keys()
         from verl.tools.sandbox_fusion_tools import SandboxFusionTool
 
-        assert isinstance(mock_rollout._tool_map["code_interpreter"], SandboxFusionTool)
+        assert isinstance(
+            mock_rollout._tool_map["code_interpreter"],
+            SandboxFusionTool)
         assert mock_rollout._tool_call_parser_type == "qwen25"
 
     def test_rollout_req_creation(self, mock_rollout, sandbox_data_proto):
@@ -322,7 +318,8 @@ class TestRolloutWithTools:
         req_list = [req]
 
         _, expect_turn_array, tool_return_array = sandbox_fusion_data
-        # here we mock a meta info with 'length'. indicate the response is truncate
+        # here we mock a meta info with 'length'. indicate the response is
+        # truncate
         mock_rollout._handle_engine_call = MagicMock()
         future = asyncio.Future()
         future.set_result(
@@ -375,7 +372,8 @@ class TestRolloutWithTools:
         req.finalize = MagicMock()
         req_list = [req]
         _, expect_turn_array, tool_return_array = sandbox_fusion_data
-        # here we mock a meta info with 'length'. indicate the response is truncate
+        # here we mock a meta info with 'length'. indicate the response is
+        # truncate
         mock_rollout._handle_engine_call = MagicMock()
         futures = [asyncio.Future() for i in expect_turn_array]
         for idx, (i, turn) in enumerate(zip(futures, expect_turn_array)):
@@ -400,7 +398,8 @@ class TestRolloutWithTools:
             )
             if idx < len(expect_turn_array) - 1:
                 assert mock_rollout._function_call_parser.has_tool_call(turn)
-                assert mock_rollout._function_call_parser.parse_non_stream(turn)
+                assert mock_rollout._function_call_parser.parse_non_stream(
+                    turn)
 
         mock_rollout._handle_engine_call.side_effect = futures
         mock_rollout._tp_rank = 0
@@ -419,7 +418,8 @@ class TestRolloutWithTools:
         # here we verify whether the code sandbox is executed correctly
         assert output_req.metrics == {"code_interpreter": ["3", "149"]}
         assert mock_rollout._handle_engine_call.call_count == 3
-        assert len(output_req.messages) == 6  # user + 3*assistant + 2*tool_call
+        # user + 3*assistant + 2*tool_call
+        assert len(output_req.messages) == 6
         code_counter = 0
         for msg in output_req.messages:
             if msg.role == "tool":
@@ -447,7 +447,10 @@ class TestRolloutWithTools:
             _temp_req = deepcopy(req)
             _temp_req.batch_data_id = i
             _temp_req.request_id = i
-            req_list.append(MagicMock(wraps=_temp_req, spec=AsyncRolloutRequest))
+            req_list.append(
+                MagicMock(
+                    wraps=_temp_req,
+                    spec=AsyncRolloutRequest))
             futures = [asyncio.Future() for i in expect_turn_array]
             for idx, (i, turn) in enumerate(zip(futures, expect_turn_array)):
                 i.set_result(
@@ -470,8 +473,10 @@ class TestRolloutWithTools:
                     }
                 )
                 if idx < len(expect_turn_array) - 1:
-                    assert mock_rollout._function_call_parser.has_tool_call(turn)
-                    assert mock_rollout._function_call_parser.parse_non_stream(turn)
+                    assert mock_rollout._function_call_parser.has_tool_call(
+                        turn)
+                    assert mock_rollout._function_call_parser.parse_non_stream(
+                        turn)
             req_turns_map[_temp_req.batch_data_id] = futures
             req_turns_counter[_temp_req.batch_data_id] = 0
 
@@ -509,7 +514,8 @@ class TestRolloutWithTools:
                 assert output_req.state == AsyncRolloutRequestStateEnum.COMPLETED
                 # here we verify whether the code sandbox is executed correctly
                 assert output_req.metrics == {"code_interpreter": ["3", "149"]}
-                assert len(output_req.messages) == 6  # user + 3*assistant + 2*tool_call
+                # user + 3*assistant + 2*tool_call
+                assert len(output_req.messages) == 6
                 code_counter = 0
                 for msg in output_req.messages:
                     if msg.role == "tool":
@@ -661,7 +667,8 @@ class TestSingleNodeRateLimiterCase(RayMultiProcessTestCase):
         print(f"Total time: {duration:.2f} seconds for rank: {self.rank}")
 
         assert results == list(range(6))
-        # we have 6 task with rate limit of 3, therefore we need at least 2 round: 3*2=6 seconds
+        # we have 6 task with rate limit of 3, therefore we need at least 2
+        # round: 3*2=6 seconds
         assert duration > 6
         assert duration < 10
 

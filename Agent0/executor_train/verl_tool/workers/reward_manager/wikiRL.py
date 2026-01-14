@@ -25,8 +25,9 @@ from mini_webarena.evaluator import metric_heuristic
 def clean_text(text):
     # 删除控制字符 & 非打印字符
     return re.sub(
-        r"[\x00-\x1F\x7F-\x9F\u200b-\u200f\u2028-\u202f\u2060-\u206f]", "", text
-    )
+        r"[\x00-\x1F\x7F-\x9F\u200b-\u200f\u2028-\u202f\u2060-\u206f]",
+        "",
+        text)
 
 
 @register("wikiRL")
@@ -39,7 +40,11 @@ class WikiRLRewardManager:
     score and a structure score.
     #"""
 
-    def __init__(self, tokenizer=None, num_examine=1, compute_score=None) -> None:
+    def __init__(
+            self,
+            tokenizer=None,
+            num_examine=1,
+            compute_score=None) -> None:
         """
         Initialize the WikiRLRewardManager.
 
@@ -51,9 +56,11 @@ class WikiRLRewardManager:
             # Simply use QWen2.5-7B tokenizer
             from transformers import AutoTokenizer
 
-            tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen2.5-7B-Instruct")
+            tokenizer = AutoTokenizer.from_pretrained(
+                "Qwen/Qwen2.5-7B-Instruct")
         self.tokenizer = tokenizer
-        self.num_examine = num_examine  # the number of batches of decoded responses to print to the console
+        # the number of batches of decoded responses to print to the console
+        self.num_examine = num_examine
         self.compute_score = compute_score or _default_compute_score
         self.fuzzy_weight = 0.7
         self.structure_weight = 0.3
@@ -65,7 +72,8 @@ class WikiRLRewardManager:
                 return matches[-1]
             return ""
 
-        # First match ```stop [...]``` use regex to find the last ```stop [...]``` in the string
+        # First match ```stop [...]``` use regex to find the last ```stop
+        # [...]``` in the string
         pred = extract_last_stop_content(pred)
         score = metric_heuristic(ground_truths, pred)
         # print("answer score", ground_truths, pred, score)
@@ -141,14 +149,14 @@ class WikiRLRewardManager:
             for a_len, o_len in zip(action_lens, obs_lens):
                 actions.append(
                     self.tokenizer.decode(
-                        resp_tokens[cursor : cursor + a_len - 1],
+                        resp_tokens[cursor: cursor + a_len - 1],
                         skip_special_tokens=True,
                     ).strip()
                 )
                 cursor += a_len - 1
                 observations.append(
                     self.tokenizer.decode(
-                        resp_tokens[cursor : cursor + o_len - 1],
+                        resp_tokens[cursor: cursor + o_len - 1],
                         skip_special_tokens=True,
                     ).strip()
                 )
@@ -167,7 +175,8 @@ class WikiRLRewardManager:
         prompt_ids = data.batch["prompts"]
         prompt_len = prompt_ids.shape[-1]
         responses_id = data.batch["responses"]
-        valid_resp_len = data.batch["attention_mask"][:, prompt_len:].sum(dim=-1)
+        valid_resp_len = data.batch["attention_mask"][:, prompt_len:].sum(
+            dim=-1)
         reward_tensor = torch.zeros_like(responses_id, dtype=torch.float32)
 
         answer_scores, format_scores = [], []
@@ -189,22 +198,24 @@ class WikiRLRewardManager:
             log_file.parent.mkdir(parents=True, exist_ok=True)
             with log_file.open("a", encoding="utf-8") as f:
                 for idx in range(len(data)):
-                    # convert entire sequence and prediction to whitespace‑joined tokens
+                    # convert entire sequence and prediction to
+                    # whitespace‑joined tokens
                     input_text = clean_text(
                         self.tokenizer.decode(
                             data.batch["input_ids"][idx].tolist(),
                             skip_special_tokens=True,
                         ).strip()
                     )
-                    input_tokens = " ".join(self.tokenizer.tokenize(input_text))
+                    input_tokens = " ".join(
+                        self.tokenizer.tokenize(input_text))
                     pred_tokens = " ".join(
                         self.tokenizer.tokenize(clean_text(response_list[idx]))
                     )
 
                     log_entry = {
-                        "uid": data.non_tensor_batch.get("uid", [None] * len(data))[
-                            idx
-                        ],
+                        "uid": data.non_tensor_batch.get(
+                            "uid",
+                            [None] * len(data))[idx],
                         "input_tokens": input_tokens,
                         "pred_tokens": pred_tokens,
                         "actions": actions_list[idx],
@@ -214,7 +225,8 @@ class WikiRLRewardManager:
                     }
                     f.write(json.dumps(log_entry, ensure_ascii=False) + "\n")
         except Exception as e:
-            print(f"[WARN] could not append to reward_manager_history.jsonl: {e}")
+            print(
+                f"[WARN] could not append to reward_manager_history.jsonl: {e}")
 
         print(f"Computed rewards for {len(data)} samples.")
         print("Answer scores:", answer_scores)

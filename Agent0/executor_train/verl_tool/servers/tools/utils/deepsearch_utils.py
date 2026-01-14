@@ -84,7 +84,9 @@ class WebParserClient:
             requests.exceptions.Timeout: 当请求超时时
         """
         endpoint = urljoin(self.base_url, "/parse_urls")
-        response = requests.post(endpoint, json={"urls": urls}, timeout=timeout)
+        response = requests.post(
+            endpoint, json={
+                "urls": urls}, timeout=timeout)
         response.raise_for_status()  # 如果响应状态码不是200，抛出异常
 
         return response.json()["results"]
@@ -129,7 +131,8 @@ def extract_snippet_with_context(
         best_sentence = None
         best_f1 = 0.2
 
-        # sentences = re.split(r'(?<=[.!?]) +', full_text)  # Split sentences using regex, supporting ., !, ? endings
+        # sentences = re.split(r'(?<=[.!?]) +', full_text)  # Split sentences
+        # using regex, supporting ., !, ? endings
         sentences = sent_tokenize(
             full_text
         )  # Split sentences using nltk's sent_tokenize
@@ -153,7 +156,8 @@ def extract_snippet_with_context(
             context = full_text[start_index:end_index]
             return True, context
         else:
-            # If no matching sentence is found, return the first context_chars*2 characters of the full text
+            # If no matching sentence is found, return the first
+            # context_chars*2 characters of the full text
             return False, full_text[: context_chars * 2]
     except Exception as e:
         return False, f"Failed to extract snippet context due to {str(e)}"
@@ -225,7 +229,8 @@ def extract_text_from_url(
                 ) or response.text == ""
                 if has_error:
                     if WebParserClient_url is None:
-                        # If WebParserClient is not available, return error message
+                        # If WebParserClient is not available, return error
+                        # message
                         return "Error extracting content: (Error detected in content)"
                     # If content has error, use WebParserClient as fallback
                     client = WebParserClient(WebParserClient_url)
@@ -251,11 +256,11 @@ def extract_text_from_url(
                         # Extract text and links
                         text_parts = []
                         for element in (
-                            soup.body.descendants if soup.body else soup.descendants
-                        ):
+                                soup.body.descendants if soup.body else soup.descendants):
                             if isinstance(element, str) and element.strip():
                                 # Clean extra whitespace
-                                cleaned_text = " ".join(element.strip().split())
+                                cleaned_text = " ".join(
+                                    element.strip().split())
                                 if cleaned_text:
                                     text_parts.append(cleaned_text)
                             elif element.name == "a" and element.get("href"):
@@ -369,8 +374,12 @@ def fetch_page_content(
 
 
 def bing_web_search(
-    query, subscription_key, endpoint, market="en-US", language="en", timeout=20
-):
+        query,
+        subscription_key,
+        endpoint,
+        market="en-US",
+        language="en",
+        timeout=20):
     """
     Perform a search using the Bing Web Search API with a set timeout.
 
@@ -411,18 +420,15 @@ def bing_web_search(
             retry_count += 1
             if retry_count == max_retries:
                 print(
-                    f"Bing Web Search request timed out ({timeout} seconds) for query: {query} after {max_retries} retries"
-                )
+                    f"Bing Web Search request timed out ({timeout} seconds) for query: {query} after {max_retries} retries")
                 return {}
             print(
-                f"Bing Web Search Timeout occurred, retrying ({retry_count}/{max_retries})..."
-            )
+                f"Bing Web Search Timeout occurred, retrying ({retry_count}/{max_retries})...")
         except requests.exceptions.RequestException as e:
             retry_count += 1
             if retry_count == max_retries:
                 print(
-                    f"Bing Web Search Request Error occurred: {e} after {max_retries} retries"
-                )
+                    f"Bing Web Search Request Error occurred: {e} after {max_retries} retries")
                 return {}
             print(
                 f"Bing Web Search Request Error occurred, retrying ({retry_count}/{max_retries})..."
@@ -445,7 +451,8 @@ def extract_pdf_text(url):
     try:
         response = session.get(url, timeout=20)  # Set timeout to 20 seconds
         if response.status_code != 200:
-            return f"Error: Unable to retrieve the PDF (status code {response.status_code})"
+            return f"Error: Unable to retrieve the PDF (status code {
+                response.status_code})"
 
         # Open the PDF file using pdfplumber
         with pdfplumber.open(BytesIO(response.content)) as pdf:
@@ -494,8 +501,12 @@ def extract_relevant_info(search_results):
 
 
 async def bing_web_search_async(
-    query, subscription_key, endpoint, market="en-US", language="en", timeout=20
-):
+        query,
+        subscription_key,
+        endpoint,
+        market="en-US",
+        language="en",
+        timeout=20):
     """
     Perform an asynchronous search using the Bing Web Search API.
 
@@ -534,8 +545,7 @@ async def bing_web_search_async(
             retry_count += 1
             if retry_count == max_retries:
                 print(
-                    f"Bing Web Search Request Error occurred: {e} after {max_retries} retries"
-                )
+                    f"Bing Web Search Request Error occurred: {e} after {max_retries} retries")
                 return {}
             print(
                 f"Bing Web Search Request Error occurred, retrying ({retry_count}/{max_retries})..."
@@ -648,7 +658,8 @@ async def extract_text_from_url_async(
                 # has_error = len(html.split()) < 64
                 if has_error:
                     if WebParserClient_url is None:
-                        # If WebParserClient is not available, return error message
+                        # If WebParserClient is not available, return error
+                        # message
                         return "Error extracting content: (Error detected in content)"
                     # If content has error, use WebParserClient as fallback
                     client = WebParserClient(WebParserClient_url)
@@ -677,10 +688,10 @@ async def extract_text_from_url_async(
 
                         text_parts = []
                         for element in (
-                            soup.body.descendants if soup.body else soup.descendants
-                        ):
+                                soup.body.descendants if soup.body else soup.descendants):
                             if isinstance(element, str) and element.strip():
-                                cleaned_text = " ".join(element.strip().split())
+                                cleaned_text = " ".join(
+                                    element.strip().split())
                                 if cleaned_text:
                                     text_parts.append(cleaned_text)
                             elif element.name == "a" and element.get("href"):
@@ -742,8 +753,9 @@ async def fetch_page_content_async(
             if show_progress:
                 results = []
                 for task in tqdm(
-                    asyncio.as_completed(tasks), total=len(tasks), desc="Fetching URLs"
-                ):
+                        asyncio.as_completed(tasks),
+                        total=len(tasks),
+                        desc="Fetching URLs"):
                     result = await task
                     results.append(result)
             else:
@@ -756,7 +768,8 @@ async def fetch_page_content_async(
     return await process_urls()  # 确保等待异步操作完成
 
 
-async def extract_pdf_text_async(url: str, session: aiohttp.ClientSession) -> str:
+async def extract_pdf_text_async(url: str,
+                                 session: aiohttp.ClientSession) -> str:
     """
     Asynchronously extract text from a PDF.
 
@@ -773,8 +786,8 @@ async def extract_pdf_text_async(url: str, session: aiohttp.ClientSession) -> st
         ) as response:  # Set timeout to 20 seconds
             if response.status != 200:
                 return (
-                    f"Error: Unable to retrieve the PDF (status code {response.status})"
-                )
+                    f"Error: Unable to retrieve the PDF (status code {
+                        response.status})")
 
             content = await response.read()
 
@@ -826,18 +839,15 @@ def google_serper_search(query: str, api_key: str, timeout: int = 20):
             retry_count += 1
             if retry_count == max_retries:
                 print(
-                    f"Google Serper API request timed out ({timeout} seconds) for query: {query} after {max_retries} retries"
-                )
+                    f"Google Serper API request timed out ({timeout} seconds) for query: {query} after {max_retries} retries")
                 return {}
             print(
-                f"Google Serper API Timeout occurred, retrying ({retry_count}/{max_retries})..."
-            )
+                f"Google Serper API Timeout occurred, retrying ({retry_count}/{max_retries})...")
         except requests.exceptions.RequestException as e:
             retry_count += 1
             if retry_count == max_retries:
                 print(
-                    f"Google Serper API Request Error occurred: {e} after {max_retries} retries"
-                )
+                    f"Google Serper API Request Error occurred: {e} after {max_retries} retries")
                 return {}
             print(
                 f"Google Serper API Request Error occurred, retrying ({retry_count}/{max_retries})..."
@@ -871,8 +881,11 @@ def extract_relevant_info_serper(search_results):
                 "id": i + 1,
                 "title": result.get("title", ""),
                 "url": result.get("link", ""),
-                "site_name": site_name,  # Serper doesn't directly provide siteName, try to parse from URL
-                "date": result.get("date", ""),  # Serper might not always provide date
+                # Serper doesn't directly provide siteName, try to parse from
+                # URL
+                "site_name": site_name,
+                # Serper might not always provide date
+                "date": result.get("date", ""),
                 "snippet": result.get("snippet", ""),
                 "context": "",  # Reserved field
             }
@@ -880,7 +893,10 @@ def extract_relevant_info_serper(search_results):
     return useful_info
 
 
-async def google_serper_search_async(query: str, api_key: str, timeout: int = 20):
+async def google_serper_search_async(
+        query: str,
+        api_key: str,
+        timeout: int = 20):
     """
     Perform an asynchronous search using the Google Serper API.
 
@@ -918,27 +934,24 @@ async def google_serper_search_async(query: str, api_key: str, timeout: int = 20
                 retry_count += 1
                 if retry_count == max_retries:
                     print(
-                        f"Google Serper API request timed out ({timeout} seconds) for query: {query} after {max_retries} retries"
-                    )
+                        f"Google Serper API request timed out ({timeout} seconds) for query: {query} after {max_retries} retries")
                     return {}
                 print(
-                    f"Google Serper API Timeout occurred, retrying ({retry_count}/{max_retries})..."
-                )
+                    f"Google Serper API Timeout occurred, retrying ({retry_count}/{max_retries})...")
             except (
                 aiohttp.ClientError
             ) as e:  # Covers ConnectionError, ClientResponseError, etc.
                 retry_count += 1
                 if retry_count == max_retries:
                     print(
-                        f"Google Serper API Request Error occurred: {e} after {max_retries} retries"
-                    )
+                        f"Google Serper API Request Error occurred: {e} after {max_retries} retries")
                     return {}
                 print(
-                    f"Google Serper API Request Error occurred ({e}), retrying ({retry_count}/{max_retries})..."
-                )
+                    f"Google Serper API Request Error occurred ({e}), retrying ({retry_count}/{max_retries})...")
 
             if retry_count < max_retries:
-                await asyncio.sleep(1)  # Wait 1 second between retries (non-blocking)
+                # Wait 1 second between retries (non-blocking)
+                await asyncio.sleep(1)
 
     return {}
 
@@ -960,7 +973,8 @@ def main(
 
         # Perform the search
         print("Performing Bing Web Search...")
-        search_results = bing_web_search(query, BING_SUBSCRIPTION_KEY, bing_endpoint)
+        search_results = bing_web_search(
+            query, BING_SUBSCRIPTION_KEY, bing_endpoint)
 
         print("Extracting relevant information from Bing search results...")
         extracted_info = extract_relevant_info(search_results)
@@ -979,7 +993,8 @@ def main(
         extracted_info = extract_relevant_info_serper(search_results)
         print(extracted_info)
     else:
-        print(f"Unknown search_type: {search_type}. Please choose 'bing' or 'serper'.")
+        print(
+            f"Unknown search_type: {search_type}. Please choose 'bing' or 'serper'.")
         exit()
 
     if not extracted_info:
@@ -992,7 +1007,8 @@ def main(
             info["url"], use_jina=False
         )  # Get full webpage text
         if full_text and not full_text.startswith("Error"):
-            success, context = extract_snippet_with_context(full_text, info["snippet"])
+            success, context = extract_snippet_with_context(
+                full_text, info["snippet"])
             if success:
                 info["context"] = context
             else:

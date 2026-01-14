@@ -28,7 +28,9 @@ from verl.utils.device import is_cuda_available
 from .dapo_ray_trainer import RayDAPOTrainer
 
 
-@hydra.main(config_path="config", config_name="dapo_trainer", version_base=None)
+@hydra.main(config_path="config",
+            config_name="dapo_trainer",
+            version_base=None)
 def main(config):
     run_ppo(config)
 
@@ -55,7 +57,9 @@ def run_ppo(config) -> None:
         nsight_options = OmegaConf.to_container(
             config.trainer.controller_nsight_options
         )
-        runner = TaskRunner.options(runtime_env={"nsight": nsight_options}).remote()
+        runner = TaskRunner.options(
+            runtime_env={
+                "nsight": nsight_options}).remote()
     else:
         runner = TaskRunner.remote()
     ray.get(runner.run.remote(config))
@@ -71,7 +75,10 @@ class TaskRunner:
 
         from verl.utils.fs import copy_to_local
 
-        print(f"TaskRunner hostname: {socket.gethostname()}, PID: {os.getpid()}")
+        print(
+            f"TaskRunner hostname: {
+                socket.gethostname()}, PID: {
+                os.getpid()}")
 
         pprint(
             OmegaConf.to_container(config, resolve=True)
@@ -119,7 +126,9 @@ class TaskRunner:
 
         global_pool_id = "global_pool"
         resource_pool_spec = {
-            global_pool_id: [config.trainer.n_gpus_per_node] * config.trainer.nnodes,
+            global_pool_id: [
+                config.trainer.n_gpus_per_node] *
+            config.trainer.nnodes,
         }
         mapping = {
             Role.ActorRollout: global_pool_id,
@@ -139,7 +148,8 @@ class TaskRunner:
                 from verl.workers.megatron_workers import RewardModelWorker
             else:
                 raise NotImplementedError
-            role_worker_mapping[Role.RewardModel] = ray.remote(RewardModelWorker)
+            role_worker_mapping[Role.RewardModel] = ray.remote(
+                RewardModelWorker)
             mapping[Role.RewardModel] = global_pool_id
 
         # reference model
@@ -147,14 +157,16 @@ class TaskRunner:
             config.algorithm.use_kl_in_reward
             or config.actor_rollout_ref.actor.use_kl_loss
         ):
-            role_worker_mapping[Role.RefPolicy] = ray.remote(ActorRolloutRefWorker)
+            role_worker_mapping[Role.RefPolicy] = ray.remote(
+                ActorRolloutRefWorker)
             mapping[Role.RefPolicy] = global_pool_id
 
         from verl.workers.reward_manager import get_reward_manager_cls
 
         # Note(haibin.lin): please make sure custom reward managers are imported and
         # registered via `verl.workers.reward_manager.register`
-        reward_manager_name = config.reward_model.get("reward_manager", "naive")
+        reward_manager_name = config.reward_model.get(
+            "reward_manager", "naive")
         reward_manager_cls = get_reward_manager_cls(reward_manager_name)
 
         compute_score = get_custom_reward_fn(config)

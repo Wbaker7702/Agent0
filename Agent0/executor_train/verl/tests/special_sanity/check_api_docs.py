@@ -61,7 +61,10 @@ def iter_submodules(root: ModuleType) -> Iterable[ModuleType]:
             try:
                 yield importlib.import_module(mod_info.name)
             except Exception as exc:  # noqa: BLE001
-                print(f"[warn] Skipping {mod_info.name!r}: {exc}", file=sys.stderr)
+                print(
+                    f"[warn] Skipping {
+                        mod_info.name!r}: {exc}",
+                    file=sys.stderr)
 
 
 def names_missing_doc(mod: ModuleType) -> list[str]:

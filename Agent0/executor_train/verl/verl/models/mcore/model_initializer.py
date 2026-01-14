@@ -29,7 +29,10 @@ from .config_converter import PretrainedConfig, TransformerConfig
 class BaseModelInitializer(ABC):
     """Base class for model initializers."""
 
-    def __init__(self, tfconfig: TransformerConfig, hf_config: PretrainedConfig):
+    def __init__(
+            self,
+            tfconfig: TransformerConfig,
+            hf_config: PretrainedConfig):
         self.tfconfig = tfconfig
         self.hf_config = hf_config
 
@@ -109,7 +112,8 @@ class DenseModel(BaseModelInitializer):
         assert (
             self.tfconfig.normalization == "RMSNorm"
         ), "only RMSNorm is supported for now"
-        return get_gpt_decoder_block_spec(self.tfconfig, use_transformer_engine=True)
+        return get_gpt_decoder_block_spec(
+            self.tfconfig, use_transformer_engine=True)
 
 
 class Qwen2MoEModel(BaseModelInitializer):
@@ -209,8 +213,7 @@ class DeepseekV3Model(BaseModelInitializer):
         if self.tfconfig.mtp_num_layers is not None:
             transformer_layer_spec = self.get_transformer_layer_spec()
             mtp_block_spec = get_gpt_mtp_block_spec(
-                self.tfconfig, transformer_layer_spec, use_transformer_engine=True
-            )
+                self.tfconfig, transformer_layer_spec, use_transformer_engine=True)
             kwargs["mtp_block_spec"] = mtp_block_spec
 
         model = super().initialize(**kwargs)

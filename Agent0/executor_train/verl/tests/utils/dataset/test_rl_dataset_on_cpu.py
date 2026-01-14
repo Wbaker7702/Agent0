@@ -40,7 +40,10 @@ def test_rl_dataset():
             "filter_overlong_prompts_workers": 2,
         }
     )
-    dataset = RLHFDataset(data_files=local_path, tokenizer=tokenizer, config=config)
+    dataset = RLHFDataset(
+        data_files=local_path,
+        tokenizer=tokenizer,
+        config=config)
 
     dataloader = DataLoader(
         dataset=dataset,

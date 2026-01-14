@@ -37,8 +37,10 @@ class ResourcePool:
     """
 
     def __init__(
-        self, process_on_nodes=None, max_colocate_count: int = 10, n_gpus_per_node=8
-    ) -> None:
+            self,
+            process_on_nodes=None,
+            max_colocate_count: int = 10,
+            n_gpus_per_node=8) -> None:
         """Initialize the ResourcePool with node processes and GPU configuration.
 
         Args:
@@ -50,7 +52,8 @@ class ResourcePool:
             process_on_nodes = []
         self._store = process_on_nodes
         self.max_colocate_count = max_colocate_count
-        self.n_gpus_per_node = n_gpus_per_node  # this is left for future huawei GPU that contains 16 GPUs per node
+        # this is left for future huawei GPU that contains 16 GPUs per node
+        self.n_gpus_per_node = n_gpus_per_node
 
     def add_node(self, process_count):
         self._store.append(process_count)
@@ -109,7 +112,10 @@ class ClassWithInitArgs:
         return self.cls(*self.args, **self.kwargs)
 
 
-def check_workers_alive(workers: list, is_alive: Callable, gap_time: float = 1) -> None:
+def check_workers_alive(
+        workers: list,
+        is_alive: Callable,
+        gap_time: float = 1) -> None:
     """Continuously monitors worker processes and raises SIGABRT if any worker dies.
 
     Args:
@@ -126,8 +132,7 @@ def check_workers_alive(workers: list, is_alive: Callable, gap_time: float = 1) 
         for worker in workers:
             if not is_alive(worker):
                 logging.warning(
-                    f"worker {worker} is not alive sending signal to main thread"
-                )
+                    f"worker {worker} is not alive sending signal to main thread")
                 signal.raise_signal(signal.SIGABRT)
         time.sleep(gap_time)
 
@@ -168,7 +173,8 @@ class WorkerGroup:
     def _block_until_all_workers_alive(self) -> None:
         """Blocks until all workers in the group are alive."""
         while True:
-            all_state = [self._is_worker_alive(worker) for worker in self._workers]
+            all_state = [self._is_worker_alive(
+                worker) for worker in self._workers]
             if False in all_state:
                 time.sleep(1)
             else:
@@ -180,7 +186,8 @@ class WorkerGroup:
         Args:
             every_n_seconds (int): Interval between aliveness checks
         """
-        # before starting checking worker aliveness, make sure all workers are already alive
+        # before starting checking worker aliveness, make sure all workers are
+        # already alive
         self._block_until_all_workers_alive()
 
         self._checker_thread = threading.Thread(
@@ -212,7 +219,8 @@ class WorkerGroup:
                     method
                 ), f"{method_name} in {user_defined_cls} is not callable"
             except Exception:
-                # if it is a property, it will fail because Class doesn't have instance property
+                # if it is a property, it will fail because Class doesn't have
+                # instance property
                 continue
 
             if hasattr(method, MAGIC_ATTR):
@@ -232,7 +240,8 @@ class WorkerGroup:
                 # get dispatch fn
                 if isinstance(dispatch_mode, Dispatch):
                     # get default dispatch fn
-                    fn = get_predefined_dispatch_fn(dispatch_mode=dispatch_mode)
+                    fn = get_predefined_dispatch_fn(
+                        dispatch_mode=dispatch_mode)
                     dispatch_fn = fn["dispatch_fn"]
                     collect_fn = fn["collect_fn"]
                 else:
@@ -243,7 +252,8 @@ class WorkerGroup:
                     collect_fn = dispatch_mode["collect_fn"]
 
                 # get execute_fn_name
-                execute_mode = get_predefined_execute_fn(execute_mode=execute_mode)
+                execute_mode = get_predefined_execute_fn(
+                    execute_mode=execute_mode)
                 wg_execute_fn_name = execute_mode["execute_fn_name"]
 
                 # get execute_fn from string
@@ -268,6 +278,7 @@ class WorkerGroup:
                     setattr(self, method_name, func)
                     method_names.append(method_name)
                 except Exception as e:
-                    raise ValueError(f"Fail to set method_name {method_name}") from e
+                    raise ValueError(
+                        f"Fail to set method_name {method_name}") from e
 
         return method_names

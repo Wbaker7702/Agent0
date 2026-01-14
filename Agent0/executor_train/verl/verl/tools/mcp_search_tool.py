@@ -50,8 +50,10 @@ class MCPSearchTool(MCPBaseTool):
                 title_matches = re.findall(r'"title"\s*:', text)
                 title_count = len(title_matches)
 
-                results_match = re.search(r'"results"\s*:\s*(\[.*?\])', text, re.DOTALL)
-                results_content = results_match.group(1) if results_match else ""
+                results_match = re.search(
+                    r'"results"\s*:\s*(\[.*?\])', text, re.DOTALL)
+                results_content = results_match.group(
+                    1) if results_match else ""
 
                 res += results_content
                 res_cnt += title_count

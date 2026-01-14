@@ -32,7 +32,8 @@ def is_sci_notation(number: float) -> bool:
     return bool(pattern.match(str(number)))
 
 
-def float_representer(dumper: Dumper, number: Union[float, np.float32, np.float64]):
+def float_representer(
+        dumper: Dumper, number: Union[float, np.float32, np.float64]):
     if is_sci_notation(number):
         value = str(number)
         if "." not in value and "e" in value:
@@ -53,7 +54,8 @@ def is_package_available(name: str) -> bool:
     return importlib.util.find_spec(name) is not None
 
 
-def union_two_dict(dict1: Dict[str, Any], dict2: Dict[str, Any]) -> Dict[str, Any]:
+def union_two_dict(dict1: Dict[str, Any],
+                   dict2: Dict[str, Any]) -> Dict[str, Any]:
     """Union two dict. Will throw an error if there is an item not the same object with the same key."""
     for key in dict2.keys():
         if key in dict1:
@@ -66,7 +68,8 @@ def union_two_dict(dict1: Dict[str, Any], dict2: Dict[str, Any]) -> Dict[str, An
     return dict1
 
 
-def append_to_dict(data: Dict[str, List[Any]], new_data: Dict[str, Any]) -> None:
+def append_to_dict(data: Dict[str, List[Any]],
+                   new_data: Dict[str, Any]) -> None:
     """Append dict to a dict of list."""
     for key, val in new_data.items():
         if key not in data:

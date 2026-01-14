@@ -54,8 +54,9 @@ def test_configs():
     return [
         SequenceParallelConfig(
             LlamaConfig(
-                num_hidden_layers=2, num_attention_heads=32, num_key_value_heads=32
-            ),
+                num_hidden_layers=2,
+                num_attention_heads=32,
+                num_key_value_heads=32),
             sp_size=8,
             is_valid=True,
         ),
@@ -81,15 +82,17 @@ def test_configs():
         ),
         SequenceParallelConfig(
             Qwen2Config(
-                num_hidden_layers=2, num_attention_heads=32, num_key_value_heads=4
-            ),
+                num_hidden_layers=2,
+                num_attention_heads=32,
+                num_key_value_heads=4),
             sp_size=4,
             is_valid=True,
         ),
         SequenceParallelConfig(
             Qwen2Config(
-                num_hidden_layers=2, num_attention_heads=32, num_key_value_heads=4
-            ),
+                num_hidden_layers=2,
+                num_attention_heads=32,
+                num_key_value_heads=4),
             sp_size=8,
             is_valid=True,
         ),
@@ -115,8 +118,10 @@ def test_hf_casual_fwd_bwd(test_config):
     with context:
         world_size = torch.distributed.get_world_size()
         _hf_casual_fwd_bwd(
-            test_config.config, test_config.sp_size, world_size // test_config.sp_size
-        )
+            test_config.config,
+            test_config.sp_size,
+            world_size //
+            test_config.sp_size)
 
     # TODO: seems not work, will cause `socketStartConnect: Connect to xxx failed : Software caused connection abort`
     # torch.distributed.destroy_process_group()
@@ -126,8 +131,9 @@ def _hf_casual_fwd(config, sp_size, dp_size):
     assert torch.cuda.device_count() >= 2, "need at least 2 gpus for test"
 
     ulysses_device_mesh = init_device_mesh(
-        device_type="cuda", mesh_shape=(dp_size, sp_size), mesh_dim_names=("dp", "sp")
-    )
+        device_type="cuda", mesh_shape=(
+            dp_size, sp_size), mesh_dim_names=(
+            "dp", "sp"))
     sharding_manager = FSDPUlyssesShardingManager(ulysses_device_mesh)
 
     batch_size = 1
@@ -193,7 +199,8 @@ def _hf_casual_fwd(config, sp_size, dp_size):
             )
         )
 
-        # input with input_ids_rmpad and postition_ids to enable flash attention varlen
+        # input with input_ids_rmpad and postition_ids to enable flash
+        # attention varlen
         logits_split_in_seq = model(
             input_ids_rmpad_sliced,
             position_ids=position_ids_rmpad_padded,
@@ -202,8 +209,10 @@ def _hf_casual_fwd(config, sp_size, dp_size):
 
         # all_gather output
         logits_full = gather_outpus_and_unpad(
-            logits_split_in_seq, gather_dim=1, unpad_dim=1, padding_size=pad_size
-        )
+            logits_split_in_seq,
+            gather_dim=1,
+            unpad_dim=1,
+            padding_size=pad_size)
 
     # 2. perform normal forward
     set_ulysses_sequence_parallel_group(None)
@@ -220,8 +229,9 @@ def _hf_casual_fwd_bwd(config, sp_size, dp_size):
     assert torch.cuda.device_count() >= 2, "need at least 2 gpus for test"
 
     ulysses_device_mesh = init_device_mesh(
-        device_type="cuda", mesh_shape=(dp_size, sp_size), mesh_dim_names=("dp", "sp")
-    )
+        device_type="cuda", mesh_shape=(
+            dp_size, sp_size), mesh_dim_names=(
+            "dp", "sp"))
     sharding_manager = FSDPUlyssesShardingManager(ulysses_device_mesh)
 
     batch_size = 1
@@ -287,7 +297,8 @@ def _hf_casual_fwd_bwd(config, sp_size, dp_size):
             )
         )
 
-        # input with input_ids_rmpad and postition_ids to enable flash attention varlen
+        # input with input_ids_rmpad and postition_ids to enable flash
+        # attention varlen
         logits_split_in_seq = model(
             input_ids_rmpad_sliced,
             position_ids=position_ids_rmpad_padded,
@@ -296,8 +307,10 @@ def _hf_casual_fwd_bwd(config, sp_size, dp_size):
 
         # all_gather output
         logits_full = gather_outpus_and_unpad(
-            logits_split_in_seq, gather_dim=1, unpad_dim=1, padding_size=pad_size
-        )
+            logits_split_in_seq,
+            gather_dim=1,
+            unpad_dim=1,
+            padding_size=pad_size)
 
     # 2. perform normal forward
     set_ulysses_sequence_parallel_group(None)

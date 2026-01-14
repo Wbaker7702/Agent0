@@ -43,14 +43,16 @@ Please put your final answer (i.e., 'True' or 'False') in \\boxed{{}}.
 
 
 def get_response(problem, solution_str, ground_truth):
-    prompt = GENRM_PROMPT_TEMPLATE.format(problem=problem, solution=solution_str)
+    prompt = GENRM_PROMPT_TEMPLATE.format(
+        problem=problem, solution=solution_str)
     messages = [{"role": "user", "content": prompt}]
     for attempt in range(MAX_RETRIES):
         try:
             headers = {"Content-Type": "application/json"}
             chat_url = f"{BASE_URL}/v1/chat/completions"
             data = {"model": MODEL_NAME, "messages": messages}
-            output = requests.post(chat_url, headers=headers, json=data, timeout=30)
+            output = requests.post(
+                chat_url, headers=headers, json=data, timeout=30)
             response = output.json()["choices"][0]["message"]["content"]
             return response
         except Exception as e:
@@ -98,15 +100,21 @@ def compute_score(data_source, solution_str, ground_truth, extra_info):
         return reward_score
 
 
-def compute_score_batch(data_sources, solution_strs, ground_truths, extra_infos):
+def compute_score_batch(
+        data_sources,
+        solution_strs,
+        ground_truths,
+        extra_infos):
     with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
         futures = []
         for data_source, solution_str, ground_truth, extra_info in zip(
-            data_sources, solution_strs, ground_truths, extra_infos, strict=True
-        ):
+                data_sources, solution_strs, ground_truths, extra_infos, strict=True):
             future = executor.submit(
-                compute_score, data_source, solution_str, ground_truth, extra_info
-            )
+                compute_score,
+                data_source,
+                solution_str,
+                ground_truth,
+                extra_info)
             futures.append(future)
 
         results = [future.result() for future in futures]

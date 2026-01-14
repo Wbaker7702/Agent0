@@ -47,7 +47,9 @@ def log_probs_from_logits_flash_attn(
     return -output[0]
 
 
-def log_probs_from_logits(logits: torch.Tensor, labels: torch.Tensor) -> torch.Tensor:
+def log_probs_from_logits(
+        logits: torch.Tensor,
+        labels: torch.Tensor) -> torch.Tensor:
     """Compute log probs on the label ids given logits.
 
     We may use torch compile to speed up computing.
@@ -72,8 +74,10 @@ def log_probs_from_logits(logits: torch.Tensor, labels: torch.Tensor) -> torch.T
 
 
 def masked_mean(
-    values: torch.Tensor, mask: torch.Tensor, dim: int = None, eps: float = 1e-8
-) -> torch.Tensor:
+        values: torch.Tensor,
+        mask: torch.Tensor,
+        dim: int = None,
+        eps: float = 1e-8) -> torch.Tensor:
     """Compute mean of tensor with a masked values."""
     return (values * mask).sum(dim=dim) / (mask.sum(dim=dim) + eps)
 
@@ -153,8 +157,10 @@ def pad_2d_list_to_length(
 
 
 def pad_sequence_to_length(
-    tensor: torch.Tensor, max_seq_len: int, pad_token_id: int, left_pad: bool = False
-) -> torch.Tensor:
+        tensor: torch.Tensor,
+        max_seq_len: int,
+        pad_token_id: int,
+        left_pad: bool = False) -> torch.Tensor:
     """Pad a nD tensors in the last dim to max_seq_len."""
     if tensor.size(-1) >= max_seq_len:
         return tensor
@@ -162,8 +168,10 @@ def pad_sequence_to_length(
     pad_shape = list(tensor.shape)
     pad_shape[-1] = max_seq_len - tensor.size(-1)
     pad_tensor = torch.full(
-        pad_shape, fill_value=pad_token_id, dtype=tensor.dtype, device=tensor.device
-    )
+        pad_shape,
+        fill_value=pad_token_id,
+        dtype=tensor.dtype,
+        device=tensor.device)
     return (
         torch.cat((pad_tensor, tensor), dim=-1)
         if left_pad
@@ -191,11 +199,15 @@ def postprocess_data(
             left_pad=left_pad,
         )
         attention_mask = pad_sequence_to_length(
-            attention_mask, max_seq_len=max_length, pad_token_id=0, left_pad=left_pad
-        )
+            attention_mask,
+            max_seq_len=max_length,
+            pad_token_id=0,
+            left_pad=left_pad)
         position_ids = pad_sequence_to_length(
-            position_ids, max_seq_len=max_length, pad_token_id=0, left_pad=left_pad
-        )
+            position_ids,
+            max_seq_len=max_length,
+            pad_token_id=0,
+            left_pad=left_pad)
     elif seq_length > max_length:
         if truncation == "left":  # actually, left truncation may not be reasonable
             input_ids = input_ids[..., -max_length:]
@@ -207,10 +219,10 @@ def postprocess_data(
             position_ids = position_ids[..., :max_length]
         elif truncation == "error":
             raise RuntimeError(
-                f"Input sequence length {seq_length} is longer than max length {max_length}."
-            )
+                f"Input sequence length {seq_length} is longer than max length {max_length}.")
         else:
-            raise NotImplementedError(f"Unknown truncation method {truncation}.")
+            raise NotImplementedError(
+                f"Unknown truncation method {truncation}.")
 
     return input_ids, attention_mask, position_ids
 
@@ -329,10 +341,12 @@ class AnyPrecisionAdamW(torch.optim.Optimizer):
                     state["step"] = torch.tensor(0.0)
 
                     # momentum - EMA of gradient values
-                    state["exp_avg"] = torch.zeros_like(p, dtype=momentum_dtype)
+                    state["exp_avg"] = torch.zeros_like(
+                        p, dtype=momentum_dtype)
 
                     # variance uncentered - EMA of squared gradient values
-                    state["exp_avg_sq"] = torch.zeros_like(p, dtype=variance_dtype)
+                    state["exp_avg_sq"] = torch.zeros_like(
+                        p, dtype=variance_dtype)
 
                     # optional Kahan summation - accumulated error tracker
                     if use_kahan_summation:
@@ -352,7 +366,8 @@ class AnyPrecisionAdamW(torch.optim.Optimizer):
                 if weight_decay:  # weight decay, AdamW style
                     p.data.mul_(1 - lr * weight_decay)
 
-                exp_avg.mul_(beta1).add_(grad, alpha=1 - beta1)  # update momentum
+                exp_avg.mul_(beta1).add_(
+                    grad, alpha=1 - beta1)  # update momentum
                 exp_avg_sq.mul_(beta2).addcmul_(
                     grad, grad, value=1 - beta2
                 )  # update uncentered variance
@@ -363,13 +378,16 @@ class AnyPrecisionAdamW(torch.optim.Optimizer):
                 denom_correction = (
                     1 - beta2**step
                 ) ** 0.5  # adjust using bias2 and avoids math import
-                centered_variance = (exp_avg_sq.sqrt() / denom_correction).add_(
-                    eps, alpha=1
-                )
+                centered_variance = (
+                    exp_avg_sq.sqrt() /
+                    denom_correction).add_(
+                    eps,
+                    alpha=1)
 
                 if use_kahan_summation:  # lr update to compensation
                     compensation = state["compensation"]
-                    compensation.addcdiv_(exp_avg, centered_variance, value=-step_size)
+                    compensation.addcdiv_(
+                        exp_avg, centered_variance, value=-step_size)
 
                     # update weights with compensation (Kahan summation)
                     # save error back to compensation for next iteration
@@ -377,4 +395,5 @@ class AnyPrecisionAdamW(torch.optim.Optimizer):
                     p.data.add_(compensation)
                     compensation.add_(temp_buffer.sub_(p.data))
                 else:  # usual AdamW updates
-                    p.data.addcdiv_(exp_avg, centered_variance, value=-step_size)
+                    p.data.addcdiv_(
+                        exp_avg, centered_variance, value=-step_size)

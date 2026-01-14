@@ -34,7 +34,11 @@ def validate_yaml_format(yaml_lines):
         if key_match:
             # Check if there's a comment above
             if i == 0 or not yaml_lines[i - 1].strip().startswith("#"):
-                errors.append(f"Missing comment above line {i + 1}: {line.strip()}")
+                errors.append(
+                    f"Missing comment above line {
+                        i +
+                        1}: {
+                        line.strip()}")
 
             # Check for inline comment
             if "#" in line and not stripped.startswith("#"):
@@ -45,16 +49,20 @@ def validate_yaml_format(yaml_lines):
                         f"Inline comment found on line {i + 1}: {line.strip()}"
                     )
 
-            # Check for blank line after this key line (unless next is a deeper indent)
+            # Check for blank line after this key line (unless next is a deeper
+            # indent)
             if i + 1 < len(yaml_lines):
                 next_line = yaml_lines[i + 1]
                 next_stripped = next_line.strip()
 
-                # If next is not empty and not a deeper nested line, enforce blank line
+                # If next is not empty and not a deeper nested line, enforce
+                # blank line
                 if next_stripped != "":
                     errors.append(
-                        f"Missing blank line after line {i + 1}: {line.strip()}"
-                    )
+                        f"Missing blank line after line {
+                            i +
+                            1}: {
+                            line.strip()}")
 
         i += 1
 
@@ -81,8 +89,7 @@ def test_trainer_config_doc():
             success = False
             print("YAML documentation format check failed:")
             print(
-                f"Please read the top block of {yaml_to_inspect} to see format rules:\n"
-            )
+                f"Please read the top block of {yaml_to_inspect} to see format rules:\n")
             for err in validation_errors:
                 print(" -", err)
 

@@ -28,9 +28,8 @@ def set_pad_token_id(tokenizer):
     if tokenizer.pad_token_id is None:
         tokenizer.pad_token_id = tokenizer.eos_token_id
         warnings.warn(
-            f"tokenizer.pad_token_id is None. Now set to {tokenizer.eos_token_id}",
-            stacklevel=1,
-        )
+            f"tokenizer.pad_token_id is None. Now set to {
+                tokenizer.eos_token_id}", stacklevel=1, )
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
         warnings.warn(
@@ -39,7 +38,11 @@ def set_pad_token_id(tokenizer):
         )
 
 
-def hf_tokenizer(name_or_path, correct_pad_token=True, correct_gemma2=True, **kwargs):
+def hf_tokenizer(
+        name_or_path,
+        correct_pad_token=True,
+        correct_gemma2=True,
+        **kwargs):
     """Create a huggingface pretrained tokenizer which correctness handles eos and pad tokens.
 
     Args:

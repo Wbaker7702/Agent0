@@ -39,7 +39,8 @@ class Profiler:
     """
 
     def __init__(self, config):
-        # note : if we do not set use_profile, it will be set as None, so that all function will be skip
+        # note : if we do not set use_profile, it will be set as None, so that
+        # all function will be skip
         self.config = config
         self.skip_prof = False
         self.saved = False
@@ -101,11 +102,16 @@ class Profiler:
         if self.prof is not None and not self.saved:
             if not os.path.exists(self.config.save_path):
                 os.makedirs(self.config.save_path)
-            save_file_name = f"/prof_start_{self.config.step_start}_end_{self.config.step_end}_rank_{self.rank}.json"
+            save_file_name = f"/prof_start_{
+                self.config.step_start}_end_{
+                self.config.step_end}_rank_{
+                self.rank}.json"
             print(
-                f"[Profiler] Saving trace to {self.config.save_path + save_file_name}"
-            )
-            self.prof.export_chrome_trace(self.config.save_path + save_file_name)
+                f"[Profiler] Saving trace to {
+                    self.config.save_path +
+                    save_file_name}")
+            self.prof.export_chrome_trace(
+                self.config.save_path + save_file_name)
             self.skip_prof = True
             self.saved = True
 
@@ -182,7 +188,11 @@ class DistProfiler:
         config (ProfilerConfig, optional): Configuration for the profiler.
     """
 
-    def __init__(self, rank: int, config: Optional[ProfilerConfig] = None, **kwargs):
+    def __init__(
+            self,
+            rank: int,
+            config: Optional[ProfilerConfig] = None,
+            **kwargs):
         pass
 
     def start(self, **kwargs):

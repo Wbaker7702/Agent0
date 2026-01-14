@@ -65,6 +65,9 @@ class PerformanceTimer:
             logger.info(f"{prefix}Performance Statistics:")
             for operation, stat in stats.items():
                 logger.info(
-                    f"  {operation}: count={stat['count']}, total={stat['total']:.4f}s, "
-                    f"mean={stat['mean']:.4f}s, min={stat['min']:.4f}s, max={stat['max']:.4f}s"
-                )
+                    f"  {operation}: count={
+                        stat['count']}, total={
+                        stat['total']:.4f}s, " f"mean={
+                        stat['mean']:.4f}s, min={
+                        stat['min']:.4f}s, max={
+                        stat['max']:.4f}s")

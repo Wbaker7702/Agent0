@@ -64,9 +64,11 @@ class FSDPCheckpointManager(BaseCheckpointManager):
             path, f"optim_world_size_{self.world_size}_rank_{self.rank}.pt"
         )
         extra_path = os.path.join(
-            path, f"extra_state_world_size_{self.world_size}_rank_{self.rank}.pt"
-        )
-        print(f"[rank-{self.rank}]: Loading model from {os.path.abspath(model_path)}.")
+            path, f"extra_state_world_size_{
+                self.world_size}_rank_{
+                self.rank}.pt")
+        print(
+            f"[rank-{self.rank}]: Loading model from {os.path.abspath(model_path)}.")
         print(
             f"[rank-{self.rank}]: Loading optimizer from {os.path.abspath(optim_path)}."
         )
@@ -111,11 +113,14 @@ class FSDPCheckpointManager(BaseCheckpointManager):
             path, f"optim_world_size_{self.world_size}_rank_{self.rank}.pt"
         )
         extra_path = os.path.join(
-            path, f"extra_state_world_size_{self.world_size}_rank_{self.rank}.pt"
-        )
+            path, f"extra_state_world_size_{
+                self.world_size}_rank_{
+                self.rank}.pt")
 
-        print(f"[rank-{self.rank}]: Saving model to {os.path.abspath(model_path)}.")
-        print(f"[rank-{self.rank}]: Saving optimizer to {os.path.abspath(optim_path)}.")
+        print(
+            f"[rank-{self.rank}]: Saving model to {os.path.abspath(model_path)}.")
+        print(
+            f"[rank-{self.rank}]: Saving optimizer to {os.path.abspath(optim_path)}.")
         print(
             f"[rank-{self.rank}]: Saving extra_state to {os.path.abspath(extra_path)}."
         )
@@ -131,7 +136,8 @@ class FSDPCheckpointManager(BaseCheckpointManager):
             os.makedirs(hf_path, exist_ok=True)
             assert isinstance(self.model._fsdp_wrapped_module, PreTrainedModel)
             self.model._fsdp_wrapped_module.config.save_pretrained(hf_path)
-            self.model._fsdp_wrapped_module.generation_config.save_pretrained(hf_path)
+            self.model._fsdp_wrapped_module.generation_config.save_pretrained(
+                hf_path)
             self.processing_class.save_pretrained(hf_path)
 
         dist.barrier()

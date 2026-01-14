@@ -79,8 +79,8 @@ def create_dataloader(
     val_dataloader = StatefulDataLoader(
         dataset=val_dataset,
         batch_size=(
-            len(val_dataset) if config.val_batch_size == -1 else config.val_batch_size
-        ),
+            len(val_dataset) if config.val_batch_size == -
+            1 else config.val_batch_size),
         shuffle=False,
         num_workers=8,
         collate_fn=collate_fn,

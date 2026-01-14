@@ -72,12 +72,15 @@ def get_rope_index(
             attention_mask = torch.ones_like(input_ids)
 
         position_ids = torch.ones(
-            3, input_ids.size(0), dtype=input_ids.dtype, device=input_ids.device
-        )  # (3, seqlen)
+            3,
+            input_ids.size(0),
+            dtype=input_ids.dtype,
+            device=input_ids.device)  # (3, seqlen)
         image_index, video_index = 0, 0
         input_ids = input_ids[attention_mask == 1]
         image_nums, video_nums = 0, 0
-        vision_start_indices = torch.argwhere(input_ids == vision_start_token_id)
+        vision_start_indices = torch.argwhere(
+            input_ids == vision_start_token_id)
         vision_tokens = input_ids[vision_start_indices + 1]
         image_nums = (vision_tokens == image_token_id).sum()
         video_nums = (vision_tokens == video_token_id).sum()
@@ -127,15 +130,18 @@ def get_rope_index(
             )
             text_len = ed - st
 
-            st_idx = llm_pos_ids_list[-1].max() + 1 if len(llm_pos_ids_list) > 0 else 0
+            st_idx = llm_pos_ids_list[-1].max() + \
+                1 if len(llm_pos_ids_list) > 0 else 0
             llm_pos_ids_list.append(
                 torch.arange(text_len).view(1, -1).expand(3, -1) + st_idx
             )
 
+            t_index = (torch.arange(llm_grid_t).view(-1,
+                                                     1).expand(-1, llm_grid_h * llm_grid_w))
             t_index = (
-                torch.arange(llm_grid_t).view(-1, 1).expand(-1, llm_grid_h * llm_grid_w)
-            )
-            t_index = (t_index * second_per_grid_t * tokens_per_second).long().flatten()
+                t_index *
+                second_per_grid_t *
+                tokens_per_second).long().flatten()
             h_index = (
                 torch.arange(llm_grid_h)
                 .view(1, -1, 1)
@@ -154,19 +160,22 @@ def get_rope_index(
             st = ed + llm_grid_t * llm_grid_h * llm_grid_w
 
         if st < len(input_tokens):
-            st_idx = llm_pos_ids_list[-1].max() + 1 if len(llm_pos_ids_list) > 0 else 0
+            st_idx = llm_pos_ids_list[-1].max() + \
+                1 if len(llm_pos_ids_list) > 0 else 0
             text_len = len(input_tokens) - st
             llm_pos_ids_list.append(
                 torch.arange(text_len).view(1, -1).expand(3, -1) + st_idx
             )
 
         llm_positions = torch.cat(llm_pos_ids_list, dim=1).reshape(3, -1)
-        position_ids[..., attention_mask == 1] = llm_positions.to(position_ids.device)
+        position_ids[..., attention_mask ==
+                     1] = llm_positions.to(position_ids.device)
     else:
         if attention_mask is not None:
             position_ids = attention_mask.long().cumsum(-1) - 1
             position_ids.masked_fill_(attention_mask == 0, 1)
-            position_ids = position_ids.unsqueeze(0).expand(3, -1).to(input_ids.device)
+            position_ids = position_ids.unsqueeze(
+                0).expand(3, -1).to(input_ids.device)
         else:
             position_ids = (
                 torch.arange(input_ids.shape[1], device=input_ids.device)
@@ -190,14 +199,8 @@ def prepare_fa2_from_position_ids(
     indices_q = torch.arange(
         position_ids.size(0), device=position_ids.device, dtype=torch.int32
     )
-    cu_seqlens = torch.cat(
-        (
-            indices_q[position_ids == 0],
-            torch.tensor(
-                position_ids.size(), device=position_ids.device, dtype=torch.int32
-            ),
-        )
-    )
+    cu_seqlens = torch.cat((indices_q[position_ids == 0], torch.tensor(
+        position_ids.size(), device=position_ids.device, dtype=torch.int32), ))
     max_length = (
         cu_seqlens.diff().max()
     )  # use cu_seqlens to infer max_length for qwen2vl mrope
@@ -229,19 +232,20 @@ def flash_attention_forward(
     """
     causal = is_causal if not use_top_left_mask else is_causal and query_length != 1
 
-    # Assuming 4D tensors, key_states.shape[1] is the key/value sequence length (source length).
+    # Assuming 4D tensors, key_states.shape[1] is the key/value sequence
+    # length (source length).
     use_sliding_windows = (
         _flash_supports_window_size
         and sliding_window is not None
         and key_states.shape[1] > sliding_window
     )
-    flash_kwargs = (
-        {"window_size": (sliding_window, sliding_window)} if use_sliding_windows else {}
-    )
+    flash_kwargs = ({"window_size": (sliding_window,
+                                     sliding_window)} if use_sliding_windows else {})
 
     if is_flash_attn_greater_or_equal("2.4.1"):
         if deterministic is None:
-            deterministic = os.environ.get("FLASH_ATTENTION_DETERMINISTIC", "0") == "1"
+            deterministic = os.environ.get(
+                "FLASH_ATTENTION_DETERMINISTIC", "0") == "1"
         flash_kwargs["deterministic"] = deterministic
 
     if (
@@ -329,15 +333,19 @@ def ulysses_flash_attn_forward(
 
         key_states = repeat_kv(key_states, self.num_key_value_groups)
         value_states = repeat_kv(value_states, self.num_key_value_groups)
-        query_states = gather_seq_scatter_heads(query_states, seq_dim=2, head_dim=1)
-        key_states = gather_seq_scatter_heads(key_states, seq_dim=2, head_dim=1)
-        value_states = gather_seq_scatter_heads(value_states, seq_dim=2, head_dim=1)
+        query_states = gather_seq_scatter_heads(
+            query_states, seq_dim=2, head_dim=1)
+        key_states = gather_seq_scatter_heads(
+            key_states, seq_dim=2, head_dim=1)
+        value_states = gather_seq_scatter_heads(
+            value_states, seq_dim=2, head_dim=1)
         # (batch_size, num_head / sp_size, seq_length, head_size)
         full_q_len = query_states.size(2)  # full_q_len = seq_length
     else:
         full_q_len = q_len
 
-    # Because the input can be padded, the absolute sequence length depends on the max position id.
+    # Because the input can be padded, the absolute sequence length depends on
+    # the max position id.
     if position_embeddings is None:
         cos, sin = self.rotary_emb(value_states, position_ids)
     else:
@@ -375,9 +383,11 @@ def ulysses_flash_attn_forward(
         position_ids=position_ids,  # important: pass position ids
     )  # (batch_size, seq_length, num_head / sp_size, head_size)
     if ulysses_sp_size > 1:
-        attn_output = gather_heads_scatter_seq(attn_output, head_dim=2, seq_dim=1)
+        attn_output = gather_heads_scatter_seq(
+            attn_output, head_dim=2, seq_dim=1)
 
-    attn_output = attn_output.reshape(bsz, q_len, self.hidden_size).contiguous()
+    attn_output = attn_output.reshape(
+        bsz, q_len, self.hidden_size).contiguous()
     attn_output = self.o_proj(attn_output)
     return attn_output, None, None
 
@@ -429,7 +439,8 @@ def forward_base_model(
         if pixel_values is not None:
             pixel_values = pixel_values.type(self.visual.get_dtype())
             image_embeds = self.visual(pixel_values, grid_thw=image_grid_thw)
-            n_image_tokens = (input_ids == self.config.image_token_id).sum().item()
+            n_image_tokens = (
+                input_ids == self.config.image_token_id).sum().item()
             n_image_features = image_embeds.shape[0]
             if n_image_tokens != n_image_features:
                 raise ValueError(
@@ -442,13 +453,18 @@ def forward_base_model(
                 .expand_as(inputs_embeds)
                 .to(inputs_embeds.device)
             )
-            image_embeds = image_embeds.to(inputs_embeds.device, inputs_embeds.dtype)
-            inputs_embeds = inputs_embeds.masked_scatter(image_mask, image_embeds)
+            image_embeds = image_embeds.to(
+                inputs_embeds.device, inputs_embeds.dtype)
+            inputs_embeds = inputs_embeds.masked_scatter(
+                image_mask, image_embeds)
 
         if pixel_values_videos is not None:
-            pixel_values_videos = pixel_values_videos.type(self.visual.get_dtype())
-            video_embeds = self.visual(pixel_values_videos, grid_thw=video_grid_thw)
-            n_video_tokens = (input_ids == self.config.video_token_id).sum().item()
+            pixel_values_videos = pixel_values_videos.type(
+                self.visual.get_dtype())
+            video_embeds = self.visual(
+                pixel_values_videos, grid_thw=video_grid_thw)
+            n_video_tokens = (
+                input_ids == self.config.video_token_id).sum().item()
             n_video_features = video_embeds.shape[0]
             if n_video_tokens != n_video_features:
                 raise ValueError(
@@ -461,13 +477,16 @@ def forward_base_model(
                 .expand_as(inputs_embeds)
                 .to(inputs_embeds.device)
             )
-            video_embeds = video_embeds.to(inputs_embeds.device, inputs_embeds.dtype)
-            inputs_embeds = inputs_embeds.masked_scatter(video_mask, video_embeds)
+            video_embeds = video_embeds.to(
+                inputs_embeds.device, inputs_embeds.dtype)
+            inputs_embeds = inputs_embeds.masked_scatter(
+                video_mask, video_embeds)
 
         if attention_mask is not None:
             attention_mask = attention_mask.to(inputs_embeds.device)
 
-    if position_ids is None and (attention_mask is None or attention_mask.ndim == 2):
+    if position_ids is None and (
+            attention_mask is None or attention_mask.ndim == 2):
         # calculate RoPE index once per generation in the pre-fill stage only
         if (
             cache_position is not None and cache_position[0] == 0
@@ -476,7 +495,8 @@ def forward_base_model(
                 input_ids, image_grid_thw, video_grid_thw, attention_mask
             )
             self.rope_deltas = rope_deltas
-        # then use the prev pre-calculated rope-deltas to get the correct position ids
+        # then use the prev pre-calculated rope-deltas to get the correct
+        # position ids
         else:
             batch_size, seq_length, _ = inputs_embeds.shape
             delta = (
@@ -484,10 +504,12 @@ def forward_base_model(
                 if cache_position is not None
                 else 0
             )
-            position_ids = torch.arange(seq_length, device=inputs_embeds.device)
+            position_ids = torch.arange(
+                seq_length, device=inputs_embeds.device)
             position_ids = position_ids.view(1, -1).expand(batch_size, -1)
             if cache_position is not None:  # otherwise `deltas` is an int `0`
-                delta = delta.repeat_interleave(batch_size // delta.shape[0], dim=0)
+                delta = delta.repeat_interleave(
+                    batch_size // delta.shape[0], dim=0)
             position_ids = position_ids.add(delta)
             position_ids = position_ids.unsqueeze(0).expand(3, -1, -1)
 
@@ -552,7 +574,8 @@ def forward_with_torch_backend(
     hidden_states = outputs[0]
 
     if not return_dict:
-        raise NotImplementedError("forward_with_torch_backend has to return_dict")
+        raise NotImplementedError(
+            "forward_with_torch_backend has to return_dict")
 
     # Loss calculations
     if labels is not None:
@@ -627,7 +650,8 @@ def forward_with_triton_backend(
     hidden_states = outputs[0]
 
     if not return_dict:
-        raise NotImplementedError("forward_with_triton_backend has to return_dict")
+        raise NotImplementedError(
+            "forward_with_triton_backend has to return_dict")
 
     # Loss calculations
     if labels is not None:

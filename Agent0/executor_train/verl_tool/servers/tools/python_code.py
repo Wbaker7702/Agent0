@@ -90,42 +90,42 @@ def wrap_code_blocks(code: Union[str, List[str]]) -> str:
 def parse_and_exec_salvageable(code_string):
     # Split the code into lines
     lines = code_string.splitlines()
-    
+
     # Try to execute code incrementally, line by line or in blocks
     current_block = ""
     local_namespace = {}
-    
+
     for line in lines:
         # Add the current line to our accumulating block
         if current_block:
             current_block += "\\n" + line
         else:
             current_block = line
-            
+
         # Skip empty lines or comments
         if not line.strip() or line.strip().startswith('#'):
             continue
-            
+
         # Try to parse the current block to check for syntax
         try:
             ast.parse(current_block)
-            
+
             # If it parses successfully, try to execute it
             try:
                 # Create a new local namespace for this execution
                 exec(current_block, globals(), local_namespace)
-                
+
                 # Clear the block after successful execution
                 current_block = ""
             except Exception as e:
                 print(f"Runtime error in block: {e}")
                 current_block = ""  # Reset the block after a runtime error
-                
+
         except SyntaxError:
             # If we have a syntax error in the accumulated block,
             # don't reset yet - we might need more lines to complete the syntax
             pass
-    
+
     return local_namespace
 """
 
@@ -135,7 +135,7 @@ def parse_and_exec_salvageable(code_string):
         # For all blocks except the last, use safe_exec_with_exports
         if not is_last_block:
             wrapped_block = (
-                f"\n# Code block {i+1} (previous)\n"
+                f"\n# Code block {i + 1} (previous)\n"
                 f"original_stdout, original_stderr = sys.stdout, sys.stderr\n"
                 f"sys.stdout, sys.stderr = io.StringIO(), io.StringIO()\n"
                 f"try:\n"
@@ -147,7 +147,7 @@ def parse_and_exec_salvageable(code_string):
             )
         else:
             # For the last (current) block, just include the code directly
-            wrapped_block = f"\n# Code block {i+1} (current)\n{block}\n"
+            wrapped_block = f"\n# Code block {i + 1} (current)\n{block}\n"
 
         wrapped_code += wrapped_block
 
@@ -163,11 +163,17 @@ def clean_traceback(text, base_path):
 # Set resource limits directly
 def set_limits():
     # Memory limit (8GB)
-    resource.setrlimit(resource.RLIMIT_AS, (4 * 1024**3, resource.RLIM_INFINITY))
+    resource.setrlimit(
+        resource.RLIMIT_AS,
+        (4 * 1024**3,
+         resource.RLIM_INFINITY))
     # # Process limit
     resource.setrlimit(resource.RLIMIT_CPU, (TIMEOUT, resource.RLIM_INFINITY))
     # File size limit (500 MB)
-    resource.setrlimit(resource.RLIMIT_FSIZE, (500 * 1024 * 1024, 500 * 1024 * 1024))
+    resource.setrlimit(
+        resource.RLIMIT_FSIZE,
+        (500 * 1024 * 1024,
+         500 * 1024 * 1024))
 
 
 def execute_python(
@@ -218,7 +224,8 @@ def execute_python(
     if not python_path:
         python_path = "python3"
     else:
-        assert os.path.exists(python_path), f"Python path {python_path} does not exist."
+        assert os.path.exists(
+            python_path), f"Python path {python_path} does not exist."
 
     if use_firejail and filejail_command_exists:
         env = {}
@@ -302,8 +309,10 @@ def execute_python(
         has_error = True
         stdout = e.stdout if e.stdout else ""
         stderr = e.stderr if e.stderr else ""
-        stdout = stdout.decode("utf-8") if isinstance(stdout, bytes) else stdout
-        stderr = stderr.decode("utf-8") if isinstance(stderr, bytes) else stderr
+        stdout = stdout.decode(
+            "utf-8") if isinstance(stdout, bytes) else stdout
+        stderr = stderr.decode(
+            "utf-8") if isinstance(stderr, bytes) else stderr
         stderr += f"Execution timed out after {timeout} seconds.\n"
     # Clean up the temporary file
     try:
@@ -346,7 +355,7 @@ class PythonCodeTool(BaseTool):
         Load the environment for the given trajectory_id
         """
         env = self.env_cache.get(trajectory_id)
-        if env == None:
+        if env is None:
             env = {
                 "trajectory_id": trajectory_id,
                 "metadata": {
@@ -363,8 +372,14 @@ class PythonCodeTool(BaseTool):
         self.env_cache[trajectory_id] = env
 
     def update_env(
-        self, trajectory_id, env, action, is_valid, extra_field, observation, **kwargs
-    ):
+            self,
+            trajectory_id,
+            env,
+            action,
+            is_valid,
+            extra_field,
+            observation,
+            **kwargs):
         """
         Update the environment for the given trajectory_id
         """
@@ -399,7 +414,8 @@ class PythonCodeTool(BaseTool):
             Tuple containing the extracted code and a validity flag
         """
         # Try to find Python code in various formats
-        all_valid_python_code = re.findall(r"<python>(.*?)</python>", action, re.DOTALL)
+        all_valid_python_code = re.findall(
+            r"<python>(.*?)</python>", action, re.DOTALL)
 
         if not all_valid_python_code:
             all_valid_python_code = re.findall(
@@ -416,7 +432,8 @@ class PythonCodeTool(BaseTool):
         # parsed_code = all_valid_python_code[0].strip()
 
         # use all the code blocks
-        parsed_code = "\n".join([code.strip() for code in all_valid_python_code])
+        parsed_code = "\n".join([code.strip()
+                                for code in all_valid_python_code])
 
         return parsed_code, True
 
@@ -450,12 +467,14 @@ class PythonCodeTool(BaseTool):
         # Determine format based on action patterns
         if any(pattern in action for pattern in ["```output", "```python"]):
             # Handle code block patterns
-            if action.count("```") % 2 == 0:  # Even number of backticks (closed block)
+            if action.count(
+                    "```") % 2 == 0:  # Even number of backticks (closed block)
                 formatted_obs = f"\n```{output_tag}\n{raw_observation}\n```\n"
             else:  # Odd number (unclosed block)
                 formatted_obs = f"\n{raw_observation}\n```\n"
         elif any(pattern in action for pattern in ["</tool_call>"]):
-            # Tool call patterns - prefer code blocks, give in <tool_response> format
+            # Tool call patterns - prefer code blocks, give in <tool_response>
+            # format
             formatted_obs = f"\n<tool_response>\n```{output_tag}\n{raw_observation}\n```\n</tool_response>\n"
         elif any(
             pattern in action
@@ -511,7 +530,8 @@ class PythonCodeTool(BaseTool):
 
             new_code = parsed_action  #
             if self.enable_history_code_execution:
-                previous_parsed_code = [obs["action"] for obs in env["previous_obs"]]
+                previous_parsed_code = [obs["action"]
+                                        for obs in env["previous_obs"]]
                 code_to_execute = previous_parsed_code + [parsed_action]
             else:
                 code_to_execute = parsed_action
@@ -540,8 +560,12 @@ class PythonCodeTool(BaseTool):
             valid = True
 
         self.update_env(
-            trajectory_id, env, parsed_action, is_valid, extra_field, execution_result
-        )
+            trajectory_id,
+            env,
+            parsed_action,
+            is_valid,
+            extra_field,
+            execution_result)
         self.save_env(trajectory_id, env)
 
         return observation, done, valid

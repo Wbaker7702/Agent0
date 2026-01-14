@@ -36,29 +36,24 @@ def test_update_model_config(override_kwargs):
     handling both plain and nested overrides via parametrization.
     """
     # Create a fresh mock config object for each test case
-    mock_config = SimpleNamespace(
-        param_a=1,
-        nested_params=SimpleNamespace(sub_param_x="original_x", sub_param_y=100),
-        other_param="keep_me",
-    )
+    mock_config = SimpleNamespace(param_a=1, nested_params=SimpleNamespace(
+        sub_param_x="original_x", sub_param_y=100), other_param="keep_me", )
     # Apply the updates using the parametrized override_kwargs
     update_model_config(mock_config, override_kwargs)
 
     # Assertions to check if the config was updated correctly
     if "nested_params" in override_kwargs:  # Case 2: Nested override
         override_nested = override_kwargs["nested_params"]
-        assert (
-            mock_config.nested_params.sub_param_x == override_nested["sub_param_x"]
-        ), "Nested sub_param_x mismatch"
+        assert (mock_config.nested_params.sub_param_x ==
+                override_nested["sub_param_x"]), "Nested sub_param_x mismatch"
         assert (
             mock_config.nested_params.sub_param_y == 100
         ), "Nested sub_param_y should be unchanged"
         assert hasattr(
             mock_config.nested_params, "sub_param_z"
         ), "Expected nested sub_param_z to be added"
-        assert (
-            mock_config.nested_params.sub_param_z == override_nested["sub_param_z"]
-        ), "Value of sub_param_z mismatch"
+        assert (mock_config.nested_params.sub_param_z ==
+                override_nested["sub_param_z"]), "Value of sub_param_z mismatch"
     else:  # Case 1: Plain override (nested params untouched)
         assert (
             mock_config.nested_params.sub_param_x == "original_x"

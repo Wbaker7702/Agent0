@@ -2,15 +2,14 @@
 Metrics related to the Agent PPO trainer. Change it to add more metrics.
 """
 
+from verl import DataProto
+import numpy as np
+from typing import Any, Dict, List
+import torch
+from verl.trainer.ppo.metric_utils import _compute_response_info
 import verl.trainer.ppo.metric_utils
 
 verl_computer_data_metrics = verl.trainer.ppo.metric_utils.compute_data_metrics
-from verl.trainer.ppo.metric_utils import _compute_response_info
-
-import torch
-from typing import Any, Dict, List
-import numpy as np
-from verl import DataProto
 
 
 def agent_compute_data_metrics(
@@ -36,14 +35,17 @@ def agent_compute_data_metrics(
         )
     if "action_lengths" in batch.non_tensor_batch:
         metrics["env/action_length/mean"] = float(
-            np.array(batch.non_tensor_batch["action_lengths"], dtype=np.int16).mean()
-        )
+            np.array(
+                batch.non_tensor_batch["action_lengths"],
+                dtype=np.int16).mean())
         metrics["env/action_length/max"] = float(
-            np.array(batch.non_tensor_batch["action_lengths"], dtype=np.int16).max()
-        )
+            np.array(
+                batch.non_tensor_batch["action_lengths"],
+                dtype=np.int16).max())
         metrics["env/action_length/min"] = float(
-            np.array(batch.non_tensor_batch["action_lengths"], dtype=np.int16).min()
-        )
+            np.array(
+                batch.non_tensor_batch["action_lengths"],
+                dtype=np.int16).min())
         metrics["env/total_action_length_per_traj/mean"] = float(
             np.array(batch.non_tensor_batch["action_lengths"], dtype=np.int16)
             .sum(-1)
@@ -61,14 +63,17 @@ def agent_compute_data_metrics(
         )
     if "obs_lengths" in batch.non_tensor_batch:
         metrics["env/obs_length/mean"] = float(
-            np.array(batch.non_tensor_batch["obs_lengths"], dtype=np.int16).mean()
-        )
+            np.array(
+                batch.non_tensor_batch["obs_lengths"],
+                dtype=np.int16).mean())
         metrics["env/obs_length/max"] = float(
-            np.array(batch.non_tensor_batch["obs_lengths"], dtype=np.int16).max()
-        )
+            np.array(
+                batch.non_tensor_batch["obs_lengths"],
+                dtype=np.int16).max())
         metrics["env/obs_length/min"] = float(
-            np.array(batch.non_tensor_batch["obs_lengths"], dtype=np.int16).min()
-        )
+            np.array(
+                batch.non_tensor_batch["obs_lengths"],
+                dtype=np.int16).min())
         metrics["env/total_obs_length_per_traj/mean"] = float(
             np.array(batch.non_tensor_batch["obs_lengths"], dtype=np.int16)
             .sum(-1)
@@ -95,11 +100,12 @@ def agent_compute_data_metrics(
             ).mean()
         )
         metrics["env/ratio_of_valid_action"] = float(
-            (
-                np.array(batch.non_tensor_batch["valid_action_stats"], dtype=np.int16)
-                / np.array(batch.non_tensor_batch["turns_stats"], dtype=np.int16)
-            ).mean()
-        )
+            (np.array(
+                batch.non_tensor_batch["valid_action_stats"],
+                dtype=np.int16) /
+                np.array(
+                batch.non_tensor_batch["turns_stats"],
+                dtype=np.int16)).mean())
 
     metrics.update(
         {
@@ -126,13 +132,13 @@ def compute_timing_metrics(
     num_response_tokens = torch.sum(response_info["response_length"]).item()
     num_overall_tokens = num_prompt_tokens + num_response_tokens
 
-    num_tokens_of_section = {
-        "gen": num_response_tokens,
-        **{
-            name: num_overall_tokens
-            for name in ["ref", "values", "adv", "update_critic", "update_actor"]
-        },
-    }
+    num_tokens_of_section = {"gen": num_response_tokens,
+                             **{name: num_overall_tokens for name in ["ref",
+                                                                      "values",
+                                                                      "adv",
+                                                                      "update_critic",
+                                                                      "update_actor"]},
+                             }
 
     return {
         **{f"timing_s/{name}": value for name, value in timing_raw.items()},

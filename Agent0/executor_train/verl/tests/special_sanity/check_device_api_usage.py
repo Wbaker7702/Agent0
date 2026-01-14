@@ -33,8 +33,10 @@ CUDA_KEYWORD_CHECK_WHITELIST = [
     "verl/utils/rendezvous/ray_backend.py",  # appear in cupy importance
     "verl/single_controller/ray/base.py",  # appear in default device_name
     "verl/trainer/ppo/ray_trainer.py",  # appear in default device_name
-    "verl/utils/reward_score/sandbox_fusion/utils.py",  # appear in sandbox language type
-    "verl/workers/reward_model/megatron/reward_model.py",  # appear in default device_name
+    "verl/utils/reward_score/sandbox_fusion/utils.py",
+    # appear in sandbox language type
+    "verl/workers/reward_model/megatron/reward_model.py",
+    # appear in default device_name
 ]
 
 # directory or file path must contain keyword "nccl"
@@ -66,8 +68,7 @@ if __name__ == "__main__":
             sw = sw.replace("/", os.sep)
             if sw in path_in_str:
                 print(
-                    f"[SKIP] File {path_in_str} is in device api usage check whitelist, checking is skipped."
-                )
+                    f"[SKIP] File {path_in_str} is in device api usage check whitelist, checking is skipped.")
                 path_in_whitelist = True
                 break
 
@@ -85,9 +86,8 @@ if __name__ == "__main__":
                     break
 
             print(
-                f"[CHECK] File {path_in_str} is detected for device api usage check, check result: "
-                f"{'success' if not find_invalid_device_management else f'failed, because detect {sk}'}."
-            )
+                f"[CHECK] File {path_in_str} is detected for device api usage check, check result: " f"{
+                    'success' if not find_invalid_device_management else f'failed, because detect {sk}'}.")
 
             assert not find_invalid_device_management, (
                 f'file {path_in_str} contains .cuda/"cuda"/"nccl" usage, please use api in '

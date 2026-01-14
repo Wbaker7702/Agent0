@@ -27,7 +27,8 @@ def get_tool_cls(tool_type):
 
         tool_class = registered_tools.get(tool_type)
         if tool_class is None:
-            raise ValueError(f"Tool class for {tool_type} was not registered properly")
+            raise ValueError(
+                f"Tool class for {tool_type} was not registered properly")
         return tool_class
     else:
         raise ValueError(
@@ -71,7 +72,7 @@ class BaseTool:
         Load the environment for the given trajectory_id
         """
         env = self.env_cache.get(trajectory_id)
-        if env == None:
+        if env is None:
             env = {
                 "trajectory_id": trajectory_id,
                 "metadata": {
@@ -88,8 +89,14 @@ class BaseTool:
         self.env_cache[trajectory_id] = env
 
     def update_env(
-        self, trajectory_id, env, action, is_valid, extra_field, observation, **kwargs
-    ):
+            self,
+            trajectory_id,
+            env,
+            action,
+            is_valid,
+            extra_field,
+            observation,
+            **kwargs):
         """
         Update the environment for the given trajectory_id
         """
@@ -152,16 +159,21 @@ class BaseTool:
         parsed_action, is_valid = self.parse_action(action)
         env = self.load_env(trajectory_id)
 
-        # any other processing that gets the observation, whether the trajectory is done, and whether the action is valid
+        # any other processing that gets the observation, whether the
+        # trajectory is done, and whether the action is valid
         observation = (
-            f"Base observation for {trajectory_id} in turn {env['metadata']['turns']}"
-        )
+            f"Base observation for {trajectory_id} in turn {
+                env['metadata']['turns']}")
         done = True
         valid = True
 
         self.update_env(
-            trajectory_id, env, parsed_action, is_valid, extra_field, observation
-        )
+            trajectory_id,
+            env,
+            parsed_action,
+            is_valid,
+            extra_field,
+            observation)
         self.save_env(trajectory_id, env)
 
         return observation, done, valid
@@ -204,7 +216,11 @@ class BaseTool:
                 trajectory_id = trajectory_ids[i]
                 action = actions[i]
                 extra_field = extra_fields[i]
-                results.append(self.conduct_action(trajectory_id, action, extra_field))
+                results.append(
+                    self.conduct_action(
+                        trajectory_id,
+                        action,
+                        extra_field))
         else:
             with ThreadPoolExecutor(
                 max_workers=min(self.num_workers, len(trajectory_ids))
@@ -212,13 +228,15 @@ class BaseTool:
                 results = list(
                     tqdm(
                         executor.map(
-                            self.conduct_action, trajectory_ids, actions, extra_fields
-                        ),
+                            self.conduct_action,
+                            trajectory_ids,
+                            actions,
+                            extra_fields),
                         total=len(trajectory_ids),
-                        desc=f"Getting observations using tool {self.tool_type}",
+                        desc=f"Getting observations using tool {
+                            self.tool_type}",
                         disable=not use_tqdm,
-                    )
-                )
+                    ))
 
         observations, dones, valids = zip(*results)
         self.maybe_cleanup_env(trajectory_ids, actions, extra_fields)

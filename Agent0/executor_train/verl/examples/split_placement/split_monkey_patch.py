@@ -89,8 +89,7 @@ def fit(self):
                 # generate a batch
                 with marked_timer("gen", timing_raw):
                     gen_batch_output = self.actor_rollout_wg.generate_sequences(
-                        gen_batch
-                    )
+                        gen_batch)
                     timing_raw.update(gen_batch_output.meta_info["timing"])
                     gen_batch_output.meta_info.pop("timing", None)
 
@@ -99,14 +98,16 @@ def fit(self):
                         gen_baseline_batch = deepcopy(gen_batch)
                         gen_baseline_batch.meta_info["do_sample"] = False
                         gen_baseline_output = self.actor_rollout_wg.generate_sequences(
-                            gen_baseline_batch
-                        )
+                            gen_baseline_batch)
 
                         batch = batch.union(gen_baseline_output)
                         reward_baseline_tensor = self.reward_fn(batch)
-                        reward_baseline_tensor = reward_baseline_tensor.sum(dim=-1)
+                        reward_baseline_tensor = reward_baseline_tensor.sum(
+                            dim=-1)
 
-                        batch.pop(batch_keys=list(gen_baseline_output.batch.keys()))
+                        batch.pop(
+                            batch_keys=list(
+                                gen_baseline_output.batch.keys()))
 
                         batch.batch["reward_baselines"] = reward_baseline_tensor
 
@@ -136,13 +137,15 @@ def fit(self):
 
                 # recompute old_log_probs
                 with marked_timer("old_log_prob", timing_raw):
-                    old_log_prob = self.actor_rollout_wg.compute_log_prob(batch)
+                    old_log_prob = self.actor_rollout_wg.compute_log_prob(
+                        batch)
                     batch = batch.union(old_log_prob)
 
                 if self.use_reference_policy:
                     # compute reference log_prob
                     with marked_timer("ref", timing_raw):
-                        ref_log_prob = self.ref_policy_wg.compute_ref_log_prob(batch)
+                        ref_log_prob = self.ref_policy_wg.compute_ref_log_prob(
+                            batch)
                         batch = batch.union(ref_log_prob)
 
                 # compute values
@@ -194,7 +197,8 @@ def fit(self):
                 if self.config.trainer.critic_warmup <= self.global_steps:
                     # update actor
                     with marked_timer("update_actor_call", timing_raw):
-                        actor_output = self.actor_rollout_wg.update_actor(batch)
+                        actor_output = self.actor_rollout_wg.update_actor(
+                            batch)
                 else:
                     actor_output = None
 
@@ -203,7 +207,8 @@ def fit(self):
                     with marked_timer("update_critic_call", timing_raw):
                         critic_output = self.critic_wg.update_critic(batch)
 
-                    # NOTE: make sure you set blocking=False in update_actor and update_crtic in the worker class
+                    # NOTE: make sure you set blocking=False in update_actor
+                    # and update_crtic in the worker class
                     with marked_timer("update_actor_critic", timing_raw):
                         critic_output = critic_output.get()
                         critic_output_metrics = reduce_metrics(
@@ -244,7 +249,10 @@ def fit(self):
             metrics.update(
                 compute_data_metrics(batch=batch, use_critic=self.use_critic)
             )
-            metrics.update(compute_timing_metrics(batch=batch, timing_raw=timing_raw))
+            metrics.update(
+                compute_timing_metrics(
+                    batch=batch,
+                    timing_raw=timing_raw))
 
             # TODO: make a canonical logger that supports various backend
             logger.log(data=metrics, step=self.global_steps)

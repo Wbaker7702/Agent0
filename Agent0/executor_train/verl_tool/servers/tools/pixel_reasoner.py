@@ -136,11 +136,12 @@ class PixelReasonerTool(BaseTool):
             Tuple containing the extracted code and a validity flag
         """
         try:
-            call = json.loads(action.split("<tool_call>")[1].split("</tool_call>")[0])
+            call = json.loads(action.split("<tool_call>")[
+                              1].split("</tool_call>")[0])
             name = call.get("name", "")
             if name not in self.valid_mcp_func_names:
                 return "", False
-        except:
+        except BaseException:
             return "", False
 
         return call, True
@@ -159,14 +160,21 @@ class PixelReasonerTool(BaseTool):
                 "previous_obs": [],
                 "images": None,
                 "temporary_images": [],
-                "temporary_image_folder": Path(f"tmp/crop_images/{trajectory_id}"),
+                "temporary_image_folder": Path(
+                    f"tmp/crop_images/{trajectory_id}"),
             }
             env["temporary_image_folder"].mkdir(parents=True, exist_ok=True)
         return env
 
     def update_env(
-        self, trajectory_id, env, action, is_valid, extra_field, observation, **kwargs
-    ):
+            self,
+            trajectory_id,
+            env,
+            action,
+            is_valid,
+            extra_field,
+            observation,
+            **kwargs):
         """
         Update the environment for the given trajectory_id
         """
@@ -200,7 +208,8 @@ class PixelReasonerTool(BaseTool):
         """
         env = self.env_cache.pop(trajectory_id, None)
 
-    def save_image_to_env(self, trajectory_id, image: Union[Image.Image, str]) -> str:
+    def save_image_to_env(self, trajectory_id,
+                          image: Union[Image.Image, str]) -> str:
         """
         Save the image to the environment for the given trajectory_id
         """
@@ -219,7 +228,8 @@ class PixelReasonerTool(BaseTool):
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(self.image_executor, _crop_and_process)
 
-    async def _process_multiple_images(self, img_sources, bbox_2d=(0, 0, 1, 1)):
+    async def _process_multiple_images(
+            self, img_sources, bbox_2d=(0, 0, 1, 1)):
         """Process multiple images concurrently."""
 
         def _crop_and_process_single(img_source):
@@ -247,10 +257,11 @@ class PixelReasonerTool(BaseTool):
             missing_parameters.append("target_image")
         try:
             parameters["target_image"] = int(parameters["target_image"])
-        except:
+        except BaseException:
             pass
         if missing_parameters:
-            observation = f"Missing parameters: {', '.join(missing_parameters)}"
+            observation = f"Missing parameters: {
+                ', '.join(missing_parameters)}"
         elif (
             not isinstance(parameters["bbox_2d"], list)
             or len(parameters["bbox_2d"]) != 4
@@ -261,7 +272,9 @@ class PixelReasonerTool(BaseTool):
             or parameters["target_image"] <= 0
             or parameters["target_image"] > len(env["images"])
         ):
-            observation = f"Invalid target_image index. It should be an integer between 1 and the number of previous images ({len(env['images'])})."
+            observation = f"Invalid target_image index. It should be an integer between 1 and the number of previous images ({
+                len(
+                    env['images'])})."
         else:
             try:
                 previous_images = env["images"]
@@ -297,7 +310,8 @@ class PixelReasonerTool(BaseTool):
         if "target_frames" not in parameters:
             missing_parameters.append("target_frames")
         if missing_parameters:
-            observation = f"Missing parameters: {', '.join(missing_parameters)}"
+            observation = f"Missing parameters: {
+                ', '.join(missing_parameters)}"
         elif not isinstance(parameters["target_frames"], list):
             observation = (
                 "Invalid target_frames format. It should be a list of integers."
@@ -306,12 +320,13 @@ class PixelReasonerTool(BaseTool):
             isinstance(frame, int) and 1 <= frame <= len(env["images"])
             for frame in parameters["target_frames"]
         ):
-            observation = f"Invalid target_frames indices. Each index should be an integer between 1 and the number of previous images ({len(env['images'])})."
+            observation = f"Invalid target_frames indices. Each index should be an integer between 1 and the number of previous images ({
+                len(
+                    env['images'])})."
         else:
             try:
-                target_frame_sources = [
-                    env["images"][frame - 1] for frame in parameters["target_frames"]
-                ]
+                target_frame_sources = [env["images"][frame - 1]
+                                        for frame in parameters["target_frames"]]
 
                 # Process all frames concurrently
                 target_frames = await self._process_multiple_images(
@@ -321,9 +336,11 @@ class PixelReasonerTool(BaseTool):
                 target_frame_width, target_frame_height = target_frames[0].size
                 num_frames = len(target_frames)
                 observation = {
-                    "obs": f"Here are the selected frames. (Frame Size: {target_frame_width}x{target_frame_height}, Numbered 1 to {num_frames}):"
-                    + "<image>" * len(target_frames),
-                    "image": [encode_image_url(img) for img in target_frames],
+                    "obs": f"Here are the selected frames. (Frame Size: {target_frame_width}x{target_frame_height}, Numbered 1 to {num_frames}):" +
+                    "<image>" *
+                    len(target_frames),
+                    "image": [
+                        encode_image_url(img) for img in target_frames],
                 }
                 valid = True
             except Exception as e:
@@ -331,8 +348,8 @@ class PixelReasonerTool(BaseTool):
                 with open("test.json", "w") as f:
                     json.dump(parameters, f, indent=4)
                 print(
-                    f"Error processing select frames action: {str(e)}; parameters: {parameters}"
-                )
+                    f"Error processing select frames action: {
+                        str(e)}; parameters: {parameters}")
         return observation, valid
 
     async def aget_observations(
@@ -353,7 +370,8 @@ class PixelReasonerTool(BaseTool):
         for i, (trajectory_id, action, extra_field) in enumerate(
             zip(trajectory_ids, actions, extra_fields)
         ):
-            task = self._conduct_action_async(trajectory_id, action, extra_field)
+            task = self._conduct_action_async(
+                trajectory_id, action, extra_field)
             tasks.append(task)
 
         # Wait for all tasks to complete
@@ -394,7 +412,9 @@ class PixelReasonerTool(BaseTool):
                 observation = "Missing 'arguments' in the tool call."
                 valid = False
             elif not isinstance(parsed_action["arguments"], dict):
-                observation = f"'arguments' should be a dictionary of parameters key-value pairs, got {type(parsed_action['arguments'])}."
+                observation = f"'arguments' should be a dictionary of parameters key-value pairs, got {
+                    type(
+                        parsed_action['arguments'])}."
                 valid = False
             elif parsed_action["name"] in [
                 "zoom_in",
@@ -407,30 +427,39 @@ class PixelReasonerTool(BaseTool):
                     )
                 except Exception as e:
                     observation = (
-                        f"Error processing {parsed_action['name']} action: {str(e)}"
-                    )
+                        f"Error processing {
+                            parsed_action['name']} action: {
+                            str(e)}")
                     valid = False
                     print(
-                        f"Error processing {parsed_action['name']} action: {str(e)}; parameters: {parsed_action['arguments']}"
-                    )
+                        f"Error processing {
+                            parsed_action['name']} action: {
+                            str(e)}; parameters: {
+                            parsed_action['arguments']}")
             elif parsed_action["name"] == "select_frames":
                 try:
                     observation, valid = await self.conduct_select_frames_action_async(
                         parsed_action["arguments"], env
                     )
                 except Exception as e:
-                    observation = f"Error processing select frames action: {str(e)}"
+                    observation = f"Error processing select frames action: {
+                        str(e)}"
                     valid = False
                     print(
-                        f"Error processing select frames action: {str(e)}; parameters: {parsed_action['arguments']}"
-                    )
+                        f"Error processing select frames action: {
+                            str(e)}; parameters: {
+                            parsed_action['arguments']}")
             else:
                 observation = "Unknown action name."
                 valid = False
 
         self.update_env(
-            trajectory_id, env, parsed_action, is_valid, extra_field, observation
-        )
+            trajectory_id,
+            env,
+            parsed_action,
+            is_valid,
+            extra_field,
+            observation)
         self.save_env(trajectory_id, env)
 
         return observation, done, valid

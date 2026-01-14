@@ -42,7 +42,8 @@ def main():
     from verl.utils.fs import copy_to_local
 
     local_model_path = copy_to_local(src=hdfs_path, cache_dir=local_cache_path)
-    tokenizer = AutoTokenizer.from_pretrained(local_model_path, trust_remote_code=True)
+    tokenizer = AutoTokenizer.from_pretrained(
+        local_model_path, trust_remote_code=True)
     actor_model_config = AutoConfig.from_pretrained(
         local_model_path, trust_remote_code=True
     )
@@ -182,8 +183,9 @@ def main():
         idx_list.append(_pre_process_inputs(pad_token_id, input_ids[i]))
     print("start generation")
     outputs = llm.generate(
-        prompt_token_ids=idx_list, sampling_params=sampling_params, use_tqdm=False
-    )
+        prompt_token_ids=idx_list,
+        sampling_params=sampling_params,
+        use_tqdm=False)
     vllm_output = outputs[0].cuda()
     if torch.distributed.get_rank() == 0:
         print(f"hf response: {tokenizer.batch_decode(response)}")

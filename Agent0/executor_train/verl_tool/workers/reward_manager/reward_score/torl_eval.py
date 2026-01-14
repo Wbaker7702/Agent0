@@ -1,3 +1,16 @@
+from datetime import datetime
+from functools import partial
+from multiprocessing import Pool
+import pandas as pd
+from tqdm import tqdm
+from sympy.parsing.latex import parse_latex
+from sympy.parsing.sympy_parser import parse_expr
+from sympy import simplify, N
+from collections import defaultdict
+from typing import Union
+from math import isclose
+import multiprocessing
+import regex
 import os
 import json
 import re
@@ -14,10 +27,8 @@ def extract_pattern(pred: str, pattern: str):
     # 从pred中extract出一个answerlist，代表所有可能的answer
     if match:
         extracted_answer = match[-1]
-        if (
-            pattern
-            == r"\\boxed\{((?:[^{}]|\\{|\\}|(?:\{(?:[^{}]|\\{|\\}|(?:\{(?:[^{}]|\\{|\\}|(?:\{[^{}]*\}))*\}))*\}))*\})"
-        ):
+        if (pattern ==
+                r"\\boxed\{((?:[^{}]|\\{|\\}|(?:\{(?:[^{}]|\\{|\\}|(?:\{(?:[^{}]|\\{|\\}|(?:\{[^{}]*\}))*\}))*\}))*\})"):
             extracted_answer = extracted_answer[:-1]
         return extracted_answer.strip("*").strip().strip("*")
     else:
@@ -70,12 +81,12 @@ def extract(pred: str):
     for split in SPLIT:
         answer_list.append(extract_split(copy.deepcopy(pred), split=split))
     for pattern in PATTERNS:
-        answer_list.append(extract_pattern(copy.deepcopy(pred), pattern=pattern))
+        answer_list.append(
+            extract_pattern(
+                copy.deepcopy(pred),
+                pattern=pattern))
     answer_list = expansion(answer_list)
     return answer_list
-
-
-import re
 
 
 SUBSTITUTIONS = [
@@ -204,16 +215,6 @@ This logic is largely copied from the Hendrycks' MATH release (math_equivalence)
 - https://github.com/deepseek-ai/DeepSeek-Math/blob/main/evaluation/eval/eval_utils.py
 """
 
-import re
-import regex
-import multiprocessing
-from math import isclose
-from typing import Union
-from collections import defaultdict
-
-from sympy import simplify, N
-from sympy.parsing.sympy_parser import parse_expr
-from sympy.parsing.latex import parse_latex
 
 # from latex2sympy2 import latex2sympy
 
@@ -239,14 +240,14 @@ def parse_digits(num):
     num = regex.sub(",", "", str(num))
     try:
         return float(num)
-    except:
+    except BaseException:
         if num.endswith("%"):
             num = num[:-1]
             if num.endswith("\\"):
                 num = num[:-1]
             try:
                 return float(num) / 100
-            except:
+            except BaseException:
                 pass
     return None
 
@@ -312,7 +313,7 @@ def math_equal(
                 except Exception:
                     continue
             return False
-    except:
+    except BaseException:
         pass
 
     if not prediction and prediction not in [0, False]:
@@ -322,11 +323,11 @@ def math_equal(
     reference = str(reference).strip()
     prediction = str(prediction).strip()
 
-    ## pmatrix (amps)
-    if "pmatrix" in prediction and not "pmatrix" in reference:
+    # pmatrix (amps)
+    if "pmatrix" in prediction and "pmatrix" not in reference:
         reference = str_to_pmatrix(reference)
 
-    ## deal with [], (), {}
+    # deal with [], (), {}
     pred_str, ref_str = prediction, reference
     if (
         prediction.startswith("[")
@@ -345,7 +346,7 @@ def math_equal(
     if pred_str.lower() == ref_str.lower():
         return True
 
-    ## [a, b] vs. [c, d], return a==c and b==d
+    # [a, b] vs. [c, d], return a==c and b==d
     if (
         regex.match(r"(\(|\[).+(\)|\])", prediction) is not None
         and regex.match(r"(\(|\[).+(\)|\])", reference) is not None
@@ -353,14 +354,10 @@ def math_equal(
         pred_parts = prediction[1:-1].split(",")
         ref_parts = reference[1:-1].split(",")
         if len(pred_parts) == len(ref_parts):
-            if all(
-                [
-                    math_equal(
-                        pred_parts[i], ref_parts[i], include_percentage, is_close
-                    )
-                    for i in range(len(pred_parts))
-                ]
-            ):
+            if all([math_equal(pred_parts[i],
+                               ref_parts[i],
+                               include_percentage,
+                               is_close) for i in range(len(pred_parts))]):
                 return True
     if (
         (
@@ -382,14 +379,14 @@ def math_equal(
         pred_lines = [
             line.strip()
             for line in prediction[
-                len("\\begin{pmatrix}") : -len("\\end{pmatrix}")
+                len("\\begin{pmatrix}"): -len("\\end{pmatrix}")
             ].split("\\\\")
             if line.strip()
         ]
         ref_lines = [
             line.strip()
             for line in reference[
-                len("\\begin{pmatrix}") : -len("\\end{pmatrix}")
+                len("\\begin{pmatrix}"): -len("\\end{pmatrix}")
             ].split("\\\\")
             if line.strip()
         ]
@@ -459,13 +456,13 @@ def math_equal(
         prediction = float(N(parse_latex(prediction)))
         if abs(prediction - float(reference)) <= 1e-8:
             True
-    except:
+    except BaseException:
         pass
     try:
         reference = float(N(parse_latex(reference)))
         if abs(prediction - reference) <= 1e-8:
             return True
-    except:
+    except BaseException:
         pass
     return False
 
@@ -484,10 +481,10 @@ def symbolic_equal(a, b):
         for f in [parse_latex, parse_expr]:
             try:
                 return f(s.replace("\\\\", "\\"))
-            except:
+            except BaseException:
                 try:
                     return f(s)
-                except:
+                except BaseException:
                     pass
         return s
 
@@ -497,27 +494,27 @@ def symbolic_equal(a, b):
     try:
         if str(a) == str(b) or a == b:
             return True
-    except:
+    except BaseException:
         pass
 
     # simplify equal
     try:
         if a.equals(b) or simplify(a - b) == 0:
             return True
-    except:
+    except BaseException:
         pass
 
     # equation equal
     try:
         if (abs(a.lhs - a.rhs)).equals(abs(b.lhs - b.rhs)):
             return True
-    except:
+    except BaseException:
         pass
 
     try:
         if numeric_equal(float(N(a)), float(N(b))):
             return True
-    except:
+    except BaseException:
         pass
 
     # matrix
@@ -528,7 +525,7 @@ def symbolic_equal(a, b):
             _b = b.applyfunc(lambda x: round(x, 3))
             if _a.equals(_b):
                 return True
-    except:
+    except BaseException:
         pass
 
     return False
@@ -542,7 +539,8 @@ def symbolic_equal_process(a, b, output_queue):
 def call_with_timeout(func, *args, timeout=1, **kwargs):
     output_queue = multiprocessing.Queue()
     process_args = args + (output_queue,)
-    process = multiprocessing.Process(target=func, args=process_args, kwargs=kwargs)
+    process = multiprocessing.Process(
+        target=func, args=process_args, kwargs=kwargs)
     process.start()
     process.join(timeout)
 
@@ -560,15 +558,6 @@ def process_answer_list(answer_list):
         answer_list.remove("")
     return answer_list
 
-
-import os
-import json
-import copy
-from tqdm import tqdm
-import pandas as pd
-from multiprocessing import Pool
-from functools import partial
-from datetime import datetime
 
 # api
 

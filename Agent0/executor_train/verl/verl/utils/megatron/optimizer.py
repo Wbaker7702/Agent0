@@ -49,9 +49,12 @@ def get_megatron_optimizer_param_scheduler(
     wsd_decay_steps = None
     if config.get("lr_wsd_decay_steps", None) is not None:
         wsd_decay_steps = config.lr_wsd_decay_steps
-    if config.get("lr_warmup_steps_ratio", None) is not None and (
-        config.get("lr_warmup_steps", None) is None or config.lr_warmup_steps <= 0
-    ):
+    if config.get(
+        "lr_warmup_steps_ratio",
+        None) is not None and (
+        config.get(
+            "lr_warmup_steps",
+            None) is None or config.lr_warmup_steps <= 0):
         config.lr_warmup_steps = int(
             config.lr_warmup_steps_ratio * config.lr_decay_steps
         )
@@ -69,7 +72,8 @@ def get_megatron_optimizer_param_scheduler(
         wd_incr_steps=config.total_training_steps,
         wd_incr_style=config.weight_decay_incr_style,
         use_checkpoint_opt_param_scheduler=config.use_checkpoint_opt_param_scheduler,
-        override_opt_param_scheduler=(not config.use_checkpoint_opt_param_scheduler),
+        override_opt_param_scheduler=(
+            not config.use_checkpoint_opt_param_scheduler),
         wsd_decay_steps=wsd_decay_steps,
         lr_wsd_decay_style=config.lr_wsd_decay_style,
     )

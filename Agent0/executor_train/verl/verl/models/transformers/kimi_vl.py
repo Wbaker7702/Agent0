@@ -31,7 +31,7 @@ from verl.utils.ulysses import (
 def rotate_half(x):
     """Rotates half the hidden dims of the input."""
     x1 = x[..., : x.shape[-1] // 2]
-    x2 = x[..., x.shape[-1] // 2 :]
+    x2 = x[..., x.shape[-1] // 2:]
     return torch.cat((-x2, x1), dim=-1)
 
 
@@ -83,7 +83,8 @@ def repeat_kv(hidden_states: torch.Tensor, n_rep: int) -> torch.Tensor:
     hidden_states = hidden_states[:, :, None, :, :].expand(
         batch, num_key_value_heads, n_rep, slen, head_dim
     )
-    return hidden_states.reshape(batch, num_key_value_heads * n_rep, slen, head_dim)
+    return hidden_states.reshape(
+        batch, num_key_value_heads * n_rep, slen, head_dim)
 
 
 def _ulysses_flash_attn_forward(
@@ -113,10 +114,15 @@ def _ulysses_flash_attn_forward(
     )
     k_pe = k_pe.view(bsz, q_len, 1, self.qk_rope_head_dim).transpose(1, 2)
     kv = (
-        self.kv_b_proj(self.kv_a_layernorm(compressed_kv))
-        .view(bsz, q_len, self.num_heads, self.qk_nope_head_dim + self.v_head_dim)
-        .transpose(1, 2)
-    )
+        self.kv_b_proj(
+            self.kv_a_layernorm(compressed_kv)) .view(
+            bsz,
+            q_len,
+            self.num_heads,
+            self.qk_nope_head_dim +
+            self.v_head_dim) .transpose(
+                1,
+            2))
 
     k_nope, value_states = torch.split(
         kv, [self.qk_nope_head_dim, self.v_head_dim], dim=-1
@@ -136,7 +142,8 @@ def _ulysses_flash_attn_forward(
         q = gather_seq_scatter_heads(q, seq_dim=2, head_dim=1)
         k_pe = gather_seq_scatter_heads(k_pe, seq_dim=2, head_dim=1)
         k_nope = gather_seq_scatter_heads(k_nope, seq_dim=2, head_dim=1)
-        value_states = gather_seq_scatter_heads(value_states, seq_dim=2, head_dim=1)
+        value_states = gather_seq_scatter_heads(
+            value_states, seq_dim=2, head_dim=1)
         # (batch_size, num_head / sp_size, seq_length, head_size)
         full_q_len = q.size(2)  # full_q_len = seq_length
 
@@ -153,16 +160,18 @@ def _ulysses_flash_attn_forward(
         bsz, self.num_heads // ulysses_sp_size, full_q_len, self.q_head_dim
     )
     query_states[:, :, :, : self.qk_nope_head_dim] = q_nope
-    query_states[:, :, :, self.qk_nope_head_dim :] = q_pe
+    query_states[:, :, :, self.qk_nope_head_dim:] = q_pe
 
     key_states = k_pe.new_empty(
         bsz, self.num_heads // ulysses_sp_size, full_q_len, self.q_head_dim
     )
     key_states[:, :, :, : self.qk_nope_head_dim] = k_nope
-    key_states[:, :, :, self.qk_nope_head_dim :] = k_pe
+    key_states[:, :, :, self.qk_nope_head_dim:] = k_pe
 
     if self.q_head_dim != self.v_head_dim:
-        value_states = F.pad(value_states, [0, self.q_head_dim - self.v_head_dim])
+        value_states = F.pad(
+            value_states, [
+                0, self.q_head_dim - self.v_head_dim])
 
     # TODO: These transpose are quite inefficient but Flash Attention requires the layout
     # [batch_size, sequence_length, num_heads, head_dim]. We would need to refactor the KV cache
@@ -188,7 +197,8 @@ def _ulysses_flash_attn_forward(
     )
 
     if ulysses_sp_size > 1:
-        attn_output = gather_heads_scatter_seq(attn_output, head_dim=2, seq_dim=1)
+        attn_output = gather_heads_scatter_seq(
+            attn_output, head_dim=2, seq_dim=1)
 
     if self.q_head_dim != self.v_head_dim:
         attn_output = attn_output[:, :, :, : self.v_head_dim]

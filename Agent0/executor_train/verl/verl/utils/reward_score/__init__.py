@@ -51,7 +51,8 @@ def default_compute_score(
         # [Optional] Math-Verify Integration
         # For enhanced accuracy, consider utilizing Math-Verify (https://github.com/huggingface/Math-Verify).
         # Note: Math-Verify needs to be manually installed via pip: `pip install math-verify`.
-        # To use it, override the `compute_score` function with the following implementation:
+        # To use it, override the `compute_score` function with the following
+        # implementation:
 
         # from . import math_verify
         # res = math_verify.compute_score(solution_str, ground_truth)
@@ -75,7 +76,8 @@ def default_compute_score(
         if sandbox_fusion_url:
             from . import sandbox_fusion
 
-            # Pass the URL directly, ground_truth likely contains test cases here
+            # Pass the URL directly, ground_truth likely contains test cases
+            # here
             res = sandbox_fusion.compute_score(
                 sandbox_fusion_url,
                 concurrent_semaphore,
@@ -85,11 +87,13 @@ def default_compute_score(
                 continuous=True,
             )
         else:
-            # If no sandbox URL is provided, fall back to prime_code or raise error
+            # If no sandbox URL is provided, fall back to prime_code or raise
+            # error
             from . import prime_code
 
             # Assuming prime_code doesn't need the URL
-            res = prime_code.compute_score(solution_str, ground_truth, continuous=True)
+            res = prime_code.compute_score(
+                solution_str, ground_truth, continuous=True)
     elif data_source in ["hiyouga/geometry3k"]:
         from . import geo3k
 

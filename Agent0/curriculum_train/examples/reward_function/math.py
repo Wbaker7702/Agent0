@@ -28,7 +28,7 @@ def accuracy_reward(predict: str, ground_truth: str) -> float:
     answer = extract_boxed_content(predict)
     try:
         return 1.0 if grade_answer(answer, ground_truth) else 0.0
-    except:
+    except BaseException:
         return 0.0
 
 

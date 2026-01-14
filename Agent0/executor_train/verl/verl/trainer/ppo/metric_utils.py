@@ -77,7 +77,8 @@ def _compute_response_info(batch: DataProto) -> dict[str, Any]:
     )
 
 
-def compute_data_metrics(batch: DataProto, use_critic: bool = True) -> dict[str, Any]:
+def compute_data_metrics(
+        batch: DataProto, use_critic: bool = True) -> dict[str, Any]:
     """
     Computes various metrics from a batch of data for PPO training.
 
@@ -109,7 +110,8 @@ def compute_data_metrics(batch: DataProto, use_critic: bool = True) -> dict[str,
 
     max_response_length = batch.batch["responses"].shape[-1]
 
-    prompt_mask = batch.batch["attention_mask"][:, :-max_response_length].bool()
+    prompt_mask = batch.batch["attention_mask"][:,
+                                                :-max_response_length].bool()
     response_mask = batch.batch["response_mask"].bool()
 
     max_prompt_length = prompt_mask.size(-1)
@@ -218,13 +220,13 @@ def compute_timing_metrics(
     num_response_tokens = torch.sum(response_info["response_length"]).item()
     num_overall_tokens = num_prompt_tokens + num_response_tokens
 
-    num_tokens_of_section = {
-        "gen": num_response_tokens,
-        **{
-            name: num_overall_tokens
-            for name in ["ref", "values", "adv", "update_critic", "update_actor"]
-        },
-    }
+    num_tokens_of_section = {"gen": num_response_tokens,
+                             **{name: num_overall_tokens for name in ["ref",
+                                                                      "values",
+                                                                      "adv",
+                                                                      "update_critic",
+                                                                      "update_actor"]},
+                             }
 
     return {
         **{f"timing_s/{name}": value for name, value in timing_raw.items()},
@@ -309,14 +311,16 @@ def bootstrap_metric(
 
     bootstrap_metric_lsts = [[] for _ in range(len(reduce_fns))]
     for _ in range(n_bootstrap):
-        bootstrap_idxs = np.random.choice(len(data), size=subset_size, replace=True)
+        bootstrap_idxs = np.random.choice(
+            len(data), size=subset_size, replace=True)
         bootstrap_data = [data[i] for i in bootstrap_idxs]
         for i, reduce_fn in enumerate(reduce_fns):
             bootstrap_metric_lsts[i].append(reduce_fn(bootstrap_data))
     return [(np.mean(lst), np.std(lst)) for lst in bootstrap_metric_lsts]
 
 
-def calc_maj_val(data: list[dict[str, Any]], vote_key: str, val_key: str) -> float:
+def calc_maj_val(data: list[dict[str, Any]],
+                 vote_key: str, val_key: str) -> float:
     """
     Calculate a value based on majority voting.
 
@@ -491,7 +495,6 @@ def process_validation_metrics(
         for var_name, metric2prompt_vals in var2metric2prompt_vals.items():
             for metric_name, prompt_vals in metric2prompt_vals.items():
                 data_src2var2metric2val[data_source][var_name][metric_name] = np.mean(
-                    prompt_vals
-                )
+                    prompt_vals)
 
     return data_src2var2metric2val

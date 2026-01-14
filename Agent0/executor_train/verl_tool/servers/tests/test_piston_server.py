@@ -6,8 +6,8 @@ import logging
 import time
 
 logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 
@@ -37,7 +37,8 @@ def test_piston_server(
     payload = {
         "trajectory_ids": [trajectory_id],
         "actions": [action],
-        "extra_field": {"tool_type": "piston"},  # Explicitly request the piston tool
+        # Explicitly request the piston tool
+        "extra_field": {"tool_type": "piston"},
     }
 
     logger.info(f"Testing Piston execution for {language} via server API")
@@ -71,7 +72,8 @@ def test_piston_server(
         observation = observations[0]
 
         logger.info(f"Server response time: {elapsed_time:.2f} seconds")
-        logger.info(f"\n--- {language.upper()} Result via Server ---\n{observation}\n")
+        logger.info(
+            f"\n--- {language.upper()} Result via Server ---\n{observation}\n")
 
         # Check if the observation contains expected content based on language
         success = validate_observation(language, observation)
@@ -216,12 +218,14 @@ def validate_observation(language, observation):
     return True
 
 
-def test_all_languages(url="http://localhost:5000/get_observation", format_type="xml"):
+def test_all_languages(
+        url="http://localhost:5000/get_observation",
+        format_type="xml"):
     """Test all languages through the server API"""
 
     logger.info(
-        f"Testing all languages via server API using {format_type.upper()} format"
-    )
+        f"Testing all languages via server API using {
+            format_type.upper()} format")
     results = {}
 
     languages = ["python", "cpp", "bash"]

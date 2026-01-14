@@ -38,7 +38,8 @@ def _worker_mean(rank: int, world_size: int, rendezvous_file: str):
 
     # each rank holds tensor [rank+1]
     local = torch.tensor([float(rank + 1)], device=f"cuda:{rank}")
-    mean, gmax, gmin, gstd = distributed_mean_max_min_std(local, True, True, True)
+    mean, gmax, gmin, gstd = distributed_mean_max_min_std(
+        local, True, True, True)
 
     values = [float(i + 1) for i in range(world_size)]
     exp_mean = sum(values) / len(values)
@@ -93,7 +94,8 @@ def _worker_mask(rank: int, world_size: int, rendezvous_file: str):
     )
 
     # build per‐rank tensor and mask
-    local_tensor = torch.tensor([rank * 2 + 1.0, rank * 2 + 2.0], device=f"cuda:{rank}")
+    local_tensor = torch.tensor(
+        [rank * 2 + 1.0, rank * 2 + 2.0], device=f"cuda:{rank}")
     if rank == 0:
         mask = torch.tensor([1, 0], device=f"cuda:{rank}", dtype=torch.float32)
     else:

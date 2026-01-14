@@ -14,7 +14,8 @@
 # limitations under the License.
 
 # there is some bug in mcore 0.12, so we need to patch it
-# 1. `get_query_key_value_tensors` in `multi_latent_attention.py` works wrong when packed_seq_params is not None
+# 1. `get_query_key_value_tensors` in `multi_latent_attention.py` works
+# wrong when packed_seq_params is not None
 
 
 def apply_patch():
@@ -56,16 +57,15 @@ def apply_patch():
         # Prepare RoPE and seqlen related params
         # =========================================
         rotary_seq_len = self.rotary_pos_emb.get_rotary_seq_len(
-            inference_context, None, hidden_states, self.config, packed_seq_params
-        )
+            inference_context, None, hidden_states, self.config, packed_seq_params)
 
         # rotary_pos_emb:[s, b, 1, 64]
         mscale = 1.0
         if self.config.rope_type == "rope":
             packed_seq = (
-                packed_seq_params is not None and packed_seq_params.qkv_format == "thd"
-            )
-            rotary_pos_emb = self.rotary_pos_emb(rotary_seq_len, packed_seq=packed_seq)
+                packed_seq_params is not None and packed_seq_params.qkv_format == "thd")
+            rotary_pos_emb = self.rotary_pos_emb(
+                rotary_seq_len, packed_seq=packed_seq)
         else:
             rotary_pos_emb, mscale = self.rotary_pos_emb(rotary_seq_len)
 
@@ -85,9 +85,11 @@ def apply_patch():
             #   2. Scatter sequence back to s / TP if sequence-parallel since it was
             #      gathered by ColumnParallelLinear.
             if q_compressed.size(-1) != self.config.q_lora_rank:
-                q_compressed = gather_from_tensor_model_parallel_region(q_compressed)
+                q_compressed = gather_from_tensor_model_parallel_region(
+                    q_compressed)
                 if self.config.sequence_parallel:
-                    q_compressed = scatter_to_sequence_parallel_region(q_compressed)
+                    q_compressed = scatter_to_sequence_parallel_region(
+                        q_compressed)
 
             q_compressed = self.q_layernorm(q_compressed)
         else:
@@ -104,7 +106,8 @@ def apply_patch():
         ):
             # kv_combined: [s, b, (kv_lora_rank + qk_pos_emb_head_dim)]
             kv_combined = gather_from_tensor_model_parallel_region(kv_combined)
-            # kv_compressed:[s, b, kv_lora_rank], k_pos_emb: [s, b, qk_pos_emb_head_dim]
+            # kv_compressed:[s, b, kv_lora_rank], k_pos_emb: [s, b,
+            # qk_pos_emb_head_dim]
             kv_compressed, k_pos_emb = torch.split(
                 kv_combined,
                 [self.config.kv_lora_rank, self.config.qk_pos_emb_head_dim],
@@ -112,9 +115,11 @@ def apply_patch():
             )
             if self.config.sequence_parallel:
                 # kv_compressed:[s / TP, b, kv_lora_rank]
-                kv_compressed = scatter_to_sequence_parallel_region(kv_compressed)
+                kv_compressed = scatter_to_sequence_parallel_region(
+                    kv_compressed)
         else:
-            # kv_compressed:[s / TP, b, kv_lora_rank], k_pos_emb: [s / TP, b, qk_pos_emb_head_dim]
+            # kv_compressed:[s / TP, b, kv_lora_rank], k_pos_emb: [s / TP, b,
+            # qk_pos_emb_head_dim]
             kv_compressed, k_pos_emb = torch.split(
                 kv_combined,
                 [self.config.kv_lora_rank, self.config.qk_pos_emb_head_dim],
@@ -142,8 +147,10 @@ def apply_patch():
 
             # q: [s, b, n, 192]
             q = q.view(
-                q_len, bsz, self.num_attention_heads_per_partition, self.q_head_dim
-            )
+                q_len,
+                bsz,
+                self.num_attention_heads_per_partition,
+                self.q_head_dim)
 
             # kv: [s, b, 2048]
             kv, _ = self.linear_kv_up_proj(kv_compressed)

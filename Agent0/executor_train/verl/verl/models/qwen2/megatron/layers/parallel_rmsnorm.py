@@ -24,7 +24,10 @@ from verl.utils.megatron import sequence_parallel as sp_utils
 
 
 class ParallelQwen2RMSNorm(nn.Module):
-    def __init__(self, config: Qwen2Config, megatron_config: ModelParallelConfig):
+    def __init__(
+            self,
+            config: Qwen2Config,
+            megatron_config: ModelParallelConfig):
         """
         Qwen2RMSNorm is equivalent to T5LayerNorm
         """

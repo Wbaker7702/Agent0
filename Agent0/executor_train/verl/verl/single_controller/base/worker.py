@@ -50,7 +50,8 @@ class WorkerHelper:
 
                 return ray._private.services.get_node_ip_address()
             else:
-                raise NotImplementedError("WG_BACKEND now just support ray mode.")
+                raise NotImplementedError(
+                    "WG_BACKEND now just support ray mode.")
 
         host_ipv4 = os.getenv("MY_HOST_IP", None)
         host_ipv6 = os.getenv("MY_HOST_IPV6", None)
@@ -95,7 +96,8 @@ class Worker(WorkerHelper):
         rank = os.environ.get("RANK", None)
         worker_group_prefix = os.environ.get("WG_PREFIX", None)
 
-        # when decorator @ray.remote applies, __new__ will be called while we don't want to apply _configure_before_init
+        # when decorator @ray.remote applies, __new__ will be called while we
+        # don't want to apply _configure_before_init
         if (
             None not in [rank, worker_group_prefix]
             and "ActorClass(" not in cls.__name__
@@ -115,7 +117,9 @@ class Worker(WorkerHelper):
             rank (int):
                 Rank of the worker in the distributed setup
         """
-        assert isinstance(rank, int), f"rank must be int, instead of {type(rank)}"
+        assert isinstance(
+            rank, int), f"rank must be int, instead of {
+            type(rank)}"
 
         if rank == 0:
             master_addr, master_port = self.get_availale_master_addr_port()
@@ -190,7 +194,8 @@ class Worker(WorkerHelper):
             "_master_port": master_port,
         }
         if cuda_visible_devices is not None:
-            store[f"_{get_visible_devices_keyword()}".lower()] = cuda_visible_devices
+            store[f"_{get_visible_devices_keyword()}".lower()
+                  ] = cuda_visible_devices
 
         self._configure_with_store(store=store)
 
@@ -317,7 +322,8 @@ class Worker(WorkerHelper):
         ret_proto = func(self, *args, **kwargs)
         return ret_proto
 
-    @register(dispatch_mode=Dispatch.ALL_TO_ALL, execute_mode=Execute.RANK_ZERO)
+    @register(dispatch_mode=Dispatch.ALL_TO_ALL,
+              execute_mode=Execute.RANK_ZERO)
     def execute_func_rank_zero(self, func, *args, **kwargs):
         """Execute a function in rank zero execution mode.
 

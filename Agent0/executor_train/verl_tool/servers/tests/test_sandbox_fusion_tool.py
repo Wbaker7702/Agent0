@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from tools.sandbox_fusion import SandboxFusionTool
 import json
 import requests
 import fire
@@ -8,7 +9,6 @@ import os
 
 # Add parent directory to path to import SandboxFusionTool
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from tools.sandbox_fusion import SandboxFusionTool
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -62,14 +62,14 @@ console.log('Sum:', numbers.reduce((a, b) => a + b, 0));
 
 int main() {
     std::cout << "Hello from C++ via SandboxFusion!" << std::endl;
-    
+
     std::vector<int> numbers = {1, 2, 3, 4, 5};
     std::cout << "Numbers: ";
     for (int n : numbers) {
         std::cout << n << " ";
     }
     std::cout << std::endl;
-    
+
     return 0;
 }
 </cpp>"""
@@ -86,11 +86,11 @@ import (
 
 func main() {
     fmt.Println("Hello from Go via SandboxFusion!")
-    
+
     // Create a slice
     numbers := []int{1, 2, 3, 4, 5}
     fmt.Println("Numbers:", numbers)
-    
+
     // Calculate sum
     sum := 0
     for _, num := range numbers {
@@ -172,23 +172,21 @@ def test_sandbox_fusion_batch(
 ):
     """Test batch processing of multiple test cases at once"""
 
-    test_cases = [
-        {
-            "name": "Python Basic",
-            "action": """<python>print('Hello from Python!')</python>""",
-        },
-        {"name": "Ruby Basic", "action": """<ruby>puts 'Hello from Ruby!'</ruby>"""},
-        {
-            "name": "Java Basic",
-            "action": """<java>
+    test_cases = [{"name": "Python Basic",
+                   "action": """<python>print('Hello from Python!')</python>""",
+                   },
+                  {"name": "Ruby Basic",
+                   "action": """<ruby>puts 'Hello from Ruby!'</ruby>"""},
+                  {"name": "Java Basic",
+                   "action": """<java>
 public class Main {
     public static void main(String[] args) {
         System.out.println("Hello from Java!");
     }
 }
 </java>""",
-        },
-    ]
+                   },
+                  ]
 
     results = {}
     for test_case in test_cases:

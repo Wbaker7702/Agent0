@@ -49,7 +49,13 @@ def get_random_string(length: int) -> str:
     return "".join(random.choice(letters_digits) for _ in range(length))
 
 
-def func_generator(self, method_name, dispatch_fn, collect_fn, execute_fn, blocking):
+def func_generator(
+        self,
+        method_name,
+        dispatch_fn,
+        collect_fn,
+        execute_fn,
+        blocking):
     class Functor:
         def __call__(this, *args, **kwargs):
             args, kwargs = dispatch_fn(self, *args, **kwargs)
@@ -70,7 +76,8 @@ def func_generator(self, method_name, dispatch_fn, collect_fn, execute_fn, block
     return type(method_name, (Functor,), {})()
 
 
-def sort_placement_group_by_node_ip(pgs: list[PlacementGroup]) -> list[PlacementGroup]:
+def sort_placement_group_by_node_ip(
+        pgs: list[PlacementGroup]) -> list[PlacementGroup]:
     """
     Sort the placement groups by node ip, all bundles in a single placement group should be on the same node.
 
@@ -80,7 +87,8 @@ def sort_placement_group_by_node_ip(pgs: list[PlacementGroup]) -> list[Placement
     With this function, if there's only one resource pool and there's no node change, RANK should be consistent
     across nodes in multiple ray jobs, even if the whole ray cluster is restarted.
     """
-    node_ip = {node["NodeID"]: node["NodeManagerAddress"] for node in ray.nodes()}
+    node_ip = {node["NodeID"]: node["NodeManagerAddress"]
+               for node in ray.nodes()}
     pg_ip = {}
     for pg in pgs:
         specs = ray._private.state.state.placement_group_table(pg.id)
@@ -167,7 +175,10 @@ def extract_pg_from_exist(
         if role_name in src_role_names
     ]
 
-    sorted_src_pgs = sorted(src_pgs, key=lambda pg: pg.bundle_count, reverse=True)
+    sorted_src_pgs = sorted(
+        src_pgs,
+        key=lambda pg: pg.bundle_count,
+        reverse=True)
     sorted_process_on_nodes = sorted(
         [(val, idx) for idx, val in enumerate(resource_pool.store)], reverse=True
     )
@@ -187,7 +198,8 @@ def extract_pg_from_exist(
     return [pg for _, pg in sorted(unsorted_pgs)]
 
 
-def merge_resource_pool(rp1: RayResourcePool, rp2: RayResourcePool) -> RayResourcePool:
+def merge_resource_pool(rp1: RayResourcePool,
+                        rp2: RayResourcePool) -> RayResourcePool:
     assert rp1.use_gpu == rp2.use_gpu, "Both RayResourcePool must either use_gpu or not"
     assert (
         rp1.max_colocate_count == rp2.max_colocate_count
@@ -201,7 +213,10 @@ def merge_resource_pool(rp1: RayResourcePool, rp2: RayResourcePool) -> RayResour
 
     new_store = rp1.store + rp2.store
 
-    merged = type(rp1)(new_store, rp1.use_gpu, f"{rp1.name_prefix}_{rp2.name_prefix}")
+    merged = type(rp1)(
+        new_store, rp1.use_gpu, f"{
+            rp1.name_prefix}_{
+            rp2.name_prefix}")
     merged.pgs = rp1.get_placement_groups() + rp2.get_placement_groups()
 
     return merged
@@ -261,7 +276,8 @@ class RayClassWithInitArgs(ClassWithInitArgs):
         """
         if sharing_with is not None:
             target_node_id = ray.get(sharing_with.get_node_id.remote())
-            visible_devices = ray.get(sharing_with.get_cuda_visible_devices.remote())
+            visible_devices = ray.get(
+                sharing_with.get_cuda_visible_devices.remote())
             options = {
                 "scheduling_strategy": NodeAffinitySchedulingStrategy(
                     node_id=target_node_id, soft=False
@@ -333,7 +349,8 @@ class RayWorkerGroup(WorkerGroup):
             get_random_string(length=6) if name_prefix is None else name_prefix
         )
         self._ray_wait_register_center_timeout = ray_wait_register_center_timeout
-        # Whether the WorkerGroup is a Colocate WorkerGroup created by FusedWorker.
+        # Whether the WorkerGroup is a Colocate WorkerGroup created by
+        # FusedWorker.
         self.fused_worker_used = ray_cls_with_init.fused_worker_used
         # if a WorkerGroup is spawned from Colocate WorkerGroup, this indicates which sub-class is binded to
         # this WorkerGroup.
@@ -366,7 +383,8 @@ class RayWorkerGroup(WorkerGroup):
             )
 
         if ray_cls_with_init is not None:
-            self._bind_worker_method(self.ray_cls_with_init.cls, func_generator)
+            self._bind_worker_method(
+                self.ray_cls_with_init.cls, func_generator)
 
         self.wg_dict = None
         self.method_names = []
@@ -433,7 +451,8 @@ class RayWorkerGroup(WorkerGroup):
             for local_rank in range(local_world_size):
                 rank += 1
 
-                # we pass in environment variable at option so that Worker can use environment variable to set
+                # we pass in environment variable at option so that Worker can
+                # use environment variable to set
                 env_vars = {
                     "WORLD_SIZE": str(world_size),
                     "RANK": str(rank),
@@ -455,7 +474,8 @@ class RayWorkerGroup(WorkerGroup):
                 cia_name = (
                     match.group(1) if match else cia_name
                 )  # "ActorClass(Obj)" -> "Obj"
-                name = f"{self.name_prefix}{cia_name}_{pg_idx}:{local_rank}"  # e.g. Worker_2:5
+                # e.g. Worker_2:5
+                name = f"{self.name_prefix}{cia_name}_{pg_idx}:{local_rank}"
 
                 if self.profile_steps and self.device_name == "cuda":
                     ray_cls_with_init.update_options(
@@ -503,11 +523,7 @@ class RayWorkerGroup(WorkerGroup):
                         if elapsed % 30 == 0:
                             logging.warning(
                                 "Waiting for register center actor %s to be ready. Elapsed time: %s seconds out of "
-                                "%s seconds.",
-                                actor_name,
-                                elapsed,
-                                self._ray_wait_register_center_timeout,
-                            )
+                                "%s seconds.", actor_name, elapsed, self._ray_wait_register_center_timeout, )
                         time.sleep(1)
 
                     if register_center_actor is None:
@@ -632,7 +648,12 @@ class RayWorkerGroup(WorkerGroup):
             self.ray_cls_with_init.cls, func_generator
         )
 
-    def _execute_remote_single_worker(self, worker, method_name: str, *args, **kwargs):
+    def _execute_remote_single_worker(
+            self,
+            worker,
+            method_name: str,
+            *args,
+            **kwargs):
         """Execute a method on a single worker remotely.
 
         Args:
@@ -664,7 +685,9 @@ class RayWorkerGroup(WorkerGroup):
         Returns:
             Result of the method execution
         """
-        return ray.get(self.execute_rank_zero_async(method_name, *args, **kwargs))
+        return ray.get(
+            self.execute_rank_zero_async(
+                method_name, *args, **kwargs))
 
     def execute_rank_zero_async(self, method_name: str, *args, **kwargs):
         """Execute a method on rank zero worker asynchronously.
@@ -749,9 +772,10 @@ class RayWorkerGroup(WorkerGroup):
                     sliced_kwargs = {k: v[i] for k, v in kwargs.items()}
                     result.append(
                         self._execute_remote_single_worker(
-                            self._workers[i], method_name, *sliced_args, **sliced_kwargs
-                        )
-                    )
+                            self._workers[i],
+                            method_name,
+                            *sliced_args,
+                            **sliced_kwargs))
                 return result
 
         return [
@@ -796,7 +820,8 @@ def _bind_workers_method_to_parent(cls, key, user_defined_cls):
                 method
             ), f"{method_name} in {user_defined_cls} is not callable"
         except Exception:
-            # if it is a property, it will fail because Class doesn't have instance property
+            # if it is a property, it will fail because Class doesn't have
+            # instance property
             continue
 
         if hasattr(method, MAGIC_ATTR):
@@ -804,7 +829,9 @@ def _bind_workers_method_to_parent(cls, key, user_defined_cls):
             def generate_function(name, key=key):
                 def func(self, *args, **kwargs):
                     # dispatch to the actual worker
-                    return getattr(self.worker_dict[key], name)(*args, **kwargs)
+                    return getattr(
+                        self.worker_dict[key], name)(
+                        *args, **kwargs)
 
                 async def async_func(self, *args, **kwargs):
                     # dispatch to the actual worker
@@ -830,12 +857,14 @@ def _bind_workers_method_to_parent(cls, key, user_defined_cls):
                         cls, method_name
                     ), f"conflict direct rollout method {method_name} with role {key}"
                     setattr(cls, method_name, func)
-                    print(f"bind role {key} method {method_name} to class {cls}")
+                    print(
+                        f"bind role {key} method {method_name} to class {cls}")
                 else:
                     method_name_with_prefix = key + "_" + method_name
                     setattr(cls, method_name_with_prefix, func)
             except Exception as e:
-                raise ValueError(f"Fail to set method_name {method_name}") from e
+                raise ValueError(
+                    f"Fail to set method_name {method_name}") from e
 
 
 def _unwrap_ray_remote(cls):
@@ -908,7 +937,8 @@ def create_colocated_worker_cls(class_dict: dict[str, RayClassWithInitArgs]):
 FusedWorkerCLSName = "FusedWorker"
 
 
-def create_colocated_worker_raw_cls(class_dict: dict[str, RayClassWithInitArgs]):
+def create_colocated_worker_raw_cls(
+        class_dict: dict[str, RayClassWithInitArgs]):
     """
     This function returns a FusedWorker class.
 
@@ -927,10 +957,15 @@ def create_colocated_worker_raw_cls(class_dict: dict[str, RayClassWithInitArgs])
         underlying classes.
     """
     raw_cls_dict = {
-        cls_name: _unwrap_ray_remote(cia.cls) for cls_name, cia in class_dict.items()
-    }
-    init_args_dict = {cls_name: cia.args for cls_name, cia in class_dict.items()}
-    init_kwargs_dict = {cls_name: cia.kwargs for cls_name, cia in class_dict.items()}
+        cls_name: _unwrap_ray_remote(
+            cia.cls) for cls_name,
+        cia in class_dict.items()}
+    init_args_dict = {
+        cls_name: cia.args for cls_name,
+        cia in class_dict.items()}
+    init_kwargs_dict = {
+        cls_name: cia.kwargs for cls_name,
+        cia in class_dict.items()}
     cls_names = list(class_dict.keys())
 
     # FusedWorker_Actor_Critic
@@ -958,13 +993,19 @@ def create_colocated_worker_raw_cls(class_dict: dict[str, RayClassWithInitArgs])
                     udc._get_ray_method_prefix = (
                         lambda x, name_prefixed=cls_name: f"{name_prefixed}_"
                     )
-                    # cls_name = "actor", "critic", udc = ActorWorker, CriticWorker
-                    self.fused_worker_dict[cls_name] = udc(*ud_args, **ud_kwargs)
+                    # cls_name = "actor", "critic", udc = ActorWorker,
+                    # CriticWorker
+                    self.fused_worker_dict[cls_name] = udc(
+                        *ud_args, **ud_kwargs)
                     setattr(self, cls_name, self.fused_worker_dict[cls_name])
 
-            # injecting fused_worker to each sub worker so they can be aware of existence of each other
+            # injecting fused_worker to each sub worker so they can be aware of
+            # existence of each other
             for _, worker in self.fused_worker_dict.items():
-                setattr(worker, Worker.fused_worker_attr_name, self.fused_worker_dict)
+                setattr(
+                    worker,
+                    Worker.fused_worker_attr_name,
+                    self.fused_worker_dict)
 
         def _fuw_execute(self, method_name: str, *args, **kwargs):
             # for fused_worker, method_name is in a form of "{cls_name}_fwmn_{method_name}"
@@ -986,7 +1027,8 @@ def create_colocated_worker_raw_cls(class_dict: dict[str, RayClassWithInitArgs])
     return renamed_fused_worker_cls
 
 
-def create_colocated_worker_cls_fused(class_dict: dict[str, RayClassWithInitArgs]):
+def create_colocated_worker_cls_fused(
+        class_dict: dict[str, RayClassWithInitArgs]):
     """
     This function returns a RayClassWithInitArgs instance of FusedWorker, which is an replacement
     of `create_colocated_worker_cls`. WorkerGroup constructed using this class will be a colocated

@@ -115,14 +115,11 @@ def check_file(
                     annotated += 1
                     if result == CHECK_WARNING:
                         warning_lines.append(
-                            (
-                                file_path,
-                                node.lineno,
-                                linecache.getline(str(file_path), node.lineno).strip(),
-                            )
-                        )
+                            (file_path, node.lineno, linecache.getline(
+                                str(file_path), node.lineno).strip(), ))
                 else:
-                    source_line = linecache.getline(str(file_path), node.lineno).strip()
+                    source_line = linecache.getline(
+                        str(file_path), node.lineno).strip()
                     failure_lines.append((file_path, node.lineno, source_line))
 
     return annotated, total, warning_lines, failure_lines
@@ -147,7 +144,10 @@ def main() -> None:
         action="store_true",
         help="Check all lines in the file instead of only changed lines based on git",
     )
-    parser.add_argument("--debug", action="store_true", help="Add debugging logs")
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Add debugging logs")
     args = parser.parse_args()
 
     total_changed = 0
@@ -155,14 +155,14 @@ def main() -> None:
     all_warnings: list[tuple[Path, int, str]] = []
     all_failures: list[tuple[Path, int, str]] = []
 
-    target_files = (
-        [args.target_file] if args.target_file is not None else get_changed_files()
-    )
+    target_files = ([args.target_file]
+                    if args.target_file is not None else get_changed_files())
     for fpath in target_files:
         if "tests/" in str(fpath):
             continue
         if args.all_lines:
-            changed_lines = [i + 1 for i in range(len(open(fpath).readlines()))]
+            changed_lines = [
+                i + 1 for i in range(len(open(fpath).readlines()))]
         else:
             changed_lines = get_changed_lines(fpath)
         annotated, total, warning_lines, failure_lines = check_file(
@@ -194,13 +194,14 @@ def main() -> None:
 
     if ratio < args.threshold:
         print(
-            f"Please add type annotations for inputs and outputs to meet threshold {args.threshold}. "
-            f"Cases exempt from checking:"
-        )
+            f"Please add type annotations for inputs and outputs to meet threshold {
+                args.threshold}. " f"Cases exempt from checking:")
         print("1. Private methods.")
         print("2. Args with name in ('self', 'cls'), or *args / **kwargs")
         print("3. Files under tests/")
-        raise Exception(f"\n❌ Type coverage below threshold ({args.threshold:.0%}).")
+        raise Exception(
+            f"\n❌ Type coverage below threshold ({
+                args.threshold:.0%}).")
     else:
         if all_warnings or all_failures:
             print("")

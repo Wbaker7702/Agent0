@@ -66,17 +66,20 @@ def parse_action(action: str, tag_type: str = "sql") -> Tuple[str, bool]:
         return "", False
 
     # Find the corresponding end tag after the start tag
-    sql_code_end_idx = action.find(end_tag, sql_code_start_idx + len(start_tag))
+    sql_code_end_idx = action.find(
+        end_tag, sql_code_start_idx + len(start_tag))
     if sql_code_end_idx == -1:
         return "", False
 
     # Extract the content between the tags
-    sql_code = action[sql_code_start_idx + len(start_tag) : sql_code_end_idx].strip()
+    sql_code = action[sql_code_start_idx +
+                      len(start_tag): sql_code_end_idx].strip()
     return sql_code, True
 
 
 # Copied from SkyRL-SQL/skyrl_gym/envs/sql/utils.py
-def verify_format_and_extract(output: str, action_list: list) -> Tuple[str, bool]:
+def verify_format_and_extract(
+        output: str, action_list: list) -> Tuple[str, bool]:
     """
     Verify the format of the output and extract thoughts, solution, and SQL code.
     Args:
@@ -87,7 +90,8 @@ def verify_format_and_extract(output: str, action_list: list) -> Tuple[str, bool
     """
     is_correct_format = True
     # verify the <solution> tags in the last action
-    if not re.search(rf"{SOLUTION_START}.*?{SOLUTION_END}", action_list[-1], re.S):
+    if not re.search(rf"{SOLUTION_START}.*?{SOLUTION_END}",
+                     action_list[-1], re.S):
         is_correct_format = False
 
     # verify the <think> tags in as starts in each action
@@ -114,10 +118,14 @@ def hash_string(s):
 @register("sqlcoder")
 class SQLCoderRewardManager:
     def __init__(
-        self, tokenizer, num_examine, compute_score=None, reward_fn_key="data_source"
-    ) -> None:
+            self,
+            tokenizer,
+            num_examine,
+            compute_score=None,
+            reward_fn_key="data_source") -> None:
         self.tokenizer = tokenizer
-        self.num_examine = num_examine  # the number of batches of decoded responses to print to the console
+        # the number of batches of decoded responses to print to the console
+        self.num_examine = num_examine
         self.compute_score = compute_score if compute_score else _default_compute_score
         self.reward_fn_key = reward_fn_key
         self.step = 0
@@ -160,24 +168,26 @@ class SQLCoderRewardManager:
             self.step = data.meta_info["global_step"]
 
         to_save_records = []
-        reward_tensor = torch.zeros_like(data.batch["responses"], dtype=torch.float32)
+        reward_tensor = torch.zeros_like(
+            data.batch["responses"], dtype=torch.float32)
 
-        # reward extra info every key of it is a default len(data) list filled with None
+        # reward extra info every key of it is a default len(data) list filled
+        # with None
         prompt_ids = data.batch["prompts"]
         prompt_length = prompt_ids.shape[-1]
         response_ids = data.batch["responses"]
         valid_prompt_length = data.batch["attention_mask"][:, :prompt_length].sum(
-            dim=-1
-        )
+            dim=-1)
         valid_response_length = data.batch["attention_mask"][:, prompt_length:].sum(
-            dim=-1
-        )
+            dim=-1)
         reward_extra_info = defaultdict(list)
 
         scores = []
         for i in tqdm(
-            range(len(data)), desc="Processing SQLCoder responses", total=len(data)
-        ):
+                range(
+                    len(data)),
+                desc="Processing SQLCoder responses",
+                total=len(data)):
             # Get the entire response for format checking
             valid_response_length_i = valid_response_length[i].item()
             response = self.tokenizer.decode(
@@ -206,8 +216,9 @@ class SQLCoderRewardManager:
                 score["is_format_correct"] = 0
 
             execution_score = (
-                sql_score_func(parsed_solution, meta)[0] if parsed_solution else 0.0
-            )
+                sql_score_func(
+                    parsed_solution,
+                    meta)[0] if parsed_solution else 0.0)
             score["accuracy"] = execution_score
 
             score["score"] = (
@@ -251,7 +262,7 @@ class SQLCoderRewardManager:
                     ),
                     "data_source": data_source[i],
                     "prompt": self.tokenizer.decode(
-                        prompt_ids[i][-valid_prompt_length[i].item() :],
+                        prompt_ids[i][-valid_prompt_length[i].item():],
                         skip_special_tokens=False,
                     ),
                     "prompt_ntokens": valid_prompt_length[i].item(),
@@ -278,16 +289,20 @@ class SQLCoderRewardManager:
 
             # Async save to JSONL file
             if self.num_examine == 1:
-                temp_file = self.record_dir / f"sqlcoder-step-val-{self.step}.jsonl"
+                temp_file = self.record_dir / \
+                    f"sqlcoder-step-val-{self.step}.jsonl"
             else:
-                temp_file = self.record_dir / f"sqlcoder-step-{self.step}.jsonl"
+                temp_file = self.record_dir / \
+                    f"sqlcoder-step-{self.step}.jsonl"
 
             # Save asynchronously without blocking
             with open(temp_file, "a") as f:
                 for record in to_save_records:
                     json_line = json.dumps(record, ensure_ascii=False)
                     f.write(json_line + "\n")
-            print(f"===> {len(to_save_records)} records for async save to {temp_file}")
+            print(
+                f"===> {
+                    len(to_save_records)} records for async save to {temp_file}")
 
             self.step += 1
 

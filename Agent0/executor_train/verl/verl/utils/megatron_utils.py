@@ -86,7 +86,13 @@ def get_model(
                 split_rank = mpu.get_pipeline_model_parallel_split_rank()
                 world_size = mpu.get_pipeline_model_parallel_world_size()
                 pre_process = rank == 0 or rank == split_rank
-                post_process = (rank == (split_rank - 1)) or (rank == (world_size - 1))
+                post_process = (
+                    rank == (
+                        split_rank -
+                        1)) or (
+                    rank == (
+                        world_size -
+                        1))
                 add_encoder = mpu.is_pipeline_stage_before_split()
                 add_decoder = mpu.is_pipeline_stage_after_split()
             model = model_provider_func(
@@ -111,8 +117,7 @@ def get_model(
     for model_module in model:
         for param in model_module.parameters():
             tensor_parallel.set_defaults_if_not_set_tensor_model_parallel_attributes(
-                param
-            )
+                param)
 
     # Print number of parameters.
     if mpu.get_data_parallel_rank() == 0:
@@ -131,7 +136,8 @@ def get_model(
         )
 
     # GPU allocation.
-    if transformer_config is None or (not transformer_config.use_cpu_initialization):
+    if transformer_config is None or (
+            not transformer_config.use_cpu_initialization):
         for model_module in model:
             model_module.to(f"{get_device_name()}:{get_device_id()}")
 
@@ -152,7 +158,8 @@ def get_model(
                 ddp_config=DistributedDataParallelConfig(
                     overlap_grad_reduce=False,
                     use_distributed_optimizer=use_distributed_optimizer,
-                    grad_reduce_in_fp32=True,  # [old] accumulate_allreduce_grads_in_fp32=True,
+                    grad_reduce_in_fp32=True,
+                    # [old] accumulate_allreduce_grads_in_fp32=True,
                 ),
             )
             ddp_models.append(ddp_model)
@@ -182,7 +189,9 @@ def unwrap_model(model, module_instances=ALL_MODULE_WRAPPER_CLASSNAMES):
     return unwrapped_model
 
 
-def convert_config(hf_config: PretrainedConfig, megatron_config) -> TransformerConfig:
+def convert_config(
+        hf_config: PretrainedConfig,
+        megatron_config) -> TransformerConfig:
     print(f"megatron config {megatron_config}")
     dt = PrecisionType.to_dtype(megatron_config.params_dtype)
     print(f"pipeline_dtype=megatron_config {dt}")
@@ -250,7 +259,8 @@ def mcore_model_parallel_config(
     params_dtype: torch.dtype,
 ) -> ModelParallelConfig:
     # WARNING: Code should not reach this point. This function is deprecated and will be removed.
-    # Please use hf_to_mcore_config_dense() from verl.models.mcore.config_converter instead.
+    # Please use hf_to_mcore_config_dense() from
+    # verl.models.mcore.config_converter instead.
     warnings.warn(
         "Code should not reach this point. This function is deprecated and will be removed. Please use "
         "hf_to_mcore_config_dense() from verl.models.mcore.config_converter instead.",
@@ -302,7 +312,8 @@ def offload_megatron_model_to_cpu(models):
                     )
 
                     if buffer.grad_data.storage().size() > 0:
-                        # if the grad_data size is already zero, we assume that it is already offloaded
+                        # if the grad_data size is already zero, we assume that
+                        # it is already offloaded
                         buffer.grad_data_size = buffer.grad_data.storage().size()
                         buffer.grad_data.storage().resize_(0)
         else:
@@ -460,9 +471,11 @@ def load_megatron_optimizer(optimizers):
         opt_state_dict_values = _opt.optimizer.state.values()
         for v in opt_state_dict_values:
             if "exp_avg" in v:
-                v["exp_avg"] = v["exp_avg"].to(get_device_id(), non_blocking=True)
+                v["exp_avg"] = v["exp_avg"].to(
+                    get_device_id(), non_blocking=True)
             if "exp_avg_sq" in v:
-                v["exp_avg_sq"] = v["exp_avg_sq"].to(get_device_id(), non_blocking=True)
+                v["exp_avg_sq"] = v["exp_avg_sq"].to(
+                    get_device_id(), non_blocking=True)
         gc.collect()
         get_torch_device().empty_cache()
 
@@ -504,8 +517,10 @@ def convert_megatron_model_to_transformers_model(
         k_shard_list = []
         v_shard_list = []
         hidden_size_per_head = getattr(
-            config, "head_dim", config.hidden_size // config.num_attention_heads
-        )
+            config,
+            "head_dim",
+            config.hidden_size //
+            config.num_attention_heads)
 
         if config.num_key_value_heads >= tp_size:
             q_size_tp = hidden_size_per_head * config.num_attention_heads // tp_size
@@ -513,13 +528,14 @@ def convert_megatron_model_to_transformers_model(
             total_size = q_size_tp + 2 * kv_size_tp
             for i in range(tp_size):
                 num_query_groups_per_partition = num_query_groups // tp_size
-                qkv_part = full_tensor[i * total_size : (i + 1) * total_size]
+                qkv_part = full_tensor[i * total_size: (i + 1) * total_size]
                 q_size_chunk = q_size_tp // num_query_groups_per_partition
                 kv_size_chunk = kv_size_tp // num_query_groups_per_partition
-                for qkv_part_chunk in qkv_part.chunk(num_query_groups_per_partition):
+                for qkv_part_chunk in qkv_part.chunk(
+                        num_query_groups_per_partition):
                     q_part = qkv_part_chunk[:q_size_chunk]
-                    k_part = qkv_part_chunk[q_size_chunk : q_size_chunk + kv_size_chunk]
-                    v_part = qkv_part_chunk[q_size_chunk + kv_size_chunk :]
+                    k_part = qkv_part_chunk[q_size_chunk: q_size_chunk + kv_size_chunk]
+                    v_part = qkv_part_chunk[q_size_chunk + kv_size_chunk:]
                     q_shard_list.append(q_part)
                     k_shard_list.append(k_part)
                     v_shard_list.append(v_part)
@@ -529,13 +545,14 @@ def convert_megatron_model_to_transformers_model(
             total_size = q_size_tp + 2 * kv_size_tp
             for i in range(tp_size):
                 num_query_groups_per_partition = num_query_groups // tp_size
-                qkv_part = full_tensor[i * total_size : (i + 1) * total_size]
+                qkv_part = full_tensor[i * total_size: (i + 1) * total_size]
                 q_size_chunk = q_size_tp // num_query_groups_per_partition
                 kv_size_chunk = kv_size_tp // num_query_groups_per_partition
-                for qkv_part_chunk in qkv_part.chunk(num_query_groups_per_partition):
+                for qkv_part_chunk in qkv_part.chunk(
+                        num_query_groups_per_partition):
                     q_part = qkv_part_chunk[:q_size_chunk]
-                    k_part = qkv_part_chunk[q_size_chunk : q_size_chunk + kv_size_chunk]
-                    v_part = qkv_part_chunk[q_size_chunk + kv_size_chunk :]
+                    k_part = qkv_part_chunk[q_size_chunk: q_size_chunk + kv_size_chunk]
+                    v_part = qkv_part_chunk[q_size_chunk + kv_size_chunk:]
                     q_shard_list.append(q_part)
                     if i * config.num_key_value_heads % tp_size == 0:
                         k_shard_list.append(k_part)
@@ -553,9 +570,8 @@ def convert_megatron_model_to_transformers_model(
         gate_weight_list = []
         up_weight_list = []
         for i in range(tp_size):
-            gate_up_weight_tp = full_tensor[
-                intermediate_size_tp * 2 * i : intermediate_size_tp * 2 * (i + 1)
-            ]
+            gate_up_weight_tp = full_tensor[intermediate_size_tp * \
+                2 * i: intermediate_size_tp * 2 * (i + 1)]
             gate_weight_tp = gate_up_weight_tp[:intermediate_size_tp]
             up_weight_tp = gate_up_weight_tp[intermediate_size_tp:]
             gate_weight_list.append(gate_weight_tp)
@@ -576,8 +592,7 @@ def convert_megatron_model_to_transformers_model(
         elif component == "linear_qkv" and not isinstance(param, list):
             if param_type == "layer_norm_weight":
                 new_params[f"model.layers.{layer_number}.input_layernorm.weight"] = (
-                    param
-                )
+                    param)
             else:
                 if convert_qkv_gate_up_by_trunk_concat:
                     convert_qkv_shard(
@@ -599,14 +614,11 @@ def convert_megatron_model_to_transformers_model(
             assert isinstance(param, list) and len(param) == 3
             assert param_type == "weight" or param_type == "bias"
             new_params[f"model.layers.{layer_number}.self_attn.q_proj.{param_type}"] = (
-                param[0]
-            )
+                param[0])
             new_params[f"model.layers.{layer_number}.self_attn.k_proj.{param_type}"] = (
-                param[1]
-            )
+                param[1])
             new_params[f"model.layers.{layer_number}.self_attn.v_proj.{param_type}"] = (
-                param[2]
-            )
+                param[2])
     elif "mlp" in name:
         splitted_name = name.split(".")
         layer_number = splitted_name[2]
@@ -686,16 +698,18 @@ def broadcast_from_megatron_pp(tensor: torch.Tensor):
         group=mpu.get_pipeline_model_parallel_group(), group_rank=src_rank
     )
     torch.distributed.broadcast(
-        tensor=tensor, src=global_rank, group=mpu.get_pipeline_model_parallel_group()
-    )
+        tensor=tensor,
+        src=global_rank,
+        group=mpu.get_pipeline_model_parallel_group())
     return tensor
 
 
 def broadcast_str_from_megatron_pp(obj: Any):
     obj_output = [None] * mpu.get_pipeline_model_parallel_world_size()
     torch.distributed.all_gather_object(
-        object_list=obj_output, obj=obj, group=mpu.get_pipeline_model_parallel_group()
-    )
+        object_list=obj_output,
+        obj=obj,
+        group=mpu.get_pipeline_model_parallel_group())
 
     src_rank = None
     target_obj = None
@@ -746,7 +760,8 @@ def default_tp_concat_fn(
     from megatron.core import mpu
 
     train_tp_size = mpu.get_tensor_model_parallel_world_size()
-    if layer_name_mapping.get("qkv_layer_name") in name and "layer_norm" not in name:
+    if layer_name_mapping.get(
+            "qkv_layer_name") in name and "layer_norm" not in name:
         # if the tensor is qkv, for each param on tp, split into q, k, v
         # concat q, k, v separately.
         q_lst = []
@@ -760,17 +775,27 @@ def default_tp_concat_fn(
         assert num_attention_heads % num_key_value_heads == 0
         num_q_per_kv = num_attention_heads // num_key_value_heads
         assert (
-            infer_params[0].shape[0] % (num_q_per_kv + 2) == 0
-        ), f"param '{name}' shape '{infer_params[0].shape}' dim0 is not divisible by {num_q_per_kv + 2}"
+            infer_params[0].shape[0] %
+            (num_q_per_kv + 2) == 0), f"param '{name}' shape '{
+            infer_params[0].shape}' dim0 is not divisible by {
+            num_q_per_kv + 2}"
         kv_size_per_tp = infer_params[0].shape[0] // (num_q_per_kv + 2)
-        split_size = [kv_size_per_tp * num_q_per_kv, kv_size_per_tp, kv_size_per_tp]
+        split_size = [
+            kv_size_per_tp *
+            num_q_per_kv,
+            kv_size_per_tp,
+            kv_size_per_tp]
         for infer_param in infer_params:
             num_query_groups_per_partition = num_key_value_heads // train_tp_size
             for chunk in infer_param.chunk(num_query_groups_per_partition):
                 split_size = [
-                    kv_size_per_tp * num_q_per_kv // num_query_groups_per_partition,
-                    kv_size_per_tp // num_query_groups_per_partition,
-                    kv_size_per_tp // num_query_groups_per_partition,
+                    kv_size_per_tp *
+                    num_q_per_kv //
+                    num_query_groups_per_partition,
+                    kv_size_per_tp //
+                    num_query_groups_per_partition,
+                    kv_size_per_tp //
+                    num_query_groups_per_partition,
                 ]
                 q, k, v = chunk.split(split_size)
                 q_lst.append(q)
@@ -811,8 +836,8 @@ def default_tp_concat_fn(
     else:
         # concat tensor
         infer_params = torch.cat(
-            infer_params, dim=tp_utils.get_tensor_parallel_partition_dim(train_params)
-        )
+            infer_params,
+            dim=tp_utils.get_tensor_parallel_partition_dim(train_params))
 
     return infer_params
 
@@ -834,7 +859,8 @@ def per_tensor_generator(
     etp_group = mpu.get_expert_tensor_parallel_group()
     vpp_size = len(actor_module)
     all_gather_group = mpu.get_tensor_model_parallel_group()
-    all_gather_group_size = torch.distributed.get_world_size(group=all_gather_group)
+    all_gather_group_size = torch.distributed.get_world_size(
+        group=all_gather_group)
 
     def tensor_generator():
         for scan_vpp_idx in range(vpp_size):
@@ -846,7 +872,8 @@ def per_tensor_generator(
             # note
             # there is a bug in megatron GPTModel
             # decoder.layers[n].mlp.router.expert_bias" in GPTModel is not registered in named_parameter, but in
-            # state_dict(). for now we patch it by adding those keys to extra_keys.
+            # state_dict(). for now we patch it by adding those keys to
+            # extra_keys.
             extra_keys = [
                 x
                 for x in model.state_dict().keys()
@@ -909,14 +936,16 @@ def per_tensor_generator(
 
         # (xya): this is a hack to fix the name of the parameters
         while cur_name.startswith("module."):
-            cur_name = cur_name[len("module.") :]
+            cur_name = cur_name[len("module."):]
 
         # EP
         if ".mlp.experts.linear_fc" in cur_name and ep_size > 1:
             num_experts = weight_converter.mcore_config.num_moe_experts
             num_experts_per_rank = num_experts // ep_size
-            infer_params = [torch.empty_like(broad_pp_tensor) for _ in range(ep_size)]
-            torch.distributed.all_gather(infer_params, broad_pp_tensor, group=ep_group)
+            infer_params = [torch.empty_like(
+                broad_pp_tensor) for _ in range(ep_size)]
+            torch.distributed.all_gather(
+                infer_params, broad_pp_tensor, group=ep_group)
 
             name_prefix, local_expert_id = cur_name.split(".weight")
             local_expert_id = int(local_expert_id)
@@ -925,14 +954,16 @@ def per_tensor_generator(
                 for ep_rank in range(ep_size)
             ]
             global_expert_names = [
-                f"{name_prefix}.weight{expert_id}" for expert_id in global_expert_ids
-            ]
+                f"{name_prefix}.weight{expert_id}" for expert_id in global_expert_ids]
 
-            for name, param in zip(global_expert_names, infer_params, strict=True):
+            for name, param in zip(
+                    global_expert_names, infer_params, strict=True):
                 if etp_size > 1:
                     # gather etp
-                    etp_params = [torch.empty_like(param) for _ in range(etp_size)]
-                    torch.distributed.all_gather(etp_params, param, group=etp_group)
+                    etp_params = [
+                        torch.empty_like(param) for _ in range(etp_size)]
+                    torch.distributed.all_gather(
+                        etp_params, param, group=etp_group)
                     params = etp_params
                 else:
                     params = [param]
@@ -949,8 +980,7 @@ def per_tensor_generator(
                 if not isinstance(merge_params, list):
                     merge_params = [merge_params]
                 converted_names, converted_params = weight_converter.convert_param(
-                    name, merge_params
-                )
+                    name, merge_params)
 
                 yield from zip(converted_names, converted_params, strict=True)
             continue
@@ -991,7 +1021,10 @@ def per_tensor_generator(
         yield from zip(converted_names, converted_params, strict=True)
 
 
-def get_transformer_layer_offset(pipeline_rank, vp_rank, config: TransformerConfig):
+def get_transformer_layer_offset(
+        pipeline_rank,
+        vp_rank,
+        config: TransformerConfig):
     '''
     Get the index offset of any pipeline stage, given the level of pipelining.
 
@@ -1007,7 +1040,8 @@ def get_transformer_layer_offset(pipeline_rank, vp_rank, config: TransformerConf
             or config.num_layers_in_last_pipeline_stage is not None
         ):
             # Calculate number of pipeline stages to distribute the remaining Transformer
-            # layers after deducting the Transformer layers in the first or the last stages
+            # layers after deducting the Transformer layers in the first or the
+            # last stages
             middle_pipeline_stages = config.pipeline_model_parallel_size
             middle_pipeline_stages -= sum(
                 [
@@ -1065,24 +1099,22 @@ def get_transformer_layer_offset(pipeline_rank, vp_rank, config: TransformerConf
 
                 # First stage + middle stage + last stage
                 total_virtual_chunks = (
-                    num_layers_per_virtual_model_chunk_in_first_pipeline_stage
-                    + num_layers_per_vritual_model_chunk_in_middle_pipeline_stage
-                    + num_layers_per_virtual_model_chunk_in_last_pipeline_stage
-                )
+                    num_layers_per_virtual_model_chunk_in_first_pipeline_stage +
+                    num_layers_per_vritual_model_chunk_in_middle_pipeline_stage +
+                    num_layers_per_virtual_model_chunk_in_last_pipeline_stage)
 
-                # Calculate the layer offset with interleaved uneven pipeline parallelism
+                # Calculate the layer offset with interleaved uneven pipeline
+                # parallelism
                 if pipeline_rank == 0:
                     offset = vp_rank * total_virtual_chunks
                 else:
-                    offset = (
-                        vp_rank * total_virtual_chunks
-                        + num_layers_per_virtual_model_chunk_in_first_pipeline_stage
-                        + (pipeline_rank - 1)
-                        * (
-                            num_layers_per_vritual_model_chunk_in_middle_pipeline_stage
-                            // middle_pipeline_stages
-                        )
-                    )
+                    offset = (vp_rank *
+                              total_virtual_chunks +
+                              num_layers_per_virtual_model_chunk_in_first_pipeline_stage +
+                              (pipeline_rank -
+                               1) *
+                              (num_layers_per_vritual_model_chunk_in_middle_pipeline_stage //
+                               middle_pipeline_stages))
             else:
                 if middle_pipeline_stages > 0:
                     num_layers_per_pipeline_rank = (
@@ -1127,7 +1159,8 @@ def get_transformer_layer_offset(pipeline_rank, vp_rank, config: TransformerConf
                     pipeline_rank * num_layers_per_virtual_rank
                 )
 
-                # Reduce the offset of embedding layer from the total layer number
+                # Reduce the offset of embedding layer from the total layer
+                # number
                 if (
                     config.account_for_embedding_in_pipeline_split
                     and not mpu.is_pipeline_first_stage()
@@ -1136,7 +1169,8 @@ def get_transformer_layer_offset(pipeline_rank, vp_rank, config: TransformerConf
             else:
                 offset = pipeline_rank * num_layers_per_pipeline_rank
 
-                # Reduce the offset of embedding layer from the total layer number
+                # Reduce the offset of embedding layer from the total layer
+                # number
                 if (
                     config.account_for_embedding_in_pipeline_split
                     and not mpu.is_pipeline_first_stage()

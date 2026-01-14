@@ -122,12 +122,20 @@ class RayDAPOTrainer(RayPPOTrainer):
                 # pop those keys for generation
                 if "multi_modal_data" in new_batch.non_tensor_batch.keys():
                     gen_batch = new_batch.pop(
-                        batch_keys=["input_ids", "attention_mask", "position_ids"],
-                        non_tensor_batch_keys=["raw_prompt_ids", "multi_modal_data"],
+                        batch_keys=[
+                            "input_ids",
+                            "attention_mask",
+                            "position_ids"],
+                        non_tensor_batch_keys=[
+                            "raw_prompt_ids",
+                            "multi_modal_data"],
                     )
                 else:
                     gen_batch = new_batch.pop(
-                        batch_keys=["input_ids", "attention_mask", "position_ids"],
+                        batch_keys=[
+                            "input_ids",
+                            "attention_mask",
+                            "position_ids"],
                         non_tensor_batch_keys=["raw_prompt_ids"],
                     )
                 gen_batch = gen_batch.repeat(
@@ -141,8 +149,7 @@ class RayDAPOTrainer(RayPPOTrainer):
                     # generate a batch
                     with marked_timer("gen", timing_raw, "red"):
                         gen_batch_output = self.actor_rollout_wg.generate_sequences(
-                            gen_batch
-                        )
+                            gen_batch)
                         timing_raw.update(gen_batch_output.meta_info["timing"])
                         gen_batch_output.meta_info.pop("timing", None)
 
@@ -158,11 +165,12 @@ class RayDAPOTrainer(RayPPOTrainer):
 
                             new_batch = new_batch.union(gen_baseline_output)
                             reward_baseline_tensor = self.reward_fn(new_batch)
-                            reward_baseline_tensor = reward_baseline_tensor.sum(dim=-1)
+                            reward_baseline_tensor = reward_baseline_tensor.sum(
+                                dim=-1)
 
                             new_batch.pop(
-                                batch_keys=list(gen_baseline_output.batch.keys())
-                            )
+                                batch_keys=list(
+                                    gen_baseline_output.batch.keys()))
 
                             new_batch.batch["reward_baselines"] = reward_baseline_tensor
 
@@ -185,13 +193,15 @@ class RayDAPOTrainer(RayPPOTrainer):
                         # the results from reward model and rule-based results.
                         if self.use_rm:
                             # we first compute reward model score
-                            reward_tensor = self.rm_wg.compute_rm_score(new_batch)
+                            reward_tensor = self.rm_wg.compute_rm_score(
+                                new_batch)
                             new_batch = new_batch.union(reward_tensor)
 
                         # we combine with rule-based rm
                         reward_extra_infos_dict: dict[str, list]
                         try:
-                            reward_result = self.reward_fn(new_batch, return_dict=True)
+                            reward_result = self.reward_fn(
+                                new_batch, return_dict=True)
                             reward_tensor = reward_result["reward_tensor"]
                             reward_extra_infos_dict = reward_result.get(
                                 "reward_extra_info", {}
@@ -218,9 +228,9 @@ class RayDAPOTrainer(RayPPOTrainer):
                                 kl_ctrl=self.kl_ctrl_in_reward,
                                 kl_penalty=self.config.algorithm.kl_penalty,
                             )
-                            metrics.update(
-                                kl_metrics
-                            )  # TODO: This will be cleared if we use multiple genenration batches
+                            # TODO: This will be cleared if we use multiple
+                            # genenration batches
+                            metrics.update(kl_metrics)
                         else:
                             new_batch.batch["token_level_rewards"] = new_batch.batch[
                                 "token_level_scores"
@@ -256,7 +266,8 @@ class RayDAPOTrainer(RayPPOTrainer):
 
                         prompt_uid2metric_std = {}
                         for prompt_uid, metric_vals in prompt_uid2metric_vals.items():
-                            prompt_uid2metric_std[prompt_uid] = np.std(metric_vals)
+                            prompt_uid2metric_std[prompt_uid] = np.std(
+                                metric_vals)
 
                         kept_prompt_uids = [
                             uid
@@ -283,8 +294,7 @@ class RayDAPOTrainer(RayPPOTrainer):
                         if num_prompt_in_batch < prompt_bsz:
                             print(f"{num_prompt_in_batch=} < {prompt_bsz=}")
                             max_num_gen_batches = (
-                                self.config.algorithm.filter_groups.max_num_gen_batches
-                            )
+                                self.config.algorithm.filter_groups.max_num_gen_batches)
                             if (
                                 max_num_gen_batches <= 0
                                 or num_gen_batches < max_num_gen_batches
@@ -294,10 +304,11 @@ class RayDAPOTrainer(RayPPOTrainer):
                                 continue
                             else:
                                 raise ValueError(
-                                    f"{num_gen_batches=} >= {max_num_gen_batches=}."
-                                    + " Generated too many. Please check if your data are too difficult."
-                                    + " You could also try set max_num_gen_batches=0 to enable endless trials."
-                                )
+                                    f"{
+                                        num_gen_batches=} >= {
+                                        max_num_gen_batches=}." +
+                                    " Generated too many. Please check if your data are too difficult." +
+                                    " You could also try set max_num_gen_batches=0 to enable endless trials.")
                         else:
                             # Align the batch
                             traj_bsz = (
@@ -325,7 +336,8 @@ class RayDAPOTrainer(RayPPOTrainer):
 
                     # recompute old_log_probs
                     with marked_timer("old_log_prob", timing_raw, "blue"):
-                        old_log_prob = self.actor_rollout_wg.compute_log_prob(batch)
+                        old_log_prob = self.actor_rollout_wg.compute_log_prob(
+                            batch)
                         entropys = old_log_prob.batch["entropys"]
                         response_masks = batch.batch["response_mask"]
                         loss_agg_mode = (
@@ -347,8 +359,7 @@ class RayDAPOTrainer(RayPPOTrainer):
                         # compute reference log_prob
                         with marked_timer("ref", timing_raw, "olive"):
                             ref_log_prob = self.ref_policy_wg.compute_ref_log_prob(
-                                batch
-                            )
+                                batch)
                             batch = batch.union(ref_log_prob)
 
                     # compute values
@@ -384,7 +395,8 @@ class RayDAPOTrainer(RayPPOTrainer):
                     if self.config.trainer.critic_warmup <= self.global_steps:
                         # update actor
                         with marked_timer("update_actor", timing_raw, "red"):
-                            actor_output = self.actor_rollout_wg.update_actor(batch)
+                            actor_output = self.actor_rollout_wg.update_actor(
+                                batch)
                         actor_output_metrics = reduce_metrics(
                             actor_output.meta_info["metrics"]
                         )
@@ -406,9 +418,8 @@ class RayDAPOTrainer(RayPPOTrainer):
                         metrics.update(val_metrics)
 
                     if self.config.trainer.save_freq > 0 and (
-                        is_last_step
-                        or self.global_steps % self.config.trainer.save_freq == 0
-                    ):
+                            is_last_step or self.global_steps %
+                            self.config.trainer.save_freq == 0):
                         with marked_timer("save_checkpoint", timing_raw, "green"):
                             self._save_checkpoint()
 
@@ -424,8 +435,9 @@ class RayDAPOTrainer(RayPPOTrainer):
 
                 # collect metrics
                 metrics.update(
-                    compute_data_metrics(batch=batch, use_critic=self.use_critic)
-                )
+                    compute_data_metrics(
+                        batch=batch,
+                        use_critic=self.use_critic))
                 metrics.update(
                     compute_timing_metrics(batch=batch, timing_raw=timing_raw)
                 )

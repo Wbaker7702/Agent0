@@ -48,9 +48,9 @@ DEFAULT_USER_CONTENT_PREFIX = (
     "</tool_response>. You can search as many times as your want. If you find no "
     "further external knowledge needed, you can directly provide the answer inside "
     "<answer> and </answer>, without detailed illustrations. For example, "
-    "<answer> Beijing </answer>. Question: "
-)
-user_content = DEFAULT_USER_CONTENT_PREFIX.rstrip("\n") + "How's the weather lately?"
+    "<answer> Beijing </answer>. Question: ")
+user_content = DEFAULT_USER_CONTENT_PREFIX.rstrip(
+    "\n") + "How's the weather lately?"
 
 
 def get_search_messages():
@@ -103,7 +103,10 @@ def get_search_messages():
     }
 
     user_prompts = [user_prompt]
-    expect_turn_array = [expect_turn_0_msg, expect_turn_1_msg, expect_turn_2_msg]
+    expect_turn_array = [
+        expect_turn_0_msg,
+        expect_turn_1_msg,
+        expect_turn_2_msg]
     tool_return_array = [tool_return_0_msg, tool_return_1_msg]
 
     return user_prompts, expect_turn_array, tool_return_array
@@ -113,7 +116,8 @@ class TestRolloutWithSearchTools:
     @pytest.fixture
     def qwen_tokenizer(self):
         local_model_path = "Qwen/Qwen2.5-0.5B"
-        tokenizer = AutoTokenizer.from_pretrained(local_model_path, padding_side="left")
+        tokenizer = AutoTokenizer.from_pretrained(
+            local_model_path, padding_side="left")
         tokenizer.pad_token = tokenizer.eos_token
         return tokenizer
 
@@ -189,8 +193,7 @@ class TestRolloutWithSearchTools:
                             "data_source": "searchR1_nq",
                         },
                     },
-                }
-            ],
+                }],
             dtype=object,
         )
         index = np.array([0], dtype=object)
@@ -205,7 +208,11 @@ class TestRolloutWithSearchTools:
         return prompts
 
     @pytest.fixture
-    def mock_rollout(self, search_rollout_config, qwen_tokenizer, qwen_model_config):
+    def mock_rollout(
+            self,
+            search_rollout_config,
+            qwen_tokenizer,
+            qwen_model_config):
         """Mock the rollout instance with sampling_params initialized."""
         with (
             patch.object(SGLangRollout, "_init_distributed_env", return_value=None),
@@ -291,16 +298,20 @@ class TestRolloutWithSearchTools:
                             type="array",
                             description="A list of fully-formed semantic queries. The tool will return search "
                             "results for each query.",
-                            items={"type": "string"},
-                        )
-                    },
+                            items={
+                                "type": "string"},
+                        )},
                     required=["query_list"],
                 ),
                 strict=False,
             ),
         )
 
-    def test_over_size_case(self, mock_rollout, search_data_proto, search_data):
+    def test_over_size_case(
+            self,
+            mock_rollout,
+            search_data_proto,
+            search_data):
         mock_rollout.config.multi_turn.max_assistant_turns = 1
         req = mock_rollout._preprocess_prompt_to_async_rollout_requests(
             search_data_proto, n=1
@@ -370,7 +381,8 @@ class TestRolloutWithSearchTools:
 
         mock_rollout._handle_engine_call = MagicMock()
         futures = [asyncio.Future() for i in expect_turn_array]
-        for idx, (i, turn) in enumerate(zip(futures, expect_turn_array, strict=True)):
+        for idx, (i, turn) in enumerate(
+                zip(futures, expect_turn_array, strict=True)):
             i.set_result(
                 {
                     "text": turn,
@@ -392,7 +404,8 @@ class TestRolloutWithSearchTools:
             )
             if idx < len(expect_turn_array) - 1:
                 assert mock_rollout._function_call_parser.has_tool_call(turn)
-                assert mock_rollout._function_call_parser.parse_non_stream(turn)
+                assert mock_rollout._function_call_parser.parse_non_stream(
+                    turn)
 
         mock_rollout._handle_engine_call.side_effect = futures
         mock_rollout._tp_rank = 0
@@ -413,7 +426,8 @@ class TestRolloutWithSearchTools:
         assert "search" in output_req.metrics
         assert output_req.metrics["search"][0]["status"] == "success"
         assert mock_execute.await_count == 2
-        assert len(output_req.messages) == 6  # user + 3*assistant + 2*tool_call
+        # user + 3*assistant + 2*tool_call
+        assert len(output_req.messages) == 6
         # Verify tool response messages contain expected content
         search_counter = 0
         for msg in output_req.messages:

@@ -125,7 +125,8 @@ class Qwen2_5VLModel(MegatronModule):
         )
 
         # This attribute is needed to check if an all-reduce is required
-        # on the word embeddings inside `finalize_model_grads._allreduce_word_embedding_grads`.
+        # on the word embeddings inside
+        # `finalize_model_grads._allreduce_word_embedding_grads`.
         self.share_embeddings_and_output_weights = False
         if self.pre_process:
             self.vision_model = Qwen2_5VisionModel(
@@ -250,7 +251,8 @@ class Qwen2_5VLModel(MegatronModule):
             video_start_index = image_mask.sum().item()
         if video_grid_thw is not None:
             video_mask = input_ids == self.video_token_id
-            vision_grid_thw = torch.cat([vision_grid_thw, video_grid_thw], dim=0)
+            vision_grid_thw = torch.cat(
+                [vision_grid_thw, video_grid_thw], dim=0)
             vision_data = torch.cat([vision_data, pixel_values_videos], dim=0)
             video_start_index = image_mask.sum().item() + video_mask.sum().item()
         use_inference_kv_cache = (
@@ -268,12 +270,15 @@ class Qwen2_5VLModel(MegatronModule):
             vision_embeds = None
             if vision_grid_thw is not None and vision_grid_thw.shape[0] > 0:
                 vision_embeds = self.vision_model(
-                    vision_data=vision_data,  # If None, vision model should use intermediate outputs (EPP > 1)
+                    vision_data=vision_data,
+                    # If None, vision model should use intermediate outputs
+                    # (EPP > 1)
                     grid_thw=vision_grid_thw,  # should provided in each EPP stage
                 )
 
             # If running inference, the language model KV cache will be updated for image token positions.
-            # Here we store the image tokens sequence length, which can be used as an offset to the KV cache later.
+            # Here we store the image tokens sequence length, which can be used
+            # as an offset to the KV cache later.
             if inference_params is not None:
                 raise NotImplementedError()
                 # inference_params.key_value_memory_dict["image_tokens_count"] = (
@@ -287,7 +292,8 @@ class Qwen2_5VLModel(MegatronModule):
                     input_ids=input_ids,
                     position_ids=None,  # NOTE: disable
                 )  # [text_seq_len, b, h_language]
-                # NOTE: why not cat here? is it the combined embeddings useless?
+                # NOTE: why not cat here? is it the combined embeddings
+                # useless?
                 combined_embeddings = language_embeddings
             elif vision_embeds is not None:
                 if video_start_index == 0:
@@ -301,9 +307,8 @@ class Qwen2_5VLModel(MegatronModule):
                     video_embeds = vision_embeds[video_start_index:]
                 else:
                     raise ValueError(
-                        f"Expect video token start index in range [0, {vision_embeds.shape[0]}], but got "
-                        f"{video_start_index}"
-                    )
+                        f"Expect video token start index in range [0, {
+                            vision_embeds.shape[0]}], but got " f"{video_start_index}")
 
                 combined_embeddings = self.language_model.embedding(
                     input_ids=input_ids,
@@ -315,7 +320,8 @@ class Qwen2_5VLModel(MegatronModule):
                         0, 1
                     ).contiguous()
                     if image_embeds is not None:
-                        image_mask = (input_ids == self.image_token_id).contiguous()
+                        image_mask = (
+                            input_ids == self.image_token_id).contiguous()
                         if image_mask.sum() > 0:
                             combined_embeddings = combined_embeddings.clone()
                             combined_embeddings[image_mask] = image_embeds.to(
@@ -323,7 +329,8 @@ class Qwen2_5VLModel(MegatronModule):
                                 device=combined_embeddings.device,
                             )
                     if video_embeds is not None:
-                        video_mask = (input_ids == self.video_token_id).contiguous()
+                        video_mask = (
+                            input_ids == self.video_token_id).contiguous()
                         if video_mask.sum() > 0:
                             combined_embeddings = combined_embeddings.clone()
                             combined_embeddings[video_mask] = video_embeds.to(
@@ -361,7 +368,8 @@ class Qwen2_5VLModel(MegatronModule):
             input_ids=None,
             position_ids=position_ids,  # None in encoder
             attention_mask=attention_mask,  # None in encoder
-            decoder_input=combined_embeddings,  # only not None in the first decoder PP stage
+            decoder_input=combined_embeddings,
+            # only not None in the first decoder PP stage
             labels=labels,  # only not None in the last decoder PP stage
             # inference_params=inference_params,  # currently always None
             packed_seq_params=packed_seq_params,  # currently always None

@@ -183,7 +183,8 @@ class AgentLoopBase(ABC):
 class AgentLoopWorker:
     """Agent loop worker takes a batch of messages and run each message in an agent loop."""
 
-    def __init__(self, config: DictConfig, server_handles: list[ray.actor.ActorHandle]):
+    def __init__(self, config: DictConfig,
+                 server_handles: list[ray.actor.ActorHandle]):
         """Initialize agent loop manager.
 
         Args:
@@ -264,10 +265,10 @@ class AgentLoopWorker:
             tasks.append(
                 asyncio.create_task(
                     self._run_agent_loop(
-                        agent_name, messages.tolist(), sampling_params, trajectory
-                    )
-                )
-            )
+                        agent_name,
+                        messages.tolist(),
+                        sampling_params,
+                        trajectory)))
         outputs = await asyncio.gather(*tasks)
 
         output = self._postprocess(outputs)
@@ -365,8 +366,9 @@ class AgentLoopWorker:
         )
         response_mask = outputs["input_ids"]
         assert (
-            response_ids.shape == response_mask.shape
-        ), f"mismatch in response_ids and response_mask shape: {response_ids.shape} vs {response_mask.shape}"
+            response_ids.shape == response_mask.shape), f"mismatch in response_ids and response_mask shape: {
+            response_ids.shape} vs {
+            response_mask.shape}"
         response_mask = response_mask * response_attention_mask
 
         input_ids = torch.cat([prompt_ids, response_ids], dim=1)
@@ -380,14 +382,18 @@ class AgentLoopWorker:
                 "prompts": prompt_ids,  # [bsz, prompt_length]
                 "responses": response_ids,  # [bsz, response_length]
                 "response_mask": response_mask,  # [bsz, response_length]
-                "input_ids": input_ids,  # [bsz, prompt_length + response_length]
-                "attention_mask": attention_mask,  # [bsz, prompt_length + response_length]
-                "position_ids": position_ids,  # [bsz, prompt_length + response_length]
+                # [bsz, prompt_length + response_length]
+                "input_ids": input_ids,
+                # [bsz, prompt_length + response_length]
+                "attention_mask": attention_mask,
+                # [bsz, prompt_length + response_length]
+                "position_ids": position_ids,
             },
             batch_size=len(input_ids),
         )
 
-        num_turns = np.array([input.num_turns for input in inputs], dtype=np.int32)
+        num_turns = np.array(
+            [input.num_turns for input in inputs], dtype=np.int32)
         metrics = [input.metrics.model_dump() for input in inputs]
         return DataProto(
             batch=batch,
@@ -461,9 +467,11 @@ class AgentLoopManager:
         while len(unready_dp_ranks) > 0:
             servers = {
                 rollout_dp_rank: server_class.options(
-                    # make sure AsyncvLLMServer colocates with its corresponding workers
+                    # make sure AsyncvLLMServer colocates with its
+                    # corresponding workers
                     scheduling_strategy=ray.util.scheduling_strategies.NodeAffinitySchedulingStrategy(
-                        node_id=workers_info[rollout_dp_rank * self.rollout_tp_size],
+                        node_id=workers_info[rollout_dp_rank *
+                                             self.rollout_tp_size],
                         soft=False,
                     ),
                     name=f"async_llm_server_{rollout_dp_rank}",
@@ -485,15 +493,16 @@ class AgentLoopManager:
                 except Exception:
                     ray.kill(server)
                     print(
-                        f"rollout server {rollout_dp_rank} failed, maybe address already in use, restarting..."
-                    )
+                        f"rollout server {rollout_dp_rank} failed, maybe address already in use, restarting...")
 
         # All server instances are ready, init AsyncLLM engine.
-        ray.get([server.init_engine.remote() for server in self.async_llm_servers])
+        ray.get([server.init_engine.remote()
+                for server in self.async_llm_servers])
 
     def _init_agent_loop_workers(self):
         self.agent_loop_workers = []
-        for i in range(self.config.actor_rollout_ref.rollout.agent.num_workers):
+        for i in range(
+                self.config.actor_rollout_ref.rollout.agent.num_workers):
             self.agent_loop_workers.append(
                 AgentLoopWorker.options(
                     name=f"agent_loop_worker_{i}",

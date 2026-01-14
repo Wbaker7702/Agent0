@@ -31,7 +31,7 @@ def extract_boxed(text):
                 depth -= 1
             j += 1
 
-        results.append(text[start + plen : j - 1])
+        results.append(text[start + plen: j - 1])
         i = j
 
     return results
@@ -66,8 +66,7 @@ def main(args):
     answer = answers[0]
     chat = [
         {
-            "role": "system",
-            "content": (
+            "role": "system", "content": (
                 "You are an expert competition-math problem setter.\n"
                 "FIRST, in your private scratch-pad, think step-by-step to design a brand-new, non-trivial problem. "
                 "The problem could come from any field of mathematics, including but not limited to algebra, geometry, number theory, combinatorics, prealgebra, probability, statistics, and calculus. "
@@ -79,24 +78,20 @@ def main(args):
                 "</question>\n\n"
                 r"\boxed{final_answer}"
                 "\n\n"
-                "Do NOT output anything else—no explanations, no extra markup."
-            ),
-        },
-        {
-            "role": "user",
-            "content": (
-                "Generate one new, challenging reasoning question now. "
-                "Remember to format the output exactly as instructed."
-            ),
-        },
-    ]
+                "Do NOT output anything else—no explanations, no extra markup."), }, {
+            "role": "user", "content": (
+                    "Generate one new, challenging reasoning question now. "
+                    "Remember to format the output exactly as instructed."), }, ]
 
     if tokenizer.chat_template:
         prompt = tokenizer.apply_chat_template(
-            chat, tokenize=False, add_generation_prompt=True, add_special_tokens=True
-        )
+            chat,
+            tokenize=False,
+            add_generation_prompt=True,
+            add_special_tokens=True)
     else:
-        prompt = "system: " + chat[0]["content"] + "\n" + "user: " + chat[1]["content"]
+        prompt = "system: " + chat[0]["content"] + \
+            "\n" + "user: " + chat[1]["content"]
     sample_params = vllm.SamplingParams(
         max_tokens=4096,
         temperature=1.0,
@@ -112,15 +107,18 @@ def main(args):
     for completion in completions:
         response = completion.outputs[0].text
         try:
-            questions = re.findall(r"<question>(.*?)</question>", response, re.DOTALL)
+            questions = re.findall(
+                r"<question>(.*?)</question>", response, re.DOTALL)
             answers = extract_boxed(response)
 
             if questions and answers:
                 question = questions[-1].strip()
                 answer = answers[-1].strip()
-                results.append({"question": question, "answer": answer, "score": 0})
+                results.append(
+                    {"question": question, "answer": answer, "score": 0})
             else:
-                results.append({"question": response, "answer": "", "score": -1})
+                results.append(
+                    {"question": response, "answer": "", "score": -1})
         except Exception:
             results.append({"question": response, "answer": "", "score": -1})
     with open(
@@ -133,11 +131,12 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", type=str, default="Qwen/Qwen3-4B")
     parser.add_argument(
-        "--num_samples", type=int, default=1250, help="Number of samples to generate"
-    )
-    parser.add_argument(
-        "--suffix", type=str, default="", help="Suffix to add to the output file"
-    )
+        "--num_samples",
+        type=int,
+        default=1250,
+        help="Number of samples to generate")
+    parser.add_argument("--suffix", type=str, default="",
+                        help="Suffix to add to the output file")
     parser.add_argument("--save_name", type=str, default="", help="")
     args = parser.parse_args()
 

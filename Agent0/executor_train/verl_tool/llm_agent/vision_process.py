@@ -132,10 +132,9 @@ def fetch_image(
         image_obj = Image.open(image)
     if image_obj is None:
         raise ValueError(
-            f"Unrecognized image input, support local path, http url, base64 and PIL.Image, got {image}"
-        )
+            f"Unrecognized image input, support local path, http url, base64 and PIL.Image, got {image}")
     image = to_rgb(image_obj)
-    ## resize
+    # resize
     if "resized_height" in ele and "resized_width" in ele:
         resized_height, resized_width = smart_resize(
             ele["resized_height"],
@@ -188,21 +187,24 @@ def smart_nframes(
         nframes = round_by_factor(ele["nframes"], FRAME_FACTOR)
     else:
         fps = ele.get("fps", FPS)
-        min_frames = ceil_by_factor(ele.get("min_frames", FPS_MIN_FRAMES), FRAME_FACTOR)
+        min_frames = ceil_by_factor(
+            ele.get(
+                "min_frames",
+                FPS_MIN_FRAMES),
+            FRAME_FACTOR)
         max_frames = floor_by_factor(
-            ele.get("max_frames", min(FPS_MAX_FRAMES, total_frames)), FRAME_FACTOR
-        )
+            ele.get(
+                "max_frames", min(
+                    FPS_MAX_FRAMES, total_frames)), FRAME_FACTOR)
         nframes = total_frames / video_fps * fps
         if nframes > total_frames:
             logger.warning(
-                f"smart_nframes: nframes[{nframes}] > total_frames[{total_frames}]"
-            )
+                f"smart_nframes: nframes[{nframes}] > total_frames[{total_frames}]")
         nframes = min(min(max(nframes, min_frames), max_frames), total_frames)
         nframes = floor_by_factor(nframes, FRAME_FACTOR)
     if not (FRAME_FACTOR <= nframes and nframes <= total_frames):
         raise ValueError(
-            f"nframes should in interval [{FRAME_FACTOR}, {total_frames}], but got {nframes}."
-        )
+            f"nframes should in interval [{FRAME_FACTOR}, {total_frames}], but got {nframes}.")
     return nframes
 
 
@@ -238,9 +240,16 @@ def _read_video_torchvision(
     )
     total_frames, video_fps = video.size(0), info["video_fps"]
     logger.info(
-        f"torchvision:  {video_path=}, {total_frames=}, {video_fps=}, time={time.time() - st:.3f}s"
-    )
-    nframes = smart_nframes(ele, total_frames=total_frames, video_fps=video_fps)
+        f"torchvision:  {
+            video_path=}, {
+            total_frames=}, {
+                video_fps=}, time={
+                    time.time() -
+            st:.3f}s")
+    nframes = smart_nframes(
+        ele,
+        total_frames=total_frames,
+        video_fps=video_fps)
     idx = torch.linspace(0, total_frames - 1, nframes).round().long()
     sample_fps = nframes / max(total_frames, 1e-6) * video_fps
     video = video[idx]
@@ -302,14 +311,19 @@ def calculate_video_frame_range(
     # Validate frame order
     if start_frame >= end_frame:
         raise ValueError(
-            f"Invalid time range: Start frame {start_frame} (at {video_start_clamped if video_start is not None else 0}s) "
-            f"exceeds end frame {end_frame} (at {video_end_clamped if video_end is not None else max_duration}s). "
-            f"Video duration: {max_duration:.2f}s ({total_frames} frames @ {video_fps}fps)"
-        )
+            f"Invalid time range: Start frame {start_frame} (at {
+                video_start_clamped if video_start is not None else 0}s) " f"exceeds end frame {end_frame} (at {
+                video_end_clamped if video_end is not None else max_duration}s). " f"Video duration: {
+                max_duration:.2f}s ({total_frames} frames @ {video_fps}fps)")
 
     logger.info(
-        f"calculate video frame range: {start_frame=}, {end_frame=}, {total_frames=} from {video_start=}, {video_end=}, {video_fps=:.3f}"
-    )
+        f"calculate video frame range: {
+            start_frame=}, {
+            end_frame=}, {
+                total_frames=} from {
+                    video_start=}, {
+                        video_end=}, {
+                            video_fps=:.3f}")
     return start_frame, end_frame, end_frame - start_frame + 1
 
 
@@ -338,13 +352,23 @@ def _read_video_decord(
         total_frames,
         video_fps,
     )
-    nframes = smart_nframes(ele, total_frames=total_frames, video_fps=video_fps)
-    idx = torch.linspace(start_frame, end_frame, nframes).round().long().tolist()
+    nframes = smart_nframes(
+        ele,
+        total_frames=total_frames,
+        video_fps=video_fps)
+    idx = torch.linspace(
+        start_frame,
+        end_frame,
+        nframes).round().long().tolist()
     video = vr.get_batch(idx).asnumpy()
     video = torch.tensor(video).permute(0, 3, 1, 2)  # Convert to TCHW format
     logger.info(
-        f"decord:  {video_path=}, {total_frames=}, {video_fps=}, time={time.time() - st:.3f}s"
-    )
+        f"decord:  {
+            video_path=}, {
+            total_frames=}, {
+                video_fps=}, time={
+                    time.time() -
+            st:.3f}s")
     sample_fps = nframes / max(total_frames, 1e-6) * video_fps
     return video, sample_fps
 
@@ -383,7 +407,9 @@ def _read_video_torchcodec(
     logger.info(f"set TORCHCODEC_NUM_THREADS: {TORCHCODEC_NUM_THREADS}")
     video_path = ele["video"]
     st = time.time()
-    decoder = VideoDecoder(video_path, num_ffmpeg_threads=TORCHCODEC_NUM_THREADS)
+    decoder = VideoDecoder(
+        video_path,
+        num_ffmpeg_threads=TORCHCODEC_NUM_THREADS)
     video_fps = decoder.metadata.average_fps
     total_frames = decoder.metadata.num_frames
     start_frame, end_frame, total_frames = calculate_video_frame_range(
@@ -391,13 +417,23 @@ def _read_video_torchcodec(
         total_frames,
         video_fps,
     )
-    nframes = smart_nframes(ele, total_frames=total_frames, video_fps=video_fps)
-    idx = torch.linspace(start_frame, end_frame, nframes).round().long().tolist()
+    nframes = smart_nframes(
+        ele,
+        total_frames=total_frames,
+        video_fps=video_fps)
+    idx = torch.linspace(
+        start_frame,
+        end_frame,
+        nframes).round().long().tolist()
     sample_fps = nframes / max(total_frames, 1e-6) * video_fps
     video = decoder.get_frames_at(indices=idx).data
     logger.info(
-        f"torchcodec:  {video_path=}, {total_frames=}, {video_fps=}, time={time.time() - st:.3f}s"
-    )
+        f"torchcodec:  {
+            video_path=}, {
+            total_frames=}, {
+                video_fps=}, time={
+                    time.time() -
+            st:.3f}s")
     return video, sample_fps
 
 
@@ -420,7 +456,9 @@ def get_video_reader_backend() -> str:
         video_reader_backend = "decord"
     else:
         video_reader_backend = "torchvision"
-    print(f"qwen-vl-utils using {video_reader_backend} to read video.", file=sys.stderr)
+    print(
+        f"qwen-vl-utils using {video_reader_backend} to read video.",
+        file=sys.stderr)
     return video_reader_backend
 
 
@@ -430,11 +468,11 @@ def fetch_video(
     if isinstance(ele["video"], str):
         video_reader_backend = get_video_reader_backend()
         try:
-            video, sample_fps = VIDEO_READER_BACKENDS[video_reader_backend](ele)
+            video, sample_fps = VIDEO_READER_BACKENDS[video_reader_backend](
+                ele)
         except Exception as e:
             logger.warning(
-                f"video_reader_backend {video_reader_backend} error, use torchvision as default, msg: {e}"
-            )
+                f"video_reader_backend {video_reader_backend} error, use torchvision as default, msg: {e}")
             video, sample_fps = VIDEO_READER_BACKENDS["torchvision"](ele)
 
         nframes, _, height, width = video.shape
@@ -447,8 +485,7 @@ def fetch_video(
         max_pixels_supposed = ele.get("max_pixels", max_pixels)
         if max_pixels_supposed > max_pixels:
             logger.warning(
-                f"The given max_pixels[{max_pixels_supposed}] exceeds limit[{max_pixels}]."
-            )
+                f"The given max_pixels[{max_pixels_supposed}] exceeds limit[{max_pixels}].")
         max_pixels = min(max_pixels_supposed, max_pixels)
         if "resized_height" in ele and "resized_width" in ele:
             resized_height, resized_width = smart_resize(
@@ -492,7 +529,8 @@ def fetch_video(
         return images
 
 
-def extract_vision_info(conversations: list[dict] | list[list[dict]]) -> list[dict]:
+def extract_vision_info(
+        conversations: list[dict] | list[list[dict]]) -> list[dict]:
     vision_infos = []
     if isinstance(conversations[0], dict):
         conversations = [conversations]
@@ -520,7 +558,7 @@ def process_vision_info(
 ]:
 
     vision_infos = extract_vision_info(conversations)
-    ## Read images or videos
+    # Read images or videos
     image_inputs = []
     video_inputs = []
     video_sample_fps_list = []

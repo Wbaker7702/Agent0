@@ -81,8 +81,8 @@ def _check_file(
         for alias in node.names:
             if alias.name == "*":
                 problems.append(
-                    f"{py_file}:{node.lineno} - wildcard import `from {module_name} import *` cannot be verified."
-                )
+                    f"{py_file}:{
+                        node.lineno} - wildcard import `from {module_name} import *` cannot be verified.")
                 continue
 
             imported_name = alias.name
@@ -105,8 +105,8 @@ def _check_file(
                 if not (doc and doc.strip()):
                     kind = "class" if inspect.isclass(obj) else "function"
                     problems.append(
-                        f"{py_file}:{node.lineno} - {kind} `{module_name}.{imported_name}` is missing a docstring."
-                    )
+                        f"{py_file}:{
+                            node.lineno} - {kind} `{module_name}.{imported_name}` is missing a docstring.")
 
     return problems
 

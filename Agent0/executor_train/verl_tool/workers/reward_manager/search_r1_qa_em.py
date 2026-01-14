@@ -144,7 +144,8 @@ class SearchR1QAEMRewardManager:
         if tokenizer is None:
             from transformers import AutoTokenizer
 
-            tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen2.5-7B-Instruct")
+            tokenizer = AutoTokenizer.from_pretrained(
+                "Qwen/Qwen2.5-7B-Instruct")
 
         self.tokenizer = tokenizer
         self.num_examine = num_examine
@@ -196,7 +197,8 @@ class SearchR1QAEMRewardManager:
             return data.batch["rm_scores"]
 
         scores = [{} for _ in range(len(data))]
-        reward_tensor = torch.zeros_like(data.batch["responses"], dtype=torch.float32)
+        reward_tensor = torch.zeros_like(
+            data.batch["responses"], dtype=torch.float32)
         already_print_data_sources = {}
         reward_extra_info = defaultdict(list)
         to_save_records = []
@@ -230,8 +232,8 @@ class SearchR1QAEMRewardManager:
             else:
                 # Fallback to direct ground truth or golden_answers
                 ground_truth = data_item.non_tensor_batch.get(
-                    "ground_truth", data_item.non_tensor_batch.get("golden_answers", [])
-                )
+                    "ground_truth", data_item.non_tensor_batch.get(
+                        "golden_answers", []))
 
             # Compute score
             score = compute_score(
@@ -245,7 +247,8 @@ class SearchR1QAEMRewardManager:
                     valid_response_length
                 )
             else:
-                reward_extra_info["wrong_response_length"].append(valid_response_length)
+                reward_extra_info["wrong_response_length"].append(
+                    valid_response_length)
 
             # TODO: check if logic is correct
             # update this score to the scores
@@ -254,7 +257,8 @@ class SearchR1QAEMRewardManager:
             reward_tensor[i, valid_response_length - 1] = score
 
             # Print examples for debugging
-            data_source = data_item.non_tensor_batch.get("data_source", "unknown")
+            data_source = data_item.non_tensor_batch.get(
+                "data_source", "unknown")
             if data_source not in already_print_data_sources:
                 already_print_data_sources[data_source] = 0
 
@@ -300,9 +304,11 @@ class SearchR1QAEMRewardManager:
         if save_record:
             # Save the records to a file
             if self.num_examine == 1:
-                temp_file = self.record_dir / f"{self.name}-step-val-{self.step}.json"
+                temp_file = self.record_dir / \
+                    f"{self.name}-step-val-{self.step}.json"
             else:
-                temp_file = self.record_dir / f"{self.name}-step-{self.step}.json"
+                temp_file = self.record_dir / \
+                    f"{self.name}-step-{self.step}.json"
             self.step += 1
             if temp_file.exists():
                 with open(temp_file, "r") as f:
@@ -321,7 +327,7 @@ class SearchR1QAEMRewardManager:
                 # convert the length to a Python int
                 length_i = (
                     data[i]
-                    .batch["attention_mask"][data[i].batch["prompts"].shape[-1] :]
+                    .batch["attention_mask"][data[i].batch["prompts"].shape[-1]:]
                     .sum()
                     .item()
                 )
@@ -334,7 +340,7 @@ class SearchR1QAEMRewardManager:
             else:
                 length_i = (
                     data[i]
-                    .batch["attention_mask"][data[i].batch["prompts"].shape[-1] :]
+                    .batch["attention_mask"][data[i].batch["prompts"].shape[-1]:]
                     .sum()
                     .item()
                 )
@@ -353,9 +359,8 @@ class SearchR1QAEMRewardManager:
         reward_extra_info["correct_response_length"] = [
             correct_response_length_mean
         ] * len(reward_tensor)
-        reward_extra_info["wrong_response_length"] = [wrong_response_length_mean] * len(
-            reward_tensor
-        )
+        reward_extra_info["wrong_response_length"] = [
+            wrong_response_length_mean] * len(reward_tensor)
 
         if return_dict:
             return {

@@ -187,7 +187,8 @@ def _check_directory_structure(folder_path, record_file):
     existing_entries = set()
     for root, dirs, files in os.walk(folder_path):
         for dir_name in dirs:
-            relative_dir = os.path.relpath(os.path.join(root, dir_name), folder_path)
+            relative_dir = os.path.relpath(
+                os.path.join(root, dir_name), folder_path)
             existing_entries.add(f"dir:{relative_dir}")
         for file_name in files:
             if file_name != ".directory_record.txt":
@@ -232,8 +233,11 @@ def copy_to_local(
 
 
 def copy_local_path_from_hdfs(
-    src: str, cache_dir=None, filelock=".file.lock", verbose=False, always_recopy=False
-) -> str:
+        src: str,
+        cache_dir=None,
+        filelock=".file.lock",
+        verbose=False,
+        always_recopy=False) -> str:
     """Deprecated. Please use copy_to_local instead."""
     from filelock import FileLock
 
@@ -265,13 +269,13 @@ def copy_local_path_from_hdfs(
                 if os.path.isdir(local_path):
                     _record_directory_structure(local_path)
             elif os.path.isdir(local_path):
-                # always_recopy=False, local path exists, and it is a folder: check whether there is anything missed
+                # always_recopy=False, local path exists, and it is a folder:
+                # check whether there is anything missed
                 record_file = os.path.join(local_path, ".directory_record.txt")
                 if not _check_directory_structure(local_path, record_file):
                     if verbose:
                         print(
-                            f"Recopy from {src} to {local_path} due to missing files or directories."
-                        )
+                            f"Recopy from {src} to {local_path} due to missing files or directories.")
                     shutil.rmtree(local_path, ignore_errors=True)
                     copy(src, local_path)
                     _record_directory_structure(local_path)

@@ -31,7 +31,8 @@ import stopit  # Use the robust, thread-safe stopit library for timeouts
 from mathruler.grader import extract_boxed_content, grade_answer
 
 # --- Argument Parsing ---
-parser = argparse.ArgumentParser(description="Evaluate generated questions using vLLM.")
+parser = argparse.ArgumentParser(
+    description="Evaluate generated questions using vLLM.")
 parser.add_argument(
     "--model",
     type=str,
@@ -123,16 +124,12 @@ sample_params = vllm.SamplingParams(
 
 # 3. Generate Responses
 print(f"[{args.suffix}] Generating {args.num_samples} samples for each question...")
-chats = [
-    [
-        {
-            "role": "system",
-            "content": "Please reason step by step, and put your final answer within \\boxed{}.",
-        },
-        {"role": "user", "content": q},
-    ]
-    for q in questions
-]
+chats = [[{"role": "system",
+           "content": "Please reason step by step, and put your final answer within \\boxed{}.",
+           },
+          {"role": "user",
+           "content": q},
+          ] for q in questions]
 
 if tokenizer.chat_template:
     prompts = [
@@ -147,7 +144,10 @@ else:
         for chat in chats
     ]
 
-responses = model.generate(prompts, sampling_params=sample_params, use_tqdm=True)
+responses = model.generate(
+    prompts,
+    sampling_params=sample_params,
+    use_tqdm=True)
 print(f"[{args.suffix}] Generation complete.")
 
 # 4. Process and Grade Responses
@@ -156,8 +156,10 @@ print(f"[{args.suffix}] Grading responses...")
 for response, golden_answer, question in zip(responses, answers, questions):
     try:
         # Extract the boxed content from all generated samples
-        results = [extract_boxed_content(output.text) for output in response.outputs]
-        results = [res for res in results if res]  # Filter out None/empty results
+        results = [extract_boxed_content(output.text)
+                   for output in response.outputs]
+        # Filter out None/empty results
+        results = [res for res in results if res]
 
         if not results:
             print(
@@ -171,15 +173,15 @@ for response, golden_answer, question in zip(responses, answers, questions):
             for existing_answer in answer_counts:
                 # OPTIMIZATION: Perform cheap string comparisons first.
                 if result == existing_answer or (
-                    "no " in result.lower() and "no " in existing_answer.lower()
-                ):
+                        "no " in result.lower() and "no " in existing_answer.lower()):
                     answer_counts[existing_answer] += 1
                     matched = True
                     break
 
                 # If cheap checks fail, use the expensive, timed grader.
                 # Check both directions (A vs B and B vs A).
-                match_1 = grade_answer_with_timeout(result, existing_answer, timeout=10)
+                match_1 = grade_answer_with_timeout(
+                    result, existing_answer, timeout=10)
                 if match_1 == "TIMED_OUT":
                     print(
                         f"[{args.suffix}] GRADER TIMEOUT on: '{result[:30]}...' vs '{existing_answer[:30]}...'"
@@ -191,7 +193,8 @@ for response, golden_answer, question in zip(responses, answers, questions):
                     matched = True
                     break
 
-                match_2 = grade_answer_with_timeout(existing_answer, result, timeout=10)
+                match_2 = grade_answer_with_timeout(
+                    existing_answer, result, timeout=10)
                 if match_2 == "TIMED_OUT":
                     print(
                         f"[{args.suffix}] GRADER TIMEOUT on: '{existing_answer[:30]}...' vs '{result[:30]}...'"

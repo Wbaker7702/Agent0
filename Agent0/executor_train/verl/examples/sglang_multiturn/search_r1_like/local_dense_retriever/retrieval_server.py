@@ -13,7 +13,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# Adapted from https://github.com/PeterGriffinJin/Search-R1/blob/main/search_r1/search/retrieval_server.py
+# Adapted from
+# https://github.com/PeterGriffinJin/Search-R1/blob/main/search_r1/search/retrieval_server.py
 
 import argparse
 import json
@@ -56,8 +57,10 @@ def load_model(model_path: str, use_fp16: bool = False):
 
 
 def pooling(
-    pooler_output, last_hidden_state, attention_mask=None, pooling_method="mean"
-):
+        pooler_output,
+        last_hidden_state,
+        attention_mask=None,
+        pooling_method="mean"):
     if pooling_method == "mean":
         last_hidden = last_hidden_state.masked_fill(
             ~attention_mask[..., None].bool(), 0.0
@@ -72,7 +75,13 @@ def pooling(
 
 
 class Encoder:
-    def __init__(self, model_name, model_path, pooling_method, max_length, use_fp16):
+    def __init__(
+            self,
+            model_name,
+            model_path,
+            pooling_method,
+            max_length,
+            use_fp16):
         self.model_name = model_name
         self.model_path = model_path
         self.pooling_method = pooling_method
@@ -153,15 +162,21 @@ class BaseRetriever:
     def _search(self, query: str, num: int, return_score: bool):
         raise NotImplementedError
 
-    def _batch_search(self, query_list: list[str], num: int, return_score: bool):
+    def _batch_search(
+            self,
+            query_list: list[str],
+            num: int,
+            return_score: bool):
         raise NotImplementedError
 
     def search(self, query: str, num: int = None, return_score: bool = False):
         return self._search(query, num, return_score)
 
     def batch_search(
-        self, query_list: list[str], num: int = None, return_score: bool = False
-    ):
+            self,
+            query_list: list[str],
+            num: int = None,
+            return_score: bool = False):
         return self._batch_search(query_list, num, return_score)
 
 
@@ -216,8 +231,10 @@ class BM25Retriever(BaseRetriever):
             return results
 
     def _batch_search(
-        self, query_list: list[str], num: int = None, return_score: bool = False
-    ):
+            self,
+            query_list: list[str],
+            num: int = None,
+            return_score: bool = False):
         results = []
         scores = []
         for query in query_list:
@@ -265,8 +282,10 @@ class DenseRetriever(BaseRetriever):
             return results
 
     def _batch_search(
-        self, query_list: list[str], num: int = None, return_score: bool = False
-    ):
+            self,
+            query_list: list[str],
+            num: int = None,
+            return_score: bool = False):
         if isinstance(query_list, str):
             query_list = [query_list]
         if num is None:
@@ -275,9 +294,12 @@ class DenseRetriever(BaseRetriever):
         results = []
         scores = []
         for start_idx in tqdm(
-            range(0, len(query_list), self.batch_size), desc="Retrieval process: "
-        ):
-            query_batch = query_list[start_idx : start_idx + self.batch_size]
+                range(
+                    0,
+                    len(query_list),
+                    self.batch_size),
+                desc="Retrieval process: "):
+            query_batch = query_list[start_idx: start_idx + self.batch_size]
             batch_emb = self.encoder.encode(query_batch)
             batch_scores, batch_idxs = self.index.search(batch_emb, k=num)
             batch_scores = batch_scores.tolist()
@@ -288,7 +310,7 @@ class DenseRetriever(BaseRetriever):
             batch_results = load_docs(self.corpus, flat_idxs)
             # chunk them back
             batch_results = [
-                batch_results[i * num : (i + 1) * num] for i in range(len(batch_idxs))
+                batch_results[i * num: (i + 1) * num] for i in range(len(batch_idxs))
             ]
 
             results.extend(batch_results)
@@ -396,8 +418,7 @@ def retrieve_endpoint(request: QueryRequest):
 
     # Perform batch retrieval
     results, scores = retriever.batch_search(
-        query_list=request.queries, num=request.topk, return_score=request.return_scores
-    )
+        query_list=request.queries, num=request.topk, return_score=request.return_scores)
 
     # Format response
     resp = []
@@ -414,7 +435,8 @@ def retrieve_endpoint(request: QueryRequest):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Launch the local faiss retriever.")
+    parser = argparse.ArgumentParser(
+        description="Launch the local faiss retriever.")
     parser.add_argument(
         "--index_path",
         type=str,
@@ -434,8 +456,10 @@ if __name__ == "__main__":
         help="Number of retrieved passages for one query.",
     )
     parser.add_argument(
-        "--retriever_name", type=str, default="e5", help="Name of the retriever model."
-    )
+        "--retriever_name",
+        type=str,
+        default="e5",
+        help="Name of the retriever model.")
     parser.add_argument(
         "--retriever_model",
         type=str,
@@ -449,7 +473,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # 1) Build a config (could also parse from arguments).
-    #    In real usage, you'd parse your CLI arguments or environment variables.
+    # In real usage, you'd parse your CLI arguments or environment variables.
     config = Config(
         retrieval_method=args.retriever_name,  # or "dense"
         index_path=args.index_path,

@@ -74,7 +74,8 @@ def test():
     )
 
     # Sharding among different ranks
-    ret_proto1 = shard_wg.execute_with_func_generator(get_aux_metrics, test_proto)
+    ret_proto1 = shard_wg.execute_with_func_generator(
+        get_aux_metrics, test_proto)
 
     # compare execute on driver
     hs = HackSelf()

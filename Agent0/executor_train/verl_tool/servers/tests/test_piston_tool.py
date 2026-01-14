@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from tools.piston import PistonTool
 import json
 import requests
 import fire
@@ -8,7 +9,6 @@ import os
 
 # Add parent directory to path to import PistonTool
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from tools.piston import PistonTool
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -241,10 +241,14 @@ def _send_test_request(url, trajectory_id, action, test_name, use_local=False):
             tool = PistonTool(use_local=use_local)
 
             # Execute the code
-            observation, done, valid = tool.conduct_action(trajectory_id, action, {})
+            observation, done, valid = tool.conduct_action(
+                trajectory_id, action, {})
 
             logger.info(f"\n--- {test_name} Result ---\n{observation}\n")
-            return {"observations": [observation], "dones": [done], "valids": [valid]}
+            return {
+                "observations": [observation],
+                "dones": [done],
+                "valids": [valid]}
 
         except Exception as e:
             logger.error(f"PistonTool error: {str(e)}")
@@ -269,7 +273,8 @@ def _send_test_request(url, trajectory_id, action, test_name, use_local=False):
                 observation = result["observations"][0]
                 logger.info(f"\n--- {test_name} Result ---\n{observation}\n")
             else:
-                logger.error(f"No observation found in response for {test_name}")
+                logger.error(
+                    f"No observation found in response for {test_name}")
 
             return result
         except requests.exceptions.RequestException as e:

@@ -42,7 +42,8 @@ class ActionRequest(BaseModel):
 
     @validator("actions")
     def validate_actions_length(cls, v, values):
-        if "trajectory_ids" in values and len(v) != len(values["trajectory_ids"]):
+        if "trajectory_ids" in values and len(
+                v) != len(values["trajectory_ids"]):
             raise ValueError("Length of actions must match trajectory_ids")
         return v
 
@@ -53,7 +54,8 @@ class ActionRequest(BaseModel):
             and "trajectory_ids" in values
             and len(v) != len(values["trajectory_ids"])
         ):
-            raise ValueError("Length of extra_fields must match trajectory_ids")
+            raise ValueError(
+                "Length of extra_fields must match trajectory_ids")
         return v
 
 
@@ -131,17 +133,17 @@ class AsyncToolManager:
     def _setup_thread_pool(self):
         """Initialize thread pool with proper configuration"""
         self.thread_pool = concurrent.futures.ThreadPoolExecutor(
-            max_workers=self.config.thread_pool_size, thread_name_prefix="tool_worker"
-        )
+            max_workers=self.config.thread_pool_size, thread_name_prefix="tool_worker")
         logger.info(
-            f"Thread pool initialized with {self.config.thread_pool_size} workers"
-        )
+            f"Thread pool initialized with {
+                self.config.thread_pool_size} workers")
 
     def _initialize_tools(self, tool_types: Tuple[str]) -> None:
         """Initialize tools with better error handling and logging"""
         # Ensure finish tool is last
         if "finish" in tool_types:
-            tool_types = tuple(t for t in tool_types if t != "finish") + ("finish",)
+            tool_types = tuple(t for t in tool_types if t !=
+                               "finish") + ("finish",)
 
         logger.info(f"Initializing tools: {tool_types}")
 
@@ -165,11 +167,8 @@ class AsyncToolManager:
             try:
                 finish_tool = get_tool_cls("finish")
                 self.tools["finish"] = finish_tool(
-                    num_workers=self.config.workers_per_tool,
-                    other_tools=[
-                        self.tools[t] for t in initialized_tools if t != "finish"
-                    ],
-                )
+                    num_workers=self.config.workers_per_tool, other_tools=[
+                        self.tools[t] for t in initialized_tools if t != "finish"], )
                 logger.info("✓ Initialized finish tool")
             except Exception as e:
                 logger.error(f"✗ Failed to initialize finish tool: {e}")
@@ -190,7 +189,9 @@ class AsyncToolManager:
         """Generate usage instructions for available tools"""
         instructions = []
         for tool_type, tool in self.tools.items():
-            if tool_type not in ["finish", "base"] and hasattr(tool, "get_usage_inst"):
+            if tool_type not in [
+                    "finish", "base"] and hasattr(
+                    tool, "get_usage_inst"):
                 instructions.append(f"• {tool_type}: {tool.get_usage_inst()}")
 
         if not instructions:
@@ -295,7 +296,8 @@ class AsyncToolManager:
         for tool_type, (indices, data) in tool_groups.items():
             if tool_type is None:
                 # Handle invalid actions
-                self._handle_invalid_actions(indices, observations, dones, valids)
+                self._handle_invalid_actions(
+                    indices, observations, dones, valids)
                 continue
 
             task = self._create_tool_processing_task(tool_type, data)
@@ -305,7 +307,9 @@ class AsyncToolManager:
         await self._execute_tool_tasks(tasks, observations, dones, valids)
 
         processing_time = (time.time() - start_time) * 1000
-        logger.debug(f"Processed {num_actions} actions in {processing_time:.1f}ms")
+        logger.debug(
+            f"Processed {num_actions} actions in {
+                processing_time:.1f}ms")
 
         return observations, dones, valids
 
@@ -400,7 +404,9 @@ class AsyncToolManager:
                     valids[result_idx] = tool_valids[idx_pos]
 
             except Exception as e:
-                logger.error(f"Tool {tool_type} processing failed: {e}", exc_info=True)
+                logger.error(
+                    f"Tool {tool_type} processing failed: {e}",
+                    exc_info=True)
 
                 if DEBUG:
                     raise e
@@ -596,14 +602,16 @@ class AsyncToolServer:
         else:
             extra_fields = [{} for _ in request_data.trajectory_ids]
 
-        # Create empty extra fields, take all other fields except trajectory_ids and actions as extra_fields
+        # Create empty extra fields, take all other fields except
+        # trajectory_ids and actions as extra_fields
         keys = set(request_data.model_dump().keys()) - {
             "trajectory_ids",
             "actions",
             "extra_fields",
         }
         for key in keys:
-            if key not in extra_fields[0] and getattr(request_data, key) is not None:
+            if key not in extra_fields[0] and getattr(
+                    request_data, key) is not None:
                 for ef, value in zip(extra_fields, getattr(request_data, key)):
                     ef[key] = value
         return extra_fields
@@ -612,7 +620,9 @@ class AsyncToolServer:
         """Start the server with optimal configuration"""
         logger.info("🚀 Starting Tool Server")
         logger.info(f"   Host: {self.config.host}:{self.config.port}")
-        logger.info(f"   Max Concurrent: {self.config.max_concurrent_requests}")
+        logger.info(
+            f"   Max Concurrent: {
+                self.config.max_concurrent_requests}")
         logger.info(f"   Thread Pool: {self.config.thread_pool_size}")
         logger.info(f"   Timeout: {self.config.request_timeout}s")
         logger.info(f"   Tools: {list(self.tool_manager.tools.keys())}")

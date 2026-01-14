@@ -49,7 +49,9 @@ class TensorHelper:
         """Create attention mask from input ids."""
         return torch.where(input_ids != self.config.pad_token_id, 1, 0)
 
-    def create_position_ids(self, attention_mask: torch.Tensor) -> torch.Tensor:
+    def create_position_ids(
+            self,
+            attention_mask: torch.Tensor) -> torch.Tensor:
         """Create position ids from attention mask."""
         return (torch.cumsum(attention_mask, dim=1) - 1) * attention_mask
 
@@ -60,7 +62,8 @@ class TensorHelper:
         device = tensors[0].device
         tensors = [tensor.to(device) for tensor in tensors]
         concatenated = torch.cat(tensors, dim=1)
-        padded_tensor, _ = self.convert_pad_structure(concatenated, pad_to_left)
+        padded_tensor, _ = self.convert_pad_structure(
+            concatenated, pad_to_left)
         return padded_tensor
 
     def _example_level_pad(
@@ -73,8 +76,9 @@ class TensorHelper:
         Pad responses for non-active examples with pad tokens.
         """
         assert (
-            active_mask.sum() == responses.shape[0]
-        ), f"Active mask sum: {active_mask.sum()}, responses shape: {responses.shape}"
+            active_mask.sum() == responses.shape[0]), f"Active mask sum: {
+            active_mask.sum()}, responses shape: {
+            responses.shape}"
         # Create masked responses tensor
         batch_size = active_mask.shape[0]
 
@@ -99,9 +103,8 @@ class TensorHelper:
 
         return padded_responses, padded_responses_str
 
-    def pad_tensor(
-        self, tensor: torch.Tensor, max_length: int, padding_side: str = "right"
-    ) -> torch.Tensor:
+    def pad_tensor(self, tensor: torch.Tensor, max_length: int,
+                   padding_side: str = "right") -> torch.Tensor:
         """
         Pad tensor with pad token id to a specified length in the sequence dimension.
         Args:

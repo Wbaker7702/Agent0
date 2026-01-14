@@ -58,7 +58,8 @@ class HFRollout(BaseRollout):
         do_sample = prompts.meta_info.get("do_sample", self.config.do_sample)
         is_validate = prompts.meta_info.get("validate", False)
 
-        temperature = prompts.meta_info.get("temperature", self.config.temperature)
+        temperature = prompts.meta_info.get(
+            "temperature", self.config.temperature)
         response_length = prompts.meta_info.get(
             "response_length", self.config.response_length
         )
@@ -101,7 +102,8 @@ class HFRollout(BaseRollout):
 
         idx = prompts.batch["input_ids"]  # (bs, prompt_length)
         prompt_length = idx.size(1)
-        attention_mask = prompts.batch["attention_mask"]  # left-padded attention_mask
+        # left-padded attention_mask
+        attention_mask = prompts.batch["attention_mask"]
         position_ids = prompts.batch["position_ids"]
 
         # used to construct attention_mask
@@ -112,7 +114,8 @@ class HFRollout(BaseRollout):
         param_ctx = contextlib.nullcontext()
 
         if isinstance(self.module, FSDP):
-            # recurse need to set to False according to https://github.com/pytorch/pytorch/issues/100069
+            # recurse need to set to False according to
+            # https://github.com/pytorch/pytorch/issues/100069
             param_ctx = FSDP.summon_full_params(
                 self.module, writeback=False, recurse=False
             )
@@ -155,13 +158,16 @@ class HFRollout(BaseRollout):
         # make necessary reputations if num_return_sequences > 1
         num_return_sequences = kwargs.get("num_return_sequences", 1)
         if num_return_sequences > 1:
-            position_ids = position_ids.repeat_interleave(num_return_sequences, dim=0)
+            position_ids = position_ids.repeat_interleave(
+                num_return_sequences, dim=0)
             attention_mask = attention_mask.repeat_interleave(
                 num_return_sequences, dim=0
             )
 
-        prompt = seq[:, :prompt_length]  # (generated_batch_size, prompt_length)
-        response = seq[:, prompt_length:]  # (generated_batch_size, response_length)
+        # (generated_batch_size, prompt_length)
+        prompt = seq[:, :prompt_length]
+        # (generated_batch_size, response_length)
+        response = seq[:, prompt_length:]
 
         response_length = response.size(1)
         delta_position_id = torch.arange(
@@ -175,9 +181,11 @@ class HFRollout(BaseRollout):
         position_ids = torch.cat([position_ids, response_position_ids], dim=-1)
 
         response_attention_mask = get_response_mask(
-            response_id=response, eos_token=eos_token_id, dtype=attention_mask.dtype
-        )
-        attention_mask = torch.cat((attention_mask, response_attention_mask), dim=-1)
+            response_id=response,
+            eos_token=eos_token_id,
+            dtype=attention_mask.dtype)
+        attention_mask = torch.cat(
+            (attention_mask, response_attention_mask), dim=-1)
 
         batch = TensorDict(
             {

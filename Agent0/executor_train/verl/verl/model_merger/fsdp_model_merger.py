@@ -74,7 +74,8 @@ class FSDPModelMerger(BaseModelMerger):
         """
         config_path = Path(self.config.local_dir) / "fsdp_config.json"
         if not config_path.exists():
-            raise FileNotFoundError(f"Config file {config_path} does not exist.")
+            raise FileNotFoundError(
+                f"Config file {config_path} does not exist.")
 
         with open(config_path) as f:
             config = json.load(f)
@@ -88,7 +89,9 @@ class FSDPModelMerger(BaseModelMerger):
 
     def _load_rank_zero_state_dict(self, world_size: int) -> dict:
         return torch.load(
-            Path(self.config.local_dir) / f"model_world_size_{world_size}_rank_0.pt",
+            Path(
+                self.config.local_dir) /
+            f"model_world_size_{world_size}_rank_0.pt",
             map_location="cpu",
             weights_only=False,
         )
@@ -161,7 +164,10 @@ class FSDPModelMerger(BaseModelMerger):
                 Path(self.config.local_dir)
                 / f"model_world_size_{world_size}_rank_{rank}.pt"
             )
-            state_dict = torch.load(model_path, map_location="cpu", weights_only=False)
+            state_dict = torch.load(
+                model_path,
+                map_location="cpu",
+                weights_only=False)
             model_state_dict_lst[rank] = state_dict
             return state_dict
 
@@ -171,8 +177,9 @@ class FSDPModelMerger(BaseModelMerger):
                 for rank in range(total_shards)
             ]
             for future in tqdm(
-                futures, desc=f"Loading {total_shards} FSDP shards", total=total_shards
-            ):
+                    futures,
+                    desc=f"Loading {total_shards} FSDP shards",
+                    total=total_shards):
                 future.result()
 
         # Merge state dicts from all shards
@@ -213,7 +220,8 @@ class FSDPModelMerger(BaseModelMerger):
                     # 1-D list, FSDP without TP
                     assert len(placements) == 1
                     shards = state_dict[key]
-                    state_dict[key] = self._merge_by_placement(shards, placements[0])
+                    state_dict[key] = self._merge_by_placement(
+                        shards, placements[0])
                 else:
                     # 2-D list, FSDP + TP
                     raise NotImplementedError("FSDP + TP is not supported yet")
@@ -234,7 +242,8 @@ class FSDPModelMerger(BaseModelMerger):
         total_shards, mesh_shape = self._calculate_shard_configuration(
             mesh, mesh_dim_names
         )
-        print(f"Processing model shards with {total_shards} {mesh_shape} in total")
+        print(
+            f"Processing model shards with {total_shards} {mesh_shape} in total")
 
         merged_state_dict = self._load_and_merge_state_dicts(
             world_size, total_shards, mesh_shape, mesh_dim_names
@@ -242,7 +251,8 @@ class FSDPModelMerger(BaseModelMerger):
 
         if self.config.operation == "test":
             if not self.config.test_hf_dir:
-                raise ValueError("test_hf_dir must be provided for test operation")
+                raise ValueError(
+                    "test_hf_dir must be provided for test operation")
             self._validate_state_dict(merged_state_dict)
         elif self.config.operation == "merge":
             self.save_hf_model_and_tokenizer(merged_state_dict)
@@ -265,8 +275,9 @@ class FSDPModelMerger(BaseModelMerger):
 
         missing_keys = hf_model_keys - collected_keys
         assert (
-            len(missing_keys) == 0
-        ), f"Missing keys in collected state dict: {list(sorted(missing_keys))}"
+            len(missing_keys) == 0), f"Missing keys in collected state dict: {
+            list(
+                sorted(missing_keys))}"
 
         extra_keys = collected_keys - hf_model_keys
         assert (

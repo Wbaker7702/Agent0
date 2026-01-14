@@ -65,7 +65,8 @@ class AgentActorRolloutRefWorker(
                     output = self.rollout.generate_sequences(prompts=prompts)
                 else:
                     # agent behavior
-                    output = self.manager.run_llm_loop(prompts)  # our agent behavior
+                    output = self.manager.run_llm_loop(
+                        prompts)  # our agent behavior
 
             log_gpu_memory_usage("After rollout generation", logger=logger)
 
@@ -86,7 +87,11 @@ class AgentActorRolloutRefWorker(
     # resume from checkpoint first val will have bad performance numbers without this modification
     # seems because of the fsdp weights not updated to vllm
     @register(dispatch_mode=Dispatch.ONE_TO_ALL)
-    def load_checkpoint(self, local_path, hdfs_path=None, del_local_after_load=False):
+    def load_checkpoint(
+            self,
+            local_path,
+            hdfs_path=None,
+            del_local_after_load=False):
         assert self._is_actor or (not self._is_actor and self._is_rollout), (
             f"Checkpoint loading is only supported for Actor or standalone Rollout Workers, but got "
             f"{self._is_actor} and {self._is_rollout}"

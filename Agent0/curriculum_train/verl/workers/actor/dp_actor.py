@@ -98,11 +98,12 @@ class DataParallelPPOActor(BasePPOActor):
             if position_ids.dim() == 3:
                 position_ids_rmpad = (
                     index_first_axis(
-                        rearrange(position_ids, "c b s ... -> (b s) c ..."), indices
-                    )
-                    .transpose(0, 1)
-                    .unsqueeze(1)
-                )  # (3, bsz, seqlen) -> (3, 1, bsz * seqlen)
+                        rearrange(
+                            position_ids,
+                            "c b s ... -> (b s) c ..."),
+                        indices) .transpose(
+                        0,
+                        1) .unsqueeze(1))  # (3, bsz, seqlen) -> (3, 1, bsz * seqlen)
             else:
                 position_ids_rmpad = index_first_axis(
                     rearrange(position_ids.unsqueeze(-1), "b s ... -> (b s) ..."),
@@ -163,7 +164,7 @@ class DataParallelPPOActor(BasePPOActor):
                 seqlen=seqlen,
             )
             log_probs = full_log_probs.squeeze(-1)[
-                :, -response_length - 1 : -1
+                :, -response_length - 1: -1
             ]  # (bsz, response_length)
         else:
             output = self.actor_module(
@@ -176,7 +177,7 @@ class DataParallelPPOActor(BasePPOActor):
             logits: torch.Tensor = output.logits
             logits.div_(temperature)
             logits = logits[
-                :, -response_length - 1 : -1, :
+                :, -response_length - 1: -1, :
             ]  # (bsz, response_length, vocab_size)
             log_probs = self.log_probs_from_logits(
                 logits, responses
@@ -186,11 +187,12 @@ class DataParallelPPOActor(BasePPOActor):
 
     def _optimizer_step(self) -> torch.Tensor:
         if isinstance(self.actor_module, FSDP):
-            grad_norm = self.actor_module.clip_grad_norm_(self.config.max_grad_norm)
+            grad_norm = self.actor_module.clip_grad_norm_(
+                self.config.max_grad_norm)
         else:
             grad_norm = nn.utils.clip_grad_norm_(
-                self.actor_module.parameters(), max_norm=self.config.max_grad_norm
-            )
+                self.actor_module.parameters(),
+                max_norm=self.config.max_grad_norm)
 
         if not torch.isfinite(grad_norm):
             print("Gradient norm is not finite. Skip update.")
@@ -222,7 +224,11 @@ class DataParallelPPOActor(BasePPOActor):
         self.actor_module.eval()
 
         temperature = data.meta_info["temperature"]
-        select_keys = ["responses", "input_ids", "attention_mask", "position_ids"]
+        select_keys = [
+            "responses",
+            "input_ids",
+            "attention_mask",
+            "position_ids"]
         if "multi_modal_inputs" in data.non_tensor_batch.keys():
             non_tensor_select_keys = ["multi_modal_inputs"]
         else:
@@ -233,11 +239,17 @@ class DataParallelPPOActor(BasePPOActor):
         )
         log_probs_lst = []
         if self.rank == 0:
-            micro_batches = tqdm(micro_batches, desc="Compute log probs", position=2)
+            micro_batches = tqdm(
+                micro_batches,
+                desc="Compute log probs",
+                position=2)
 
         for micro_batch in micro_batches:
-            model_inputs = {**micro_batch.batch, **micro_batch.non_tensor_batch}
-            log_probs = self._forward_micro_batch(model_inputs, temperature=temperature)
+            model_inputs = {
+                **micro_batch.batch,
+                **micro_batch.non_tensor_batch}
+            log_probs = self._forward_micro_batch(
+                model_inputs, temperature=temperature)
             log_probs_lst.append(log_probs)
 
         log_probs = torch.concat(log_probs_lst, dim=0)
@@ -274,7 +286,10 @@ class DataParallelPPOActor(BasePPOActor):
         metrics = defaultdict(list)
         for _ in range(self.config.ppo_epochs):
             if self.rank == 0:
-                mini_batches = tqdm(mini_batches, desc="Train mini-batches", position=2)
+                mini_batches = tqdm(
+                    mini_batches,
+                    desc="Train mini-batches",
+                    position=2)
 
             for mini_batch in mini_batches:
                 gradient_accumulation = (
@@ -290,7 +305,9 @@ class DataParallelPPOActor(BasePPOActor):
                     )
 
                 for micro_batch in micro_batches:
-                    model_inputs = {**micro_batch.batch, **micro_batch.non_tensor_batch}
+                    model_inputs = {
+                        **micro_batch.batch,
+                        **micro_batch.non_tensor_batch}
                     responses = model_inputs["responses"]
                     response_length = responses.size(1)
                     attention_mask = model_inputs["attention_mask"]
@@ -343,6 +360,7 @@ class DataParallelPPOActor(BasePPOActor):
                     append_to_dict(metrics, batch_metrics)
 
                 grad_norm = self._optimizer_step()
-                append_to_dict(metrics, {"actor/grad_norm": grad_norm.detach().item()})
+                append_to_dict(metrics,
+                               {"actor/grad_norm": grad_norm.detach().item()})
 
         return metrics

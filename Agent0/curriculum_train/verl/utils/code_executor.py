@@ -30,7 +30,10 @@ def execute_code_in_sandbox(code: str) -> str:
         if run_info.get("status") == "Finished":
             return run_info.get("stdout", "")
         else:
-            return f"Execution failed with status: {run_info.get('status')}\nStderr: {run_info.get('stderr', '')}"
+            return f"Execution failed with status: {
+                run_info.get('status')}\nStderr: {
+                run_info.get(
+                    'stderr', '')}"
     else:
         return f"{result}"
 

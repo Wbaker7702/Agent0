@@ -71,11 +71,11 @@ class MegatronWorker(Worker):
             )
         elif isinstance(tokenizer_or_path, str):
             self.tokenizer = hf_tokenizer(
-                copy_to_local(tokenizer_or_path), trust_remote_code=trust_remote_code
-            )
+                copy_to_local(tokenizer_or_path),
+                trust_remote_code=trust_remote_code)
             self.processor = hf_processor(
-                copy_to_local(tokenizer_or_path), trust_remote_code=trust_remote_code
-            )
+                copy_to_local(tokenizer_or_path),
+                trust_remote_code=trust_remote_code)
         else:
             self.tokenizer = tokenizer_or_path
             self.processor = tokenizer_or_path
@@ -97,31 +97,34 @@ class MegatronWorker(Worker):
             "eos_token_id": self.tokenizer.eos_token_id,
             "pad_token_id": self.tokenizer.pad_token_id,
         }
-        override_config_kwargs.update(override_model_config.get("model_config", {}))
+        override_config_kwargs.update(
+            override_model_config.get(
+                "model_config", {}))
         self.share_embeddings_and_output_weights = getattr(
             hf_config, "tie_word_embeddings", False
         )
-        update_model_config(hf_config, override_config_kwargs=override_config_kwargs)
+        update_model_config(
+            hf_config,
+            override_config_kwargs=override_config_kwargs)
         self.architectures = getattr(hf_config, "architectures", None)
         if self.rank == 0:
             print(f"Model config after override: {hf_config}")
-        tf_config = hf_to_mcore_config(hf_config, dtype, **override_transformer_config)
+        tf_config = hf_to_mcore_config(
+            hf_config, dtype, **override_transformer_config)
 
         def add_optimization_config_to_tf_config(tf_config):
             # add optimization config to tf_config, e.g. checkpointing
             if self.config.model.get("enable_gradient_checkpointing", False):
                 gradient_checkpointing_cfg = dict(
-                    self.config.model.get("gradient_checkpointing_kwargs", dict())
-                )
+                    self.config.model.get(
+                        "gradient_checkpointing_kwargs", dict()))
                 tf_config.recompute_method = gradient_checkpointing_cfg.get(
                     "activations_checkpoint_method", "full"
                 )
                 tf_config.recompute_granularity = gradient_checkpointing_cfg.get(
-                    "activations_checkpoint_granularity", "full"
-                )
+                    "activations_checkpoint_granularity", "full")
                 tf_config.recompute_num_layers = gradient_checkpointing_cfg.get(
-                    "activations_checkpoint_num_layers", -1
-                )
+                    "activations_checkpoint_num_layers", -1)
             if megatron_config := self.config.get("megatron", {}):
                 if extra := megatron_config.get("extra", {}):
                     for k, v in extra.items():

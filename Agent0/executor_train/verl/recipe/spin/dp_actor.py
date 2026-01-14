@@ -58,21 +58,24 @@ class SPINDataParallelPPOActor(DataParallelPPOActor):
         ]  # temperature must be in the data.meta_info to avoid silent error
         use_dynamic_bsz = data.meta_info["use_dynamic_bsz"]
 
-        select_keys = ["responses", "input_ids", "attention_mask", "position_ids"]
+        select_keys = [
+            "responses",
+            "input_ids",
+            "attention_mask",
+            "position_ids"]
         batch = data.select(batch_keys=select_keys).batch
         has_multi_modal_inputs = "multi_modal_inputs" in data.non_tensor_batch.keys()
 
         if has_multi_modal_inputs:
             num_micro_batches = data.batch.batch_size[0] // micro_batch_size
             non_tensor_select_keys = ["multi_modal_inputs"]
-            micro_batches = data.select(select_keys, non_tensor_select_keys).chunk(
-                num_micro_batches
-            )
+            micro_batches = data.select(
+                select_keys, non_tensor_select_keys).chunk(num_micro_batches)
         elif use_dynamic_bsz:
             # split using dynamic bsz
             max_token_len = (
-                data.meta_info["max_token_len"] * self.ulysses_sequence_parallel_size
-            )
+                data.meta_info["max_token_len"] *
+                self.ulysses_sequence_parallel_size)
             micro_batches, indices = rearrange_micro_batches(
                 batch=batch, max_token_len=max_token_len
             )
@@ -82,7 +85,9 @@ class SPINDataParallelPPOActor(DataParallelPPOActor):
         log_probs_lst = []
         for micro_batch in micro_batches:
             if isinstance(micro_batch, DataProto):
-                micro_batch = {**micro_batch.batch, **micro_batch.non_tensor_batch}
+                micro_batch = {
+                    **micro_batch.batch,
+                    **micro_batch.non_tensor_batch}
 
             with torch.no_grad():
                 _, log_probs = self._forward_micro_batch(
@@ -96,7 +101,8 @@ class SPINDataParallelPPOActor(DataParallelPPOActor):
             assert len(indices) == log_probs.size(
                 0
             ), f"{len(indices)} vs. {log_probs.size()}"
-            revert_indices = torch.tensor(get_reverse_idx(indices), dtype=torch.long)
+            revert_indices = torch.tensor(
+                get_reverse_idx(indices), dtype=torch.long)
             log_probs = log_probs[revert_indices]
 
         return log_probs
@@ -110,7 +116,8 @@ class SPINDataParallelPPOActor(DataParallelPPOActor):
 
         # --- Retrieve necessary data ---
         try:
-            # Expects batch prepared by fit_dpo loop, including reference log probs
+            # Expects batch prepared by fit_dpo loop, including reference log
+            # probs
             batch_td = data.batch
             chosen_labels = batch_td["chosen_labels"]
             rejected_labels = batch_td["rejected_labels"]
@@ -137,16 +144,14 @@ class SPINDataParallelPPOActor(DataParallelPPOActor):
 
         except KeyError as e:
             print(
-                f"ERROR: Missing required key for DPO update (in update_policy_dpo): {e}"
-            )
+                f"ERROR: Missing required key for DPO update (in update_policy_dpo): {e}")
             print(
                 f"Available keys in data.batch: {list(batch_td.keys())}"
             )  # Debug print
             return {}  # Return empty metrics on error
         except Exception as e_data:
             print(
-                f"ERROR accessing data for DPO update (in update_policy_dpo): {e_data}"
-            )
+                f"ERROR accessing data for DPO update (in update_policy_dpo): {e_data}")
             return {}
 
         # --- Micro-batching Setup ---
@@ -191,7 +196,8 @@ class SPINDataParallelPPOActor(DataParallelPPOActor):
                 continue
 
             # Slice the full DPO batch into micro-batches
-            # Important: Slice ALL required tensors, including labels and inputs
+            # Important: Slice ALL required tensors, including labels and
+            # inputs
             micro_batch_chosen_labels = chosen_labels[start_idx:end_idx]
             micro_batch_rejected_labels = rejected_labels[start_idx:end_idx]
             micro_batch_chosen_inputs = {
@@ -241,7 +247,8 @@ class SPINDataParallelPPOActor(DataParallelPPOActor):
                 )
 
                 # --- Step 3: Retrieve PRE-CALCULATED reference log probs (NO grad needed) ---
-                # Slice the full batch reference logps for the current micro-batch
+                # Slice the full batch reference logps for the current
+                # micro-batch
                 micro_ref_chosen_logps = reference_chosen_logps[start_idx:end_idx]
                 micro_ref_rejected_logps = reference_rejected_logps[start_idx:end_idx]
                 # --- The ActorAsRef calculation block is REMOVED ---
@@ -256,8 +263,10 @@ class SPINDataParallelPPOActor(DataParallelPPOActor):
                 loss = compute_online_dpo_loss(
                     policy_chosen_logps=policy_chosen_logps,  # Has grad
                     policy_rejected_logps=policy_rejected_logps,  # Has grad
-                    reference_chosen_logps=micro_ref_chosen_logps,  # No grad (from input)
-                    reference_rejected_logps=micro_ref_rejected_logps,  # No grad (from input)
+                    # No grad (from input)
+                    reference_chosen_logps=micro_ref_chosen_logps,
+                    # No grad (from input)
+                    reference_rejected_logps=micro_ref_rejected_logps,
                     beta=beta,
                     label_smoothing=label_smoothing,
                     loss_type=loss_type,
@@ -273,19 +282,17 @@ class SPINDataParallelPPOActor(DataParallelPPOActor):
                 accumulated_metrics["actor/dpo_logits_batch"].append(
                     logits.mean().item()
                 )
-                # Accumulate policy and reference log probs/ratios if needed for debugging
+                # Accumulate policy and reference log probs/ratios if needed
+                # for debugging
                 accumulated_metrics["actor/policy_chosen_logps_batch"].append(
                     policy_chosen_logps.mean().item()
                 )
                 accumulated_metrics["actor/policy_rejected_logps_batch"].append(
-                    policy_rejected_logps.mean().item()
-                )
+                    policy_rejected_logps.mean().item())
                 accumulated_metrics["actor/reference_chosen_logps_batch"].append(
-                    micro_ref_chosen_logps.mean().item()
-                )
+                    micro_ref_chosen_logps.mean().item())
                 accumulated_metrics["actor/reference_rejected_logps_batch"].append(
-                    micro_ref_rejected_logps.mean().item()
-                )
+                    micro_ref_rejected_logps.mean().item())
 
             # --- Backward Pass (outside autocast) ---
             # Check if loss requires grad before backward
@@ -293,8 +300,7 @@ class SPINDataParallelPPOActor(DataParallelPPOActor):
                 scaled_loss.backward()
             else:
                 print(
-                    f"Warning: Scaled loss at micro-batch {i} does not require grad. Skipping backward."
-                )
+                    f"Warning: Scaled loss at micro-batch {i} does not require grad. Skipping backward.")
 
         # --- End Micro-batch Loop ---
 
@@ -314,7 +320,8 @@ class SPINDataParallelPPOActor(DataParallelPPOActor):
                 if val_list:
                     metrics[key.replace("_batch", "")] = np.mean(val_list)
 
-            # Calculate accuracy / rewards / margins based on averaged logprobs if desired
+            # Calculate accuracy / rewards / margins based on averaged logprobs
+            # if desired
             if (
                 "actor/policy_chosen_logps" in metrics
                 and "actor/policy_rejected_logps" in metrics
@@ -342,8 +349,8 @@ class SPINDataParallelPPOActor(DataParallelPPOActor):
                     logits_mean > 0
                 )  # Mean accuracy proxy
                 metrics["actor/rewards_margins"] = (
-                    metrics["actor/rewards_chosen"] - metrics["actor/rewards_rejected"]
-                )
+                    metrics["actor/rewards_chosen"] -
+                    metrics["actor/rewards_rejected"])
 
         else:  # Handle case where no micro-batches were run (e.g., bsz=0)
             metrics["actor/dpo_loss"] = 0.0

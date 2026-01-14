@@ -71,7 +71,8 @@ def prepare_input_dataproto(tokenizer, config, validate):
         {
             "input_ids": prompts["input_ids"],
             "attention_mask": prompts["attention_mask"],
-            "position_ids": compute_position_id_with_mask(prompts["attention_mask"]),
+            "position_ids": compute_position_id_with_mask(
+                prompts["attention_mask"]),
         },
         meta_info={
             "bos_token_id": tokenizer.bos_token_id,
@@ -116,7 +117,10 @@ def prepare_fsdp_model(model, world_size):
     return fsdp_model
 
 
-def test_hf_rollout(n: int = 1, do_sample: bool = True, validate: bool = False):
+def test_hf_rollout(
+        n: int = 1,
+        do_sample: bool = True,
+        validate: bool = False):
     config = OmegaConf.create(BASE_HF_ROLLOUT_CONFIG)
     config.update({"n": n, "do_sample": do_sample})
 
@@ -157,12 +161,14 @@ def test_hf_rollout(n: int = 1, do_sample: bool = True, validate: bool = False):
         prompt_tokens = outputs.batch["prompts"][i]
         prompt_mask = prompt_tokens != tokenizer.pad_token_id
         prompt_tokens = prompt_tokens[prompt_mask]
-        decoded_prompt = tokenizer.decode(prompt_tokens, skip_special_tokens=False)
+        decoded_prompt = tokenizer.decode(
+            prompt_tokens, skip_special_tokens=False)
 
         response_tokens = outputs.batch["responses"][i]
         response_mask = response_tokens != tokenizer.pad_token_id
         response_tokens = response_tokens[response_mask]
-        decoded_response = tokenizer.decode(response_tokens, skip_special_tokens=False)
+        decoded_response = tokenizer.decode(
+            response_tokens, skip_special_tokens=False)
 
         attention_mask = outputs.batch["attention_mask"][i]
         position_ids = outputs.batch["position_ids"][i]
@@ -184,7 +190,7 @@ def test_hf_rollout(n: int = 1, do_sample: bool = True, validate: bool = False):
             ].all(), "Response attention mask should be 1 until EOS"
             if first_eos_pos + 1 < response_length:
                 assert not response_attention[
-                    first_eos_pos + 1 :
+                    first_eos_pos + 1:
                 ].any(), "Response attention mask should be 0 after EOS"
         else:
             assert (

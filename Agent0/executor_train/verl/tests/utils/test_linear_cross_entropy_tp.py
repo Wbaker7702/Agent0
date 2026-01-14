@@ -50,7 +50,8 @@ finally:
 
 import verl.utils.torch_functional as verl_F
 
-compute_entropy_from_logits = torch.compile(verl_F.entropy_from_logits, dynamic=True)
+compute_entropy_from_logits = torch.compile(
+    verl_F.entropy_from_logits, dynamic=True)
 
 MAX_TEST_CASES = os.environ.get("MAX_TEST_CASES", 5)
 VERIFY_TORCH_SELF = os.environ.get("VERIFY_TORCH_SELF", False)
@@ -79,7 +80,8 @@ def run_torch_entropy(
         ),
     )
     logits /= temperature
-    pd = torch.nn.functional.softmax(logits, dim=-1)  # [num_tokens, vocab_size]
+    pd = torch.nn.functional.softmax(
+        logits, dim=-1)  # [num_tokens, vocab_size]
     entropy_a = torch.logsumexp(logits, dim=-1)  # [num_tokens]
     entropy_b = torch.sum(pd * logits, dim=-1)  # [num_tokens]
     entropy = entropy_a - entropy_b
@@ -105,10 +107,12 @@ class TorchEntropyTP(torch.autograd.Function):
         temperature: float,
         dist_process_group: torch.distributed.ProcessGroup,
     ):
-        # weight has shape [vocab_size, hidden_size], hidden has shape [num_tokens, hidden_size]
+        # weight has shape [vocab_size, hidden_size], hidden has shape
+        # [num_tokens, hidden_size]
         ctx.original_hidden_shape = hidden.shape
         if len(hidden.shape) > 2:
-            hidden = hidden.view(-1, hidden.shape[-1])  # [num_tokens, hidden_size]
+            # [num_tokens, hidden_size]
+            hidden = hidden.view(-1, hidden.shape[-1])
         if len(labels.shape) > 1:
             labels = labels.view(-1)
 
@@ -125,7 +129,7 @@ class TorchEntropyTP(torch.autograd.Function):
             device=logits.device,
         )
         whole_logits_ref = [
-            whole_logits[:, i * logits.shape[1] : (i + 1) * logits.shape[1]]
+            whole_logits[:, i * logits.shape[1]: (i + 1) * logits.shape[1]]
             for i in range(dist.get_world_size(dist_process_group))
         ]
         dist.all_gather(whole_logits_ref, logits, group=dist_process_group)
@@ -188,7 +192,8 @@ class TorchEntropyTP(torch.autograd.Function):
         d_logits /= temperature
 
         # Get local slice of gradients
-        local_d_logits = d_logits[:, rank * vocab_size : (rank + 1) * vocab_size]
+        local_d_logits = d_logits[:, rank *
+                                  vocab_size: (rank + 1) * vocab_size]
 
         # Compute gradients for hidden and weight
         d_hidden = torch.matmul(local_d_logits, weight.to(torch.float32))
@@ -210,7 +215,10 @@ class TestLinearCrossEntropy_TensorParallel:
         self.world_size = dist.get_world_size(self.group)
         device = torch.device(f"cuda:{self.local_rank}")
         torch.cuda.set_device(device)
-        print(f"[INFO]: Local rank: {self.local_rank}, World size: {self.world_size}")
+        print(
+            f"[INFO]: Local rank: {
+                self.local_rank}, World size: {
+                self.world_size}")
 
     def initialize(self, test_case_idx: int, temperature: float = 1.5):
         self.test_case_idx = test_case_idx
@@ -272,16 +280,17 @@ class TestLinearCrossEntropy_TensorParallel:
             .uniform_(-0.5, 0.5)
             .requires_grad_()
         )
-        weight = (
-            torch.empty(
-                (self.vocab_size, self.hidden_size), dtype=self.dtype, device="cuda"
-            )
-            .uniform_(-0.5, 0.5)
-            .requires_grad_()
-        )
+        weight = (torch.empty((self.vocab_size,
+                               self.hidden_size),
+                              dtype=self.dtype,
+                              device="cuda") .uniform_(-0.5,
+                                                       0.5) .requires_grad_())
         labels = torch.randint(
-            0, self.vocab_size, (self.batch_size, self.num_tokens), device="cuda"
-        )
+            0,
+            self.vocab_size,
+            (self.batch_size,
+             self.num_tokens),
+            device="cuda")
         return hidden, weight, labels
 
     def generate_backward_inputs(self):
@@ -300,14 +309,16 @@ class TestLinearCrossEntropy_TensorParallel:
         for i in range(iterations):
             hidden, weight, labels = self.generate_forward_inputs()
 
-            # NOTE: we need to manually synchronize hidden and labels among Process Group
+            # NOTE: we need to manually synchronize hidden and labels among
+            # Process Group
             dist.broadcast(hidden, src=0, group=self.group)
             dist.broadcast(labels, src=0, group=self.group)
 
             # forward pass
             # Create a tensor to hold the gathered weights from all ranks
             # weight has shape [vocab_size, hidden_size]
-            # We want to gather along the first dimension to get [vocab_size * world_size, hidden_size]
+            # We want to gather along the first dimension to get [vocab_size *
+            # world_size, hidden_size]
 
             # Create a single contiguous tensor to hold all gathered weights
             whole_weight = torch.empty(
@@ -318,7 +329,7 @@ class TestLinearCrossEntropy_TensorParallel:
 
             # Create views into the tensor for each rank's portion
             whole_weight_views = [
-                whole_weight[i * self.vocab_size : (i + 1) * self.vocab_size]
+                whole_weight[i * self.vocab_size: (i + 1) * self.vocab_size]
                 for i in range(self.world_size)
             ]
 
@@ -339,11 +350,13 @@ class TestLinearCrossEntropy_TensorParallel:
             torch.testing.assert_close(
                 single_logprobs, tp_logprobs, atol=1e-4, rtol=1e-4
             )
-            torch.testing.assert_close(single_entropy, tp_entropy, atol=1e-4, rtol=1e-4)
+            torch.testing.assert_close(
+                single_entropy, tp_entropy, atol=1e-4, rtol=1e-4)
 
             # backward pass
             g_entropy, g_logprobs = self.generate_backward_inputs()
-            # NOTE: we need to manually synchronize g_entropy and g_logprobs among Process Group
+            # NOTE: we need to manually synchronize g_entropy and g_logprobs
+            # among Process Group
             dist.broadcast(g_entropy, src=0, group=self.group)
             dist.broadcast(g_logprobs, src=0, group=self.group)
 
@@ -361,7 +374,10 @@ class TestLinearCrossEntropy_TensorParallel:
                 retain_graph=False,
             )
             # NOTE: all-reduce on hidden is conducted outside the kernel
-            dist.all_reduce(tp_d_hidden, op=dist.ReduceOp.SUM, group=self.group)
+            dist.all_reduce(
+                tp_d_hidden,
+                op=dist.ReduceOp.SUM,
+                group=self.group)
 
             torch.testing.assert_close(
                 tp_d_hidden, single_d_hidden, atol=1e-2, rtol=1e-4
@@ -373,7 +389,7 @@ class TestLinearCrossEntropy_TensorParallel:
                 tp_d_weight,
                 single_d_weight[
                     self.local_rank
-                    * self.vocab_size : (self.local_rank + 1)
+                    * self.vocab_size: (self.local_rank + 1)
                     * self.vocab_size
                 ],
                 atol=1e-2,
@@ -390,7 +406,8 @@ class TestLinearCrossEntropy_TensorParallel:
 
         hidden, weight, labels = self.generate_forward_inputs()
 
-        # NOTE: we need to manually synchronize hidden and labels among Process Group
+        # NOTE: we need to manually synchronize hidden and labels among Process
+        # Group
         dist.broadcast(hidden, src=0, group=self.group)
         dist.broadcast(labels, src=0, group=self.group)
 
@@ -402,7 +419,8 @@ class TestLinearCrossEntropy_TensorParallel:
         forward_max_memory = torch.cuda.max_memory_allocated() / 1024 / 1024
 
         g_entropy, g_logprobs = self.generate_backward_inputs()
-        # NOTE: we need to manually synchronize g_entropy and g_logprobs among Process Group
+        # NOTE: we need to manually synchronize g_entropy and g_logprobs among
+        # Process Group
         dist.broadcast(g_entropy, src=0, group=self.group)
         dist.broadcast(g_logprobs, src=0, group=self.group)
 
@@ -420,11 +438,11 @@ class TestLinearCrossEntropy_TensorParallel:
 
         if self.local_rank == 0:
             print(
-                f"[INFO]: Torch Forward pass peak memory: {forward_max_memory:.2f} MB"
-            )
+                f"[INFO]: Torch Forward pass peak memory: {
+                    forward_max_memory:.2f} MB")
             print(
-                f"[INFO]: Torch Backward pass peak memory: {backward_max_memory:.2f} MB"
-            )
+                f"[INFO]: Torch Backward pass peak memory: {
+                    backward_max_memory:.2f} MB")
 
     def verify_kernel_correctness(self, iterations: int = 5):
         self.cleanup()
@@ -441,7 +459,8 @@ class TestLinearCrossEntropy_TensorParallel:
         for i in range(iterations):
             hidden, weight, labels = self.generate_forward_inputs()
 
-            # NOTE: we need to manually synchronize hidden and labels among Process Group
+            # NOTE: we need to manually synchronize hidden and labels among
+            # Process Group
             dist.broadcast(hidden, src=0, group=self.group)
             dist.broadcast(labels, src=0, group=self.group)
 
@@ -470,7 +489,8 @@ class TestLinearCrossEntropy_TensorParallel:
 
             # backward pass
             g_entropy, g_logprobs = self.generate_backward_inputs()
-            # NOTE: we need to manually synchronize g_entropy and g_logprobs among Process Group
+            # NOTE: we need to manually synchronize g_entropy and g_logprobs
+            # among Process Group
             dist.broadcast(g_entropy, src=0, group=self.group)
             dist.broadcast(g_logprobs, src=0, group=self.group)
 
@@ -485,7 +505,10 @@ class TestLinearCrossEntropy_TensorParallel:
             torch.cuda.synchronize()
             torch_backward_latency.append(start_event.elapsed_time(end_event))
             # NOTE: all-reduce on hidden is conducted outside the kernel
-            dist.all_reduce(torch_d_hidden, op=dist.ReduceOp.SUM, group=self.group)
+            dist.all_reduce(
+                torch_d_hidden,
+                op=dist.ReduceOp.SUM,
+                group=self.group)
 
             start_event.record()
             (kernel_d_hidden, kernel_d_weight) = torch.autograd.grad(
@@ -498,7 +521,10 @@ class TestLinearCrossEntropy_TensorParallel:
             torch.cuda.synchronize()
             kernel_backward_latency.append(start_event.elapsed_time(end_event))
             # NOTE: all-reduce on hidden is conducted outside the kernel
-            dist.all_reduce(kernel_d_hidden, op=dist.ReduceOp.SUM, group=self.group)
+            dist.all_reduce(
+                kernel_d_hidden,
+                op=dist.ReduceOp.SUM,
+                group=self.group)
 
             torch.testing.assert_close(
                 torch_d_hidden, kernel_d_hidden, atol=2e-2, rtol=4e-2
@@ -517,21 +543,21 @@ class TestLinearCrossEntropy_TensorParallel:
             print("\n[PASS]: Verified kernel forward & backward correctness.")
 
             print(
-                f"[INFO]: Forward pass: Torch implementation average time: "
-                f"{sum(torch_forward_latency) / len(torch_forward_latency):.2f} ms"
-            )
+                f"[INFO]: Forward pass: Torch implementation average time: " f"{
+                    sum(torch_forward_latency) /
+                    len(torch_forward_latency):.2f} ms")
             print(
-                f"[INFO]: Backward pass: torch implementation average time: "
-                f"{sum(torch_backward_latency) / len(torch_backward_latency):.2f} ms"
-            )
+                f"[INFO]: Backward pass: torch implementation average time: " f"{
+                    sum(torch_backward_latency) /
+                    len(torch_backward_latency):.2f} ms")
             print(
-                f"[INFO]: Forward pass: Kernel implementation average time: "
-                f"{sum(kernel_forward_latency) / len(kernel_forward_latency):.2f} ms"
-            )
+                f"[INFO]: Forward pass: Kernel implementation average time: " f"{
+                    sum(kernel_forward_latency) /
+                    len(kernel_forward_latency):.2f} ms")
             print(
-                f"[INFO]: Backward pass: kernel implementation average time: "
-                f"{sum(kernel_backward_latency) / len(kernel_backward_latency):.2f} ms"
-            )
+                f"[INFO]: Backward pass: kernel implementation average time: " f"{
+                    sum(kernel_backward_latency) /
+                    len(kernel_backward_latency):.2f} ms")
 
     def check_kernel_storage(self):
         self.cleanup()
@@ -539,7 +565,8 @@ class TestLinearCrossEntropy_TensorParallel:
 
         hidden, weight, labels = self.generate_forward_inputs()
 
-        # NOTE: we need to manually synchronize hidden and labels among Process Group
+        # NOTE: we need to manually synchronize hidden and labels among Process
+        # Group
         dist.broadcast(hidden, src=0, group=self.group)
         dist.broadcast(labels, src=0, group=self.group)
 
@@ -551,7 +578,8 @@ class TestLinearCrossEntropy_TensorParallel:
         kernel_max_memory = torch.cuda.max_memory_allocated() / 1024 / 1024
 
         g_entropy, g_logprobs = self.generate_backward_inputs()
-        # NOTE: we need to manually synchronize g_entropy and g_logprobs among Process Group
+        # NOTE: we need to manually synchronize g_entropy and g_logprobs among
+        # Process Group
         dist.broadcast(g_entropy, src=0, group=self.group)
         dist.broadcast(g_logprobs, src=0, group=self.group)
 
@@ -565,19 +593,23 @@ class TestLinearCrossEntropy_TensorParallel:
         torch.cuda.synchronize()
         kernel_backward_max_memory = torch.cuda.max_memory_allocated() / 1024 / 1024
         # NOTE: all-reduce on hidden is conducted outside the kernel
-        dist.all_reduce(d_kernel_hidden, op=dist.ReduceOp.SUM, group=self.group)
+        dist.all_reduce(
+            d_kernel_hidden,
+            op=dist.ReduceOp.SUM,
+            group=self.group)
 
         if self.local_rank == 0:
             print(
-                f"[INFO]: Kernel Forward pass peak memory: {kernel_max_memory:.2f} MB"
-            )
+                f"[INFO]: Kernel Forward pass peak memory: {
+                    kernel_max_memory:.2f} MB")
             print(
-                f"[INFO]: Kernel Backward pass peak memory: {kernel_backward_max_memory:.2f} MB"
-            )
+                f"[INFO]: Kernel Backward pass peak memory: {
+                    kernel_backward_max_memory:.2f} MB")
 
 
 if __name__ == "__main__":
-    # TP command: torchrun --standalone --nnodes=1 --nproc-per-node=2 tests/kernels/test_linear_cross_entropy_tp.py
+    # TP command: torchrun --standalone --nnodes=1 --nproc-per-node=2
+    # tests/kernels/test_linear_cross_entropy_tp.py
 
     # Check if running with torchrun (distributed mode)
     assert int(os.environ["WORLD_SIZE"]) > 1, (

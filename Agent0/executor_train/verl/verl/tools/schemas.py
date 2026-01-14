@@ -73,13 +73,16 @@ class OpenAIFunctionCallSchema(BaseModel):
         except json.JSONDecodeError:
             arguments = {}
             has_decode_error = True
-        # If the arguments is not a dict, it means the arguments is not a valid JSON string
+        # If the arguments is not a dict, it means the arguments is not a valid
+        # JSON string
         if not isinstance(arguments, dict):
             arguments = {}
             has_decode_error = True
 
         return (
-            OpenAIFunctionCallSchema(name=parsed_schema.name, arguments=arguments),
+            OpenAIFunctionCallSchema(
+                name=parsed_schema.name,
+                arguments=arguments),
             has_decode_error,
         )
 

@@ -64,7 +64,8 @@ class BaseInteraction:
             additional_data,
         )
 
-    async def calculate_score(self) -> float:  # More clear score calculation method
+    # More clear score calculation method
+    async def calculate_score(self) -> float:
         """
         Calculates a score for the interaction,
         potentially considering aspects like partial exposure & in-context task switching.

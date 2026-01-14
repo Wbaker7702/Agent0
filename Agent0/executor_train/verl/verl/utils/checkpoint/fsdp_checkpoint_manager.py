@@ -103,8 +103,10 @@ class FSDPCheckpointManager(BaseCheckpointManager):
         )
 
     def load_checkpoint(
-        self, local_path: str, hdfs_path: str = None, del_local_after_load=False
-    ):
+            self,
+            local_path: str,
+            hdfs_path: str = None,
+            del_local_after_load=False):
         """
         Load an FSDP checkpoint for this rank.
 
@@ -152,7 +154,8 @@ class FSDPCheckpointManager(BaseCheckpointManager):
                     f"model_world_size_{self.world_size}_rank_{self.rank}.pt",
                 )
                 local_model_path = copy_to_local(remote_model_path)
-                model_state_dict = torch.load(local_model_path, weights_only=False)
+                model_state_dict = torch.load(
+                    local_model_path, weights_only=False)
                 self.model.load_state_dict(model_state_dict)
                 log_with_rank(
                     f"Loaded model from {remote_model_path}",
@@ -166,7 +169,8 @@ class FSDPCheckpointManager(BaseCheckpointManager):
                     f"optim_world_size_{self.world_size}_rank_{self.rank}.pt",
                 )
                 local_optim_path = copy_to_local(remote_optim_path)
-                optimizer_state_dict = torch.load(local_optim_path, weights_only=False)
+                optimizer_state_dict = torch.load(
+                    local_optim_path, weights_only=False)
                 self.optimizer.load_state_dict(optimizer_state_dict)
                 log_with_rank(
                     f"Loaded optimizer from {remote_optim_path}",
@@ -176,11 +180,12 @@ class FSDPCheckpointManager(BaseCheckpointManager):
 
         if self.should_load_extra:
             remote_extra_state_path = os.path.join(
-                local_path,
-                f"extra_state_world_size_{self.world_size}_rank_{self.rank}.pt",
-            )
+                local_path, f"extra_state_world_size_{
+                    self.world_size}_rank_{
+                    self.rank}.pt", )
             local_extra_state_path = copy_to_local(remote_extra_state_path)
-            extra_state_dict = torch.load(local_extra_state_path, weights_only=False)
+            extra_state_dict = torch.load(
+                local_extra_state_path, weights_only=False)
             # recover random state
             if "rng" in extra_state_dict:
                 # 'rng' may not exist for backward compatibility
@@ -202,8 +207,10 @@ class FSDPCheckpointManager(BaseCheckpointManager):
 
         if self.rank == 0 and del_local_after_load:
             try:
-                os.remove(local_model_path) if is_non_local(local_model_path) else None
-                os.remove(local_optim_path) if is_non_local(local_optim_path) else None
+                os.remove(local_model_path) if is_non_local(
+                    local_model_path) else None
+                os.remove(local_optim_path) if is_non_local(
+                    local_optim_path) else None
                 (
                     os.remove(local_extra_state_path)
                     if is_non_local(local_extra_state_path)
@@ -258,7 +265,8 @@ class FSDPCheckpointManager(BaseCheckpointManager):
             and len(self.previous_saved_paths) >= max_ckpt_to_keep
         ):
             keep_start = len(self.previous_saved_paths) - max_ckpt_to_keep + 1
-            self.remove_previous_save_local_path(self.previous_saved_paths[:keep_start])
+            self.remove_previous_save_local_path(
+                self.previous_saved_paths[:keep_start])
             self.previous_saved_paths = self.previous_saved_paths[keep_start:]
 
         local_path = local_mkdir_safe(local_path)
@@ -295,9 +303,9 @@ class FSDPCheckpointManager(BaseCheckpointManager):
                     f"optim_world_size_{self.world_size}_rank_{self.rank}.pt",
                 )
                 extra_path = os.path.join(
-                    local_path,
-                    f"extra_state_world_size_{self.world_size}_rank_{self.rank}.pt",
-                )
+                    local_path, f"extra_state_world_size_{
+                        self.world_size}_rank_{
+                        self.rank}.pt", )
 
                 if self.should_save_model:
                     model_state_dict = self.model.state_dict()
@@ -363,7 +371,8 @@ class FSDPCheckpointManager(BaseCheckpointManager):
             model_config.save_pretrained(hf_config_tokenizer_path)
             self.processing_class.save_pretrained(hf_config_tokenizer_path)
             log_with_rank(
-                f"Saved model config and tokenizer class to {os.path.abspath(hf_config_tokenizer_path)}",
+                f"Saved model config and tokenizer class to {
+                    os.path.abspath(hf_config_tokenizer_path)}",
                 rank=self.rank,
                 logger=logger,
                 log_only_rank_0=True,
@@ -383,7 +392,8 @@ class FSDPCheckpointManager(BaseCheckpointManager):
 
         if self.should_save_hf_model:
             # Only rank 0 will save hf model and,
-            # offload to cpu to save LLMs which may be too large to fit in one GPU
+            # offload to cpu to save LLMs which may be too large to fit in one
+            # GPU
             state_dict = get_fsdp_full_state_dict(
                 self.model, offload_to_cpu=True, rank0_only=True
             )
@@ -424,7 +434,8 @@ class FSDPCheckpointManager(BaseCheckpointManager):
                             f"in, using a generation config created from the model config when saving hf_model."
                         )
 
-                save_model.save_pretrained(hf_local_path, state_dict=state_dict)
+                save_model.save_pretrained(
+                    hf_local_path, state_dict=state_dict)
                 log_with_rank(
                     f"Saved hf_model to {os.path.abspath(hf_local_path)}",
                     rank=self.rank,

@@ -146,8 +146,10 @@ class AgentRayPPOTrainer(RayPPOTrainer):
         self.device_name = device_name
         self.validation_generations_logger = ValidationGenerationsLogger()
 
-        # if ref_in_actor is True, the reference policy will be actor without lora applied
-        self.ref_in_actor = config.actor_rollout_ref.model.get("lora_rank", 0) > 0
+        # if ref_in_actor is True, the reference policy will be actor without
+        # lora applied
+        self.ref_in_actor = config.actor_rollout_ref.model.get(
+            "lora_rank", 0) > 0
 
         # define in-reward KL control
         # kl loss control currently not suppoorted
@@ -176,7 +178,11 @@ class AgentRayPPOTrainer(RayPPOTrainer):
             raise NotImplementedError
 
         self._validate_config()
-        self._create_dataloader(train_dataset, val_dataset, collate_fn, train_sampler)
+        self._create_dataloader(
+            train_dataset,
+            val_dataset,
+            collate_fn,
+            train_sampler)
 
     def _validate(self):
         data_source_lst = []
@@ -273,12 +279,10 @@ class AgentRayPPOTrainer(RayPPOTrainer):
             )
             if not self.async_rollout_mode:
                 test_output_gen_batch_padded = self.actor_rollout_wg.generate_sequences(
-                    test_gen_batch_padded
-                )
+                    test_gen_batch_padded)
             else:
                 test_output_gen_batch_padded = (
-                    self.async_rollout_manager.generate_sequences(test_gen_batch_padded)
-                )
+                    self.async_rollout_manager.generate_sequences(test_gen_batch_padded))
 
             # unpad
             test_output_gen_batch = unpad_dataproto(
@@ -320,7 +324,8 @@ class AgentRayPPOTrainer(RayPPOTrainer):
 
             # collect num_turns of each prompt
             if "__num_turns__" in test_batch.non_tensor_batch:
-                sample_turns.append(test_batch.non_tensor_batch["__num_turns__"])
+                sample_turns.append(
+                    test_batch.non_tensor_batch["__num_turns__"])
 
             data_source_lst.append(
                 test_batch.non_tensor_batch.get(
@@ -457,10 +462,13 @@ class AgentRayPPOTrainer(RayPPOTrainer):
                         if self.use_rm:
                             self.rm_wg.start_profile()
                 batch: DataProto = DataProto.from_single_dict(batch_dict)
-                print("batch.non_tensor_batch.keys():", batch.non_tensor_batch.keys())
+                print(
+                    "batch.non_tensor_batch.keys():",
+                    batch.non_tensor_batch.keys())
 
                 # pop those keys for generation
-                batch_keys_to_pop = ["input_ids", "attention_mask", "position_ids"]
+                batch_keys_to_pop = [
+                    "input_ids", "attention_mask", "position_ids"]
                 non_tensor_batch_keys_to_pop = [
                     "raw_prompt_ids",
                     "rollout_messages",
@@ -511,12 +519,10 @@ class AgentRayPPOTrainer(RayPPOTrainer):
                     with marked_timer("gen", timing_raw, color="red"):
                         if not self.async_rollout_mode:
                             gen_batch_output = self.actor_rollout_wg.generate_sequences(
-                                gen_batch
-                            )
+                                gen_batch)
                         else:
                             gen_batch_output = (
-                                self.async_rollout_manager.generate_sequences(gen_batch)
-                            )
+                                self.async_rollout_manager.generate_sequences(gen_batch))
                         timing_raw.update(gen_batch_output.meta_info["timing"])
                         gen_batch_output.meta_info.pop("timing", None)
 
@@ -532,9 +538,12 @@ class AgentRayPPOTrainer(RayPPOTrainer):
 
                             batch = batch.union(gen_baseline_output)
                             reward_baseline_tensor = self.reward_fn(batch)
-                            reward_baseline_tensor = reward_baseline_tensor.sum(dim=-1)
+                            reward_baseline_tensor = reward_baseline_tensor.sum(
+                                dim=-1)
 
-                            batch.pop(batch_keys=list(gen_baseline_output.batch.keys()))
+                            batch.pop(
+                                batch_keys=list(
+                                    gen_baseline_output.batch.keys()))
 
                             batch.batch["reward_baselines"] = reward_baseline_tensor
 
@@ -551,7 +560,8 @@ class AgentRayPPOTrainer(RayPPOTrainer):
                     )
                     batch = batch.union(gen_batch_output)
                     if "response_mask" not in batch.batch.keys():
-                        batch.batch["response_mask"] = compute_response_mask(batch)
+                        batch.batch["response_mask"] = compute_response_mask(
+                            batch)
                     # Balance the number of valid tokens across DP ranks.
                     # NOTE: This usually changes the order of data in the `batch`,
                     # which won't affect the advantage calculation (since it's based on uid),
@@ -589,8 +599,7 @@ class AgentRayPPOTrainer(RayPPOTrainer):
                             )
                         else:
                             reward_tensor, reward_extra_infos_dict = compute_reward(
-                                batch, self.reward_fn
-                            )
+                                batch, self.reward_fn)
 
                     # added by verl-tool for dapo
                     if not do_filter_groups:
@@ -604,7 +613,8 @@ class AgentRayPPOTrainer(RayPPOTrainer):
                             print(f"{list(reward_extra_infos_dict.keys())=}")
                             to_remove_keys = []
                             for k, v in reward_extra_infos_dict.items():
-                                mean_v = np.mean([x for x in v if x is not None])
+                                mean_v = np.mean(
+                                    [x for x in v if x is not None])
                                 metrics[f"reward_extra_info/{k}"] = mean_v
                                 if None in v:
                                     to_remove_keys.append(k)
@@ -639,7 +649,8 @@ class AgentRayPPOTrainer(RayPPOTrainer):
 
                         prompt_uid2metric_std = {}
                         for prompt_uid, metric_vals in prompt_uid2metric_vals.items():
-                            prompt_uid2metric_std[prompt_uid] = np.std(metric_vals)
+                            prompt_uid2metric_std[prompt_uid] = np.std(
+                                metric_vals)
 
                         kept_prompt_uids = [
                             uid
@@ -682,27 +693,31 @@ class AgentRayPPOTrainer(RayPPOTrainer):
                         prompt_bsz = self.config.data.train_batch_size
                         if num_prompt_in_batch < prompt_bsz:
                             print(
-                                f"cur_num_traj={num_prompt_in_batch*self.config.actor_rollout_ref.rollout.n} < expected_num_traj={prompt_bsz*self.config.actor_rollout_ref.rollout.n}."
-                            )
+                                f"cur_num_traj={
+                                    num_prompt_in_batch *
+                                    self.config.actor_rollout_ref.rollout.n} < expected_num_traj={
+                                    prompt_bsz *
+                                    self.config.actor_rollout_ref.rollout.n}.")
                             max_num_gen_batches = (
-                                self.config.algorithm.filter_groups.max_num_gen_batches
-                            )
+                                self.config.algorithm.filter_groups.max_num_gen_batches)
                             if (
                                 max_num_gen_batches <= 0
                                 or num_gen_batches < max_num_gen_batches
                             ):
                                 print(
-                                    f"DAPO sub sample step {num_gen_batches}. Keep generating..."
-                                )
+                                    f"DAPO sub sample step {num_gen_batches}. Keep generating...")
                                 num_gen_batches += 1
                                 progress_bar.update(1)
                                 continue
                             else:
                                 raise ValueError(
-                                    f"cur_num_traj={num_prompt_in_batch*self.config.actor_rollout_ref.rollout.n} < expected_num_traj={prompt_bsz*self.config.actor_rollout_ref.rollout.n}."
-                                    + " Generated too many. Please check if your data are too difficult."
-                                    + " You could also try set max_num_gen_batches=0 to enable endless trials."
-                                )
+                                    f"cur_num_traj={
+                                        num_prompt_in_batch *
+                                        self.config.actor_rollout_ref.rollout.n} < expected_num_traj={
+                                        prompt_bsz *
+                                        self.config.actor_rollout_ref.rollout.n}." +
+                                    " Generated too many. Please check if your data are too difficult." +
+                                    " You could also try set max_num_gen_batches=0 to enable endless trials.")
                         else:
                             # Align the batch
                             traj_bsz = (
@@ -717,8 +732,10 @@ class AgentRayPPOTrainer(RayPPOTrainer):
 
                             dapo_batch = None
                             print(
-                                f"cur_num_traj={len(batch)} >= expected_num_traj={len(cur_batch)}. Keep {len(cur_batch)} trajectories for this step"
-                            )
+                                f"cur_num_traj={
+                                    len(batch)} >= expected_num_traj={
+                                    len(cur_batch)}. Keep {
+                                    len(cur_batch)} trajectories for this step")
                             num_gen_batches = 0
                             dapo_substep = 0
                             batch = cur_batch
@@ -726,7 +743,8 @@ class AgentRayPPOTrainer(RayPPOTrainer):
 
                     # recompute old_log_probs
                     with marked_timer("old_log_prob", timing_raw):
-                        old_log_prob = self.actor_rollout_wg.compute_log_prob(batch)
+                        old_log_prob = self.actor_rollout_wg.compute_log_prob(
+                            batch)
                         entropys = old_log_prob.batch["entropys"]
                         response_masks = batch.batch["response_mask"]
                         loss_agg_mode = (
@@ -751,36 +769,38 @@ class AgentRayPPOTrainer(RayPPOTrainer):
                             attention_mask = batch.batch["attention_mask"]
                             responses = batch.batch["responses"]
                             response_length = responses.size(1)
-                            response_mask = attention_mask[:, -response_length:]
+                            response_mask = attention_mask[:, -
+                                                           response_length:]
 
                             rollout_probs = torch.exp(rollout_old_log_probs)
                             actor_probs = torch.exp(actor_old_log_probs)
-                            rollout_probs_diff = torch.abs(rollout_probs - actor_probs)
+                            rollout_probs_diff = torch.abs(
+                                rollout_probs - actor_probs)
                             rollout_probs_diff = torch.masked_select(
                                 rollout_probs_diff, response_mask.bool()
                             )
-                            rollout_probs_diff_max = torch.max(rollout_probs_diff)
-                            rollout_probs_diff_mean = torch.mean(rollout_probs_diff)
-                            rollout_probs_diff_std = torch.std(rollout_probs_diff)
+                            rollout_probs_diff_max = torch.max(
+                                rollout_probs_diff)
+                            rollout_probs_diff_mean = torch.mean(
+                                rollout_probs_diff)
+                            rollout_probs_diff_std = torch.std(
+                                rollout_probs_diff)
                             metrics.update(
                                 {
                                     "training/rollout_probs_diff_max": rollout_probs_diff_max.detach().item(),
                                     "training/rollout_probs_diff_mean": rollout_probs_diff_mean.detach().item(),
                                     "training/rollout_probs_diff_std": rollout_probs_diff_std.detach().item(),
-                                }
-                            )
+                                })
 
                     if self.use_reference_policy:
                         # compute reference log_prob
                         with marked_timer("ref", timing_raw, color="olive"):
                             if not self.ref_in_actor:
                                 ref_log_prob = self.ref_policy_wg.compute_ref_log_prob(
-                                    batch
-                                )
+                                    batch)
                             else:
                                 ref_log_prob = (
-                                    self.actor_rollout_wg.compute_ref_log_prob(batch)
-                                )
+                                    self.actor_rollout_wg.compute_ref_log_prob(batch))
                             batch = batch.union(ref_log_prob)
 
                     # compute values
@@ -795,17 +815,18 @@ class AgentRayPPOTrainer(RayPPOTrainer):
                         if not do_filter_groups:
                             if self.config.reward_model.launch_reward_fn_async:
                                 reward_tensor, reward_extra_infos_dict = ray.get(
-                                    future_reward
-                                )
+                                    future_reward)
                             batch.batch["token_level_scores"] = reward_tensor
 
                             if reward_extra_infos_dict:
-                                print(f"{list(reward_extra_infos_dict.keys())=}")
+                                print(
+                                    f"{list(reward_extra_infos_dict.keys())=}")
 
                                 # added by verl_tool
                                 to_remove_keys = []
                                 for k, v in reward_extra_infos_dict.items():
-                                    mean_v = np.mean([x for x in v if x is not None])
+                                    mean_v = np.mean(
+                                        [x for x in v if x is not None])
                                     metrics[f"reward_extra_info/{k}"] = mean_v
                                     if None in v:
                                         to_remove_keys.append(k)
@@ -864,25 +885,25 @@ class AgentRayPPOTrainer(RayPPOTrainer):
                                 self.config.actor_rollout_ref.rollout.multi_turn.enable
                                 or self.config.actor_rollout_ref.agent.enable_agent
                             )
-                            actor_output = self.actor_rollout_wg.update_actor(batch)
+                            actor_output = self.actor_rollout_wg.update_actor(
+                                batch)
                         actor_output_metrics = reduce_metrics(
                             actor_output.meta_info["metrics"]
                         )
                         metrics.update(actor_output_metrics)
 
                     # Log rollout generations if enabled
-                    rollout_data_dir = self.config.trainer.get("rollout_data_dir", None)
+                    rollout_data_dir = self.config.trainer.get(
+                        "rollout_data_dir", None)
                     if rollout_data_dir:
                         with marked_timer(
                             "dump_rollout_generations", timing_raw, color="green"
                         ):
                             print(batch.batch.keys())
                             inputs = self.tokenizer.batch_decode(
-                                batch.batch["prompts"], skip_special_tokens=True
-                            )
+                                batch.batch["prompts"], skip_special_tokens=True)
                             outputs = self.tokenizer.batch_decode(
-                                batch.batch["responses"], skip_special_tokens=True
-                            )
+                                batch.batch["responses"], skip_special_tokens=True)
                             scores = (
                                 batch.batch["token_level_scores"].sum(-1).cpu().tolist()
                             )
@@ -909,7 +930,8 @@ class AgentRayPPOTrainer(RayPPOTrainer):
                                 last_val_metrics = val_metrics
                         metrics.update(val_metrics)
 
-                    # Check if the ESI (Elastic Server Instance)/training plan is close to expiration.
+                    # Check if the ESI (Elastic Server Instance)/training plan
+                    # is close to expiration.
                     esi_close_to_expiration = should_save_ckpt_esi(
                         max_steps_duration=self.max_steps_duration,
                         redundant_time=self.config.trainer.esi_redundant_time,
@@ -920,12 +942,11 @@ class AgentRayPPOTrainer(RayPPOTrainer):
                     # 1. The save frequency is set to a positive value.
                     # 2. It's the last training step.
                     # 3. The current step number is a multiple of the save frequency.
-                    # 4. The ESI(Elastic Server Instance)/training plan is close to expiration.
+                    # 4. The ESI(Elastic Server Instance)/training plan is
+                    # close to expiration.
                     if self.config.trainer.save_freq > 0 and (
-                        is_last_step
-                        or self.global_steps % self.config.trainer.save_freq == 0
-                        or esi_close_to_expiration
-                    ):
+                            is_last_step or self.global_steps %
+                            self.config.trainer.save_freq == 0 or esi_close_to_expiration):
                         if esi_close_to_expiration:
                             print(
                                 "Force saving checkpoint: ESI instance expiration approaching."
@@ -944,7 +965,8 @@ class AgentRayPPOTrainer(RayPPOTrainer):
                             self.rm_wg.stop_profile()
 
                 steps_duration = timing_raw["step"]
-                self.max_steps_duration = max(self.max_steps_duration, steps_duration)
+                self.max_steps_duration = max(
+                    self.max_steps_duration, steps_duration)
 
                 # training metrics
                 metrics.update(
@@ -955,8 +977,9 @@ class AgentRayPPOTrainer(RayPPOTrainer):
                 )
                 # collect metrics
                 metrics.update(
-                    compute_data_metrics(batch=batch, use_critic=self.use_critic)
-                )
+                    compute_data_metrics(
+                        batch=batch,
+                        use_critic=self.use_critic))
                 metrics.update(
                     compute_timing_metrics(batch=batch, timing_raw=timing_raw)
                 )
@@ -968,8 +991,11 @@ class AgentRayPPOTrainer(RayPPOTrainer):
                     )
                 )
 
-                # this is experimental and may be changed/removed in the future in favor of a general-purpose one
-                if isinstance(self.train_dataloader.sampler, AbstractCurriculumSampler):
+                # this is experimental and may be changed/removed in the future
+                # in favor of a general-purpose one
+                if isinstance(
+                        self.train_dataloader.sampler,
+                        AbstractCurriculumSampler):
                     self.train_dataloader.sampler.update(batch=batch)
 
                 # TODO: make a canonical logger that supports various backend

@@ -50,7 +50,8 @@ def is_code_safe(code: str, language: str) -> bool:
         # Add patterns for other languages as needed
     }
 
-    # Get patterns for the specific language or use an empty list if not defined
+    # Get patterns for the specific language or use an empty list if not
+    # defined
     patterns = dangerous_patterns.get(language.lower(), [])
 
     # Check for dangerous patterns
@@ -87,14 +88,16 @@ class SandboxFusionTool(BaseTool):
         language = "python"  # Default language
 
         # Try explicit XML tags with language
-        lang_tag_match = re.search(r"<([a-zA-Z0-9_]+)>(.*?)</\1>", action, re.DOTALL)
+        lang_tag_match = re.search(
+            r"<([a-zA-Z0-9_]+)>(.*?)</\1>", action, re.DOTALL)
         if lang_tag_match:
             language = lang_tag_match.group(1).lower()
             code_block = lang_tag_match.group(2).strip()
 
         # Try markdown code blocks with language
         if not code_block:
-            md_match = re.search(r"```([a-zA-Z0-9_]+)(.*?)```", action, re.DOTALL)
+            md_match = re.search(
+                r"```([a-zA-Z0-9_]+)(.*?)```", action, re.DOTALL)
             if md_match:
                 language = md_match.group(1).lower()
                 code_block = md_match.group(2).strip()
@@ -170,8 +173,9 @@ class SandboxFusionTool(BaseTool):
 
         if response.status_code != 200:
             raise Exception(
-                f"SandboxFusion API returned status code {response.status_code}: {response.text}"
-            )
+                f"SandboxFusion API returned status code {
+                    response.status_code}: {
+                    response.text}")
 
         return response.json()
 
@@ -195,15 +199,16 @@ class SandboxFusionTool(BaseTool):
             if compile_status != "Finished":
                 if result["compile_result"].get("stderr"):
                     formatted += (
-                        f"Compilation errors:\n{result['compile_result']['stderr']}\n\n"
-                    )
+                        f"Compilation errors:\n{
+                            result['compile_result']['stderr']}\n\n")
                 return formatted
 
         # Handle run result
         if result.get("run_result"):
             run_status = result["run_result"]["status"]
             execution_time = result["run_result"].get("execution_time", 0)
-            formatted += f"Execution: {run_status} (took {execution_time:.4f}s)\n"
+            formatted += f"Execution: {run_status} (took {
+                execution_time:.4f}s)\n"
 
             # Add stdout if available
             if result["run_result"].get("stdout"):

@@ -93,7 +93,13 @@ def patch_vllm_moe_model_weight_loader(model):
     if not isinstance(model, tuple(SUPPORTED_MOE_MODELS)):
         return
 
-    model = getattr(model, "model", None) or getattr(model, "language_model", None)
+    model = getattr(
+        model,
+        "model",
+        None) or getattr(
+        model,
+        "language_model",
+        None)
     if model is None:
         raise ValueError(
             "The provided model does not have a valid 'model' or 'language_model' attribute."
@@ -117,7 +123,8 @@ class TensorLoRARequest(LoRARequest):
 class VLLMHijack:
     @staticmethod
     def hijack():
-        def hijack__load_adapter(self, lora_request: TensorLoRARequest) -> LoRAModel:
+        def hijack__load_adapter(
+                self, lora_request: TensorLoRARequest) -> LoRAModel:
             """
             based on vllm.lora.worker_manager.WorkerLoRAManager._load_adapter, support load adapter with lora tensors
 
@@ -132,7 +139,8 @@ class VLLMHijack:
                 expected_lora_modules: list[str] = []
                 for module in supported_lora_modules:
                     if module in packed_modules_mapping:
-                        expected_lora_modules.extend(packed_modules_mapping[module])
+                        expected_lora_modules.extend(
+                            packed_modules_mapping[module])
                     else:
                         expected_lora_modules.append(module)
 
@@ -146,7 +154,8 @@ class VLLMHijack:
                     lora_tensors = lora_request.lora_tensors
                     peft_helper = PEFTHelper.from_dict(peft_config)
                 else:
-                    lora_path = get_adapter_absolute_path(lora_request.lora_path)
+                    lora_path = get_adapter_absolute_path(
+                        lora_request.lora_path)
 
                     peft_helper = PEFTHelper.from_local_dir(
                         lora_path, self.max_position_embeddings
@@ -174,8 +183,8 @@ class VLLMHijack:
                         device="cpu",
                         dtype=self.lora_config.lora_dtype,
                         embeddings=None,
-                        target_embedding_padding=self.vocab_size
-                        + self.lora_config.lora_extra_vocab_size,
+                        target_embedding_padding=self.vocab_size +
+                        self.lora_config.lora_extra_vocab_size,
                         embedding_modules=self.embedding_modules,
                         embedding_padding_modules=self.embedding_padding_modules,
                         weights_mapper=hf_to_vllm_mapper,
@@ -188,8 +197,8 @@ class VLLMHijack:
                         lora_model_id=lora_request.lora_int_id,
                         device="cpu",
                         dtype=self.lora_config.lora_dtype,
-                        target_embedding_padding=self.vocab_size
-                        + self.lora_config.lora_extra_vocab_size,
+                        target_embedding_padding=self.vocab_size +
+                        self.lora_config.lora_extra_vocab_size,
                         embedding_modules=self.embedding_modules,
                         embedding_padding_modules=self.embedding_padding_modules,
                         weights_mapper=hf_to_vllm_mapper,
@@ -199,15 +208,18 @@ class VLLMHijack:
 
             if lora.extra_vocab_size > self.lora_config.lora_extra_vocab_size:
                 raise ValueError(
-                    f"LoRA added vocab size {lora.extra_vocab_size} is greater than lora_extra_vocab_size "
-                    f"{self.lora_config.lora_extra_vocab_size}."
-                )
+                    f"LoRA added vocab size {
+                        lora.extra_vocab_size} is greater than lora_extra_vocab_size " f"{
+                        self.lora_config.lora_extra_vocab_size}.")
             return lora
 
         def do_hijack(target_cls, target_method_name, hooking_method):
             setattr(target_cls, target_method_name, hooking_method)
 
-        do_hijack(LRUCacheWorkerLoRAManager, "_load_adapter", hijack__load_adapter)
+        do_hijack(
+            LRUCacheWorkerLoRAManager,
+            "_load_adapter",
+            hijack__load_adapter)
 
 
 def is_version_ge(pkg: str = "vllm", minver: str = "0.7.3"):

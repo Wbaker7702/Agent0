@@ -23,13 +23,15 @@ from verl.workers.rollout.async_server import AsyncLLMServerManager
 
 
 def init_async_rollout_manager(config: DictConfig) -> AsyncLLMServerManager:
-    # =========================== 1. Create hybrid ActorRollout workers ===========================
+    # =========================== 1. Create hybrid ActorRollout workers ======
     role_worker_mapping = {
         Role.ActorRollout: ray.remote(AsyncActorRolloutRefWorker),
     }
     global_pool_id = "global_pool"
     resource_pool_spec = {
-        global_pool_id: [config.trainer.n_gpus_per_node] * config.trainer.nnodes,
+        global_pool_id: [
+            config.trainer.n_gpus_per_node] *
+        config.trainer.nnodes,
     }
     mapping = {
         Role.ActorRollout: global_pool_id,
@@ -62,7 +64,7 @@ def init_async_rollout_manager(config: DictConfig) -> AsyncLLMServerManager:
     actor_rollout_wg = all_wg["actor_rollout"]
     actor_rollout_wg.init_model()
 
-    # =========================== 2. Create AsyncLLMServerManager  ===========================
+    # =========================== 2. Create AsyncLLMServerManager  ===========
     async_rollout_manager = AsyncLLMServerManager(
         config=config,
         worker_group=actor_rollout_wg,

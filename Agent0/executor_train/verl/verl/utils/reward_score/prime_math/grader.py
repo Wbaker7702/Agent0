@@ -149,21 +149,24 @@ def handle_base(x) -> str:
 
 
 def handle_pi(string, pi):
-    if isinstance(string, str) and "\pi" in string:
+    if isinstance(string, str) and "\\pi" in string:
         # Find the first occurrence of "\pi"
-        idx = string.find("\pi")
+        idx = string.find("\\pi")
 
-        # Iterate over the string and find all occurrences of "\pi" with a valid previous character
+        # Iterate over the string and find all occurrences of "\pi" with a
+        # valid previous character
         while idx != -1:
             if idx > 0 and string[idx - 1].isdigit():
-                # Replace "\pi" with "*math.pi" if the previous character is a digit
-                string = string[:idx] + f"*{pi}" + string[idx + 3 :]
+                # Replace "\pi" with "*math.pi" if the previous character is a
+                # digit
+                string = string[:idx] + f"*{pi}" + string[idx + 3:]
             else:
-                # Replace "\pi" with "1*math.pi" if the previous character is not a digit
-                string = string[:idx] + f"1*{pi}" + string[idx + 3 :]
+                # Replace "\pi" with "1*math.pi" if the previous character is
+                # not a digit
+                string = string[:idx] + f"1*{pi}" + string[idx + 3:]
 
             # Find the next occurrence of "\pi"
-            idx = string.find("\pi", idx + 1)
+            idx = string.find("\\pi", idx + 1)
 
         # Evaluate the expression using eval() function
         with contextlib.suppress(Exception):
@@ -228,7 +231,7 @@ def math_equal(
     reference = str(reference).strip()
     prediction = str(prediction).strip()
 
-    ## deal with [], (), {}
+    # deal with [], (), {}
     prediction = format_intervals(prediction)
 
     pred_str, ref_str = prediction, reference
@@ -249,7 +252,7 @@ def math_equal(
     if pred_str == ref_str:
         return True
 
-    ## [a, b] vs. [c, d], return a==c and b==d
+    # [a, b] vs. [c, d], return a==c and b==d
     if (
         prediction
         and reference
@@ -273,20 +276,15 @@ def math_equal(
         ref_parts = [item.strip() for item in reference.split(",")]
 
         if len(pred_parts) == len(ref_parts):
-            return bool(
-                all(
-                    [
-                        math_equal(
-                            pred_parts[i], ref_parts[i], include_percentage, tolerance
-                        )
-                        for i in range(len(pred_parts))
-                    ]
-                )
-            )
+            return bool(all([math_equal(pred_parts[i],
+                                        ref_parts[i],
+                                        include_percentage,
+                                        tolerance) for i in range(len(pred_parts))]))
 
     # if we have point == tuple of values
-    if prediction.startswith("Point") and reference[0] == "(" and reference[-1] == ")":
-        pred_parts = prediction[prediction.find("(") + 1 : -1].split(",")
+    if prediction.startswith(
+            "Point") and reference[0] == "(" and reference[-1] == ")":
+        pred_parts = prediction[prediction.find("(") + 1: -1].split(",")
         ref_parts = reference[1:-1].split(",")
         if len(pred_parts) == len(ref_parts) and all(
             [
@@ -327,8 +325,7 @@ def math_equal(
                 )  # noqa: B005
                 ref_matrix_items = ref_matrix_items.split("\\")
                 ref_matrix_items = [
-                    row.split("&") if "&" in row else row for row in ref_matrix_items
-                ]
+                    row.split("&") if "&" in row else row for row in ref_matrix_items]
                 if len(pred_matrix) == len(ref_matrix_items) and all(
                     [
                         math_equal(pred, ref, include_percentage, tolerance)

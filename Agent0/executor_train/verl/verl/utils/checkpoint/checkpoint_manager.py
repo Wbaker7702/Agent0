@@ -50,11 +50,13 @@ class BaseCheckpointManager:
     ):
         self.checkpoint_config = checkpoint_config
         checkpoint_load_contents = (
-            checkpoint_config.get("load_contents", None) if checkpoint_config else None
-        )
+            checkpoint_config.get(
+                "load_contents",
+                None) if checkpoint_config else None)
         checkpoint_save_contents = (
-            checkpoint_config.get("save_contents", None) if checkpoint_config else None
-        )
+            checkpoint_config.get(
+                "save_contents",
+                None) if checkpoint_config else None)
         if checkpoint_load_contents is None:
             checkpoint_load_contents = ["model", "optimizer", "extra"]
         if checkpoint_save_contents is None:
@@ -123,8 +125,10 @@ class BaseCheckpointManager:
         return "extra" in self.checkpoint_load_contents
 
     def load_checkpoint(
-        self, local_path: str, hdfs_path: str = None, del_local_after_load: bool = False
-    ):
+            self,
+            local_path: str,
+            hdfs_path: str = None,
+            del_local_after_load: bool = False):
         raise NotImplementedError
 
     def save_checkpoint(
@@ -150,7 +154,8 @@ class BaseCheckpointManager:
             path = [path]
         for p in path:
             abs_path = os.path.abspath(p)
-            print(f"Checkpoint manager remove previous save local path: {abs_path}")
+            print(
+                f"Checkpoint manager remove previous save local path: {abs_path}")
             if not os.path.exists(abs_path):
                 continue
             shutil.rmtree(abs_path, ignore_errors=True)
@@ -218,8 +223,9 @@ def get_checkpoint_tracker_filename(root_path: str):
 
 
 def should_save_ckpt_esi(
-    max_steps_duration: float, save_ckpt_duration: float = 60, redundant_time: float = 0
-) -> bool:
+        max_steps_duration: float,
+        save_ckpt_duration: float = 60,
+        redundant_time: float = 0) -> bool:
     """
     Determine if checkpoint should be saved based on capacity esi expiration.
 
@@ -228,7 +234,8 @@ def should_save_ckpt_esi(
         save_ckpt_duration: Estimated time (seconds) required to save checkpoint (default: 60)
         redundant_time: Additional buffer time (seconds) for unexpected delays (default: 0)
     """
-    exp_ts_mlp = os.getenv("MLP_CURRENT_CAPACITY_BLOCK_EXPIRATION_TIMESTAMP")  # vemlp
+    exp_ts_mlp = os.getenv(
+        "MLP_CURRENT_CAPACITY_BLOCK_EXPIRATION_TIMESTAMP")  # vemlp
     exp_ts_aws = os.getenv(
         "SAGEMAKER_CURRENT_CAPACITY_BLOCK_EXPIRATION_TIMESTAMP"
     )  # aws
@@ -239,11 +246,8 @@ def should_save_ckpt_esi(
             remaining = float(exp_ts_mlp) - time.time()
         except ValueError:
             return False
-        return (
-            remaining > 0
-            and max_steps_duration > 0
-            and remaining <= save_ckpt_duration + max_steps_duration + redundant_time
-        )
+        return (remaining > 0 and max_steps_duration > 0 and remaining <=
+                save_ckpt_duration + max_steps_duration + redundant_time)
     elif exp_ts_aws:
         from datetime import datetime, timedelta
 

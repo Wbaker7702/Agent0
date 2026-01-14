@@ -31,7 +31,8 @@ class TestInteractionRegistry:
     def test_get_interaction_class(self):
         """Test getting interaction class by name."""
         # Test getting base interaction class
-        base_cls = get_interaction_class("verl.interactions.base.BaseInteraction")
+        base_cls = get_interaction_class(
+            "verl.interactions.base.BaseInteraction")
         assert base_cls == BaseInteraction
 
         # Test getting gsm8k interaction class
@@ -49,16 +50,15 @@ class TestInteractionRegistry:
                     "name": "test_gsm8k",
                     "class_name": "verl.interactions.gsm8k_interaction.Gsm8kInteraction",
                     "config": {},
-                }
-            ]
-        }
+                }]}
 
         with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
             OmegaConf.save(config_content, f.name)
             temp_config_path = f.name
 
         try:
-            interaction_map = initialize_interactions_from_config(temp_config_path)
+            interaction_map = initialize_interactions_from_config(
+                temp_config_path)
 
             # Check that interaction was created
             assert len(interaction_map) == 1
@@ -80,17 +80,18 @@ class TestInteractionRegistry:
                 {
                     "name": "base_agent",
                     "class_name": "verl.interactions.base.BaseInteraction",
-                    "config": {"custom_param": "test_value"},
+                    "config": {
+                        "custom_param": "test_value"},
                 },
-            ]
-        }
+            ]}
 
         with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
             OmegaConf.save(config_content, f.name)
             temp_config_path = f.name
 
         try:
-            interaction_map = initialize_interactions_from_config(temp_config_path)
+            interaction_map = initialize_interactions_from_config(
+                temp_config_path)
 
             # Check that both interactions were created
             assert len(interaction_map) == 2
@@ -98,7 +99,9 @@ class TestInteractionRegistry:
             assert "base_agent" in interaction_map
 
             # Check types
-            assert isinstance(interaction_map["gsm8k_solver"], Gsm8kInteraction)
+            assert isinstance(
+                interaction_map["gsm8k_solver"],
+                Gsm8kInteraction)
             assert isinstance(interaction_map["base_agent"], BaseInteraction)
 
             # Check names were injected
@@ -106,9 +109,8 @@ class TestInteractionRegistry:
             assert interaction_map["base_agent"].name == "base_agent"
 
             # Check custom config was passed
-            assert (
-                interaction_map["base_agent"].config.get("custom_param") == "test_value"
-            )
+            assert (interaction_map["base_agent"].config.get(
+                "custom_param") == "test_value")
         finally:
             os.unlink(temp_config_path)
 
@@ -128,7 +130,8 @@ class TestInteractionRegistry:
             temp_config_path = f.name
 
         try:
-            interaction_map = initialize_interactions_from_config(temp_config_path)
+            interaction_map = initialize_interactions_from_config(
+                temp_config_path)
 
             # Check that interaction name was derived from class name
             assert len(interaction_map) == 1
@@ -149,7 +152,8 @@ class TestInteractionRegistry:
             temp_config_path = f.name
 
         try:
-            interaction_map = initialize_interactions_from_config(temp_config_path)
+            interaction_map = initialize_interactions_from_config(
+                temp_config_path)
             assert len(interaction_map) == 0
         finally:
             os.unlink(temp_config_path)
@@ -190,8 +194,7 @@ class TestInteractionRegistry:
                     "class_name": "verl.interactions.gsm8k_interaction.Gsm8kInteraction",
                     "config": {},
                 },
-            ]
-        }
+            ]}
 
         with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
             OmegaConf.save(config_content, f.name)
@@ -222,7 +225,8 @@ class TestInteractionRegistry:
             temp_config_path = f.name
 
         try:
-            interaction_map = initialize_interactions_from_config(temp_config_path)
+            interaction_map = initialize_interactions_from_config(
+                temp_config_path)
 
             # Check that names were generated correctly
             assert len(interaction_map) == 2

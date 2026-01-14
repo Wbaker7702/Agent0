@@ -90,11 +90,12 @@ class DataParallelPPOCritic(BasePPOCritic):
             if position_ids.dim() == 3:
                 position_ids_rmpad = (
                     index_first_axis(
-                        rearrange(position_ids, "c b s ... -> (b s) c ..."), indices
-                    )
-                    .transpose(0, 1)
-                    .unsqueeze(1)
-                )  # (3, bsz, seqlen) -> (3, 1, bsz * seqlen)
+                        rearrange(
+                            position_ids,
+                            "c b s ... -> (b s) c ..."),
+                        indices) .transpose(
+                        0,
+                        1) .unsqueeze(1))  # (3, bsz, seqlen) -> (3, 1, bsz * seqlen)
             else:
                 position_ids_rmpad = index_first_axis(
                     rearrange(position_ids.unsqueeze(-1), "b s ... -> (b s) ..."),
@@ -125,14 +126,13 @@ class DataParallelPPOCritic(BasePPOCritic):
             # gather output if sp > 1
             if self.config.ulysses_sequence_parallel_size > 1:
                 values_rmpad = gather_outputs_and_unpad(
-                    values_rmpad, gather_dim=0, unpad_dim=0, padding_size=pad_size
-                )
+                    values_rmpad, gather_dim=0, unpad_dim=0, padding_size=pad_size)
 
             # pad it back
             values = pad_input(
                 values_rmpad, indices=indices, batch=batch_size, seqlen=seqlen
             ).squeeze(-1)
-            values = values[:, -response_length - 1 : -1]
+            values = values[:, -response_length - 1: -1]
         else:
             output = self.critic_module(
                 input_ids=input_ids,
@@ -142,7 +142,7 @@ class DataParallelPPOCritic(BasePPOCritic):
                 use_cache=False,
             )
             values: torch.Tensor = output.logits
-            values = values[:, -response_length - 1 : -1].squeeze(
+            values = values[:, -response_length - 1: -1].squeeze(
                 -1
             )  # (bsz, response_length, vocab_size)
 
@@ -150,11 +150,12 @@ class DataParallelPPOCritic(BasePPOCritic):
 
     def _optimizer_step(self) -> torch.Tensor:
         if isinstance(self.critic_module, FSDP):
-            grad_norm = self.critic_module.clip_grad_norm_(self.config.max_grad_norm)
+            grad_norm = self.critic_module.clip_grad_norm_(
+                self.config.max_grad_norm)
         else:
             grad_norm = torch.nn.utils.clip_grad_norm_(
-                self.critic_module.parameters(), max_norm=self.config.max_grad_norm
-            )
+                self.critic_module.parameters(),
+                max_norm=self.config.max_grad_norm)
 
         if not torch.isfinite(grad_norm):
             print("Gradient norm is not finite. Skip update.")
@@ -168,7 +169,11 @@ class DataParallelPPOCritic(BasePPOCritic):
     def compute_values(self, data: DataProto) -> torch.Tensor:
         self.critic_module.eval()
 
-        select_keys = ["responses", "input_ids", "attention_mask", "position_ids"]
+        select_keys = [
+            "responses",
+            "input_ids",
+            "attention_mask",
+            "position_ids"]
         if "multi_modal_inputs" in data.non_tensor_batch.keys():
             non_tensor_select_keys = ["multi_modal_inputs"]
         else:
@@ -179,10 +184,15 @@ class DataParallelPPOCritic(BasePPOCritic):
         )
         values_lst = []
         if self.rank == 0:
-            micro_batches = tqdm(micro_batches, desc="Compute values", position=2)
+            micro_batches = tqdm(
+                micro_batches,
+                desc="Compute values",
+                position=2)
 
         for micro_batch in micro_batches:
-            model_inputs = {**micro_batch.batch, **micro_batch.non_tensor_batch}
+            model_inputs = {
+                **micro_batch.batch,
+                **micro_batch.non_tensor_batch}
             values = self._forward_micro_batch(model_inputs)
             values_lst.append(values)
 
@@ -190,7 +200,7 @@ class DataParallelPPOCritic(BasePPOCritic):
         responses = data.batch["responses"]
         attention_mask = data.batch["attention_mask"]
         response_length = responses.size(1)
-        values = values * attention_mask[:, -response_length - 1 : -1]
+        values = values * attention_mask[:, -response_length - 1: -1]
         return values
 
     def update_critic(self, data: DataProto) -> Dict[str, Any]:
@@ -218,7 +228,10 @@ class DataParallelPPOCritic(BasePPOCritic):
         metrics = defaultdict(list)
         for _ in range(self.config.ppo_epochs):
             if self.rank == 0:
-                mini_batches = tqdm(mini_batches, desc="Train mini-batches", position=2)
+                mini_batches = tqdm(
+                    mini_batches,
+                    desc="Train mini-batches",
+                    position=2)
 
             for mini_batch in mini_batches:
                 gradient_accumulation = (
@@ -234,14 +247,16 @@ class DataParallelPPOCritic(BasePPOCritic):
                     )
 
                 for micro_batch in micro_batches:
-                    model_inputs = {**micro_batch.batch, **micro_batch.non_tensor_batch}
+                    model_inputs = {
+                        **micro_batch.batch,
+                        **micro_batch.non_tensor_batch}
                     responses = model_inputs["responses"]
                     attention_mask = model_inputs["attention_mask"]
                     values = model_inputs["values"]
                     returns = model_inputs["returns"]
                     response_length = responses.size(1)
                     action_mask = attention_mask[
-                        :, -response_length - 1 : -1
+                        :, -response_length - 1: -1
                     ]  # shift left for value computation
 
                     vpreds = self._forward_micro_batch(model_inputs)
@@ -258,13 +273,14 @@ class DataParallelPPOCritic(BasePPOCritic):
                     batch_metrics = {
                         "critic/vf_loss": vf_loss.detach().item(),
                         "critic/vf_clipfrac": vf_clipfrac.detach().item(),
-                        "critic/vpred_mean": VF.masked_mean(vpreds, action_mask)
-                        .detach()
-                        .item(),
+                        "critic/vpred_mean": VF.masked_mean(
+                            vpreds,
+                            action_mask) .detach() .item(),
                     }
                     append_to_dict(metrics, batch_metrics)
 
                 grad_norm = self._optimizer_step()
-                append_to_dict(metrics, {"critic/grad_norm": grad_norm.detach().item()})
+                append_to_dict(metrics,
+                               {"critic/grad_norm": grad_norm.detach().item()})
 
         return metrics

@@ -50,13 +50,9 @@ def _mp_target_wrapper(
         except (pickle.PicklingError, TypeError):
             # Fallback if the original exception cannot be pickled
             mp_queue.put(
-                (
-                    False,
-                    RuntimeError(
-                        f"Original exception type {type(e).__name__} not pickleable: {e}"
-                    ),
-                )
-            )
+                (False, RuntimeError(
+                    f"Original exception type {
+                        type(e).__name__} not pickleable: {e}"), ))
 
 
 # Renamed the function from timeout to timeout_limit
@@ -87,20 +83,21 @@ def timeout_limit(seconds: float, use_signals: bool = False):
             print(
                 "WARN: The 'use_signals=True' option in the timeout decorator is deprecated. \
                 Signals are unreliable outside the main thread. \
-                Please use the default multiprocessing-based timeout (use_signals=False)."
-            )
+                Please use the default multiprocessing-based timeout (use_signals=False).")
 
             @wraps(func)
             def wrapper_signal(*args, **kwargs):
                 def handler(signum, frame):
-                    # Update function name in error message if needed (optional but good practice)
+                    # Update function name in error message if needed (optional
+                    # but good practice)
                     raise TimeoutError(
-                        f"Function {func.__name__} timed out after {seconds} seconds (signal)!"
-                    )
+                        f"Function {
+                            func.__name__} timed out after {seconds} seconds (signal)!")
 
                 old_handler = signal.getsignal(signal.SIGALRM)
                 signal.signal(signal.SIGALRM, handler)
-                # Use setitimer for float seconds support, alarm only supports integers
+                # Use setitimer for float seconds support, alarm only supports
+                # integers
                 signal.setitimer(signal.ITIMER_REAL, seconds)
 
                 try:
@@ -128,12 +125,13 @@ def timeout_limit(seconds: float, use_signals: bool = False):
                     process.join(timeout=0.5)  # Give it a moment to terminate
                     if process.is_alive():
                         print(
-                            f"Warning: Process {process.pid} did not terminate gracefully after timeout."
-                        )
-                    # Update function name in error message if needed (optional but good practice)
+                            f"Warning: Process {
+                                process.pid} did not terminate gracefully after timeout.")
+                    # Update function name in error message if needed (optional
+                    # but good practice)
                     raise TimeoutError(
-                        f"Function {func.__name__} timed out after {seconds} seconds (multiprocessing)!"
-                    )
+                        f"Function {
+                            func.__name__} timed out after {seconds} seconds (multiprocessing)!")
 
                 try:
                     success, result_or_exc = q.get(
@@ -151,7 +149,8 @@ def timeout_limit(seconds: float, use_signals: bool = False):
                         ) from err
                     else:
                         # Should have timed out if queue is empty after join unless process died unexpectedly
-                        # Update function name in error message if needed (optional but good practice)
+                        # Update function name in error message if needed
+                        # (optional but good practice)
                         raise TimeoutError(
                             f"Operation timed out or process finished unexpectedly without result "
                             f"(exitcode: {exitcode})."

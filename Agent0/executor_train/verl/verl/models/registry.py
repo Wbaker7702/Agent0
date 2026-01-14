@@ -50,7 +50,8 @@ _MODELS = {
 # return model class
 class ModelRegistry:
     @staticmethod
-    def load_model_cls(model_arch: str, value=False) -> Optional[type[nn.Module]]:
+    def load_model_cls(model_arch: str,
+                       value=False) -> Optional[type[nn.Module]]:
         if model_arch not in _MODELS:
             return None
 
@@ -63,8 +64,7 @@ class ModelRegistry:
             model_cls_name = model_cls_name[1]
 
         module = importlib.import_module(
-            f"verl.models.{module_name}.{megatron}.modeling_{module_name}_megatron"
-        )
+            f"verl.models.{module_name}.{megatron}.modeling_{module_name}_megatron")
         return getattr(module, model_cls_name, None)
 
     @staticmethod

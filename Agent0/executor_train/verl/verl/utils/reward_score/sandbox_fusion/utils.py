@@ -110,8 +110,11 @@ def call_sandbox_api(
             "fetch_files": [],
         }
     )
-    headers = {"Content-Type": "application/json", "Accept": "application/json"}
-    # Calculate a reasonable request timeout based on compile/run timeouts plus a buffer
+    headers = {
+        "Content-Type": "application/json",
+        "Accept": "application/json"}
+    # Calculate a reasonable request timeout based on compile/run timeouts
+    # plus a buffer
     request_timeout = compile_timeout + run_timeout + API_TIMEOUT
 
     last_error = None  # Store the last error encountered
@@ -131,14 +134,14 @@ def call_sandbox_api(
             # Check for Gateway Timeout (504) specifically for retrying
             if response.status_code == 504:
                 last_error = (
-                    f"{log_prefix}API Request Error: Gateway Timeout (504) on attempt "
-                    f"{attempt + 1}/{MAX_RETRIES}"
-                )  # <-- Use internal log_prefix
+                    f"{log_prefix}API Request Error: Gateway Timeout (504) on attempt " f"{
+                        attempt + 1}/{MAX_RETRIES}")  # <-- Use internal log_prefix
                 logger.warning(last_error)
                 if attempt < MAX_RETRIES - 1:  # Don't sleep after the last attempt
                     # Calculate increasing delay (e.g., 1s, 2s, 4s, ...) or (1s, 2s, 3s, ...)
                     # Simple linear increase: delay = INITIAL_RETRY_DELAY * (attempt + 1)
-                    # Exponential backoff: delay = INITIAL_RETRY_DELAY * (2 ** attempt)
+                    # Exponential backoff: delay = INITIAL_RETRY_DELAY * (2 **
+                    # attempt)
                     delay = INITIAL_RETRY_DELAY * (
                         attempt + 1
                     )  # Using linear increase for simplicity
@@ -153,31 +156,36 @@ def call_sandbox_api(
 
             # If successful (status code 2xx)
             logger.info(
-                f"{log_prefix}Sandbox API call successful on attempt {attempt + 1}"
-            )  # <-- Use internal log_prefix
+                f"{log_prefix}Sandbox API call successful on attempt {
+                    attempt + 1}")  # <-- Use internal log_prefix
             return response.json(), None
 
         except requests.exceptions.RequestException as e:
             last_error = (
-                f"{log_prefix}API Request Error: {e}"  # <-- Use internal log_prefix
+                # <-- Use internal log_prefix
+                f"{log_prefix}API Request Error: {e}"
             )
             break  # Exit retry loop on non-504 request errors
         except json.JSONDecodeError as e:
             raw_response_text = response.text if "response" in locals() else "N/A"
-            last_error = f"{log_prefix}API Response JSON Decode Error: {e}"  # <-- Use internal log_prefix
+            # <-- Use internal log_prefix
+            last_error = f"{log_prefix}API Response JSON Decode Error: {e}"
             break  # Exit retry loop on JSON decode errors
         except Exception as e:
             last_error = (
-                f"{log_prefix}Unexpected Error: {e}"  # <-- Use internal log_prefix
+                # <-- Use internal log_prefix
+                f"{log_prefix}Unexpected Error: {e}"
             )
             break  # Exit retry loop on other unexpected errors
 
-    # If loop finishes without returning success, return the last recorded error
+    # If loop finishes without returning success, return the last recorded
+    # error
     logger.error(
         f"{log_prefix}Sandbox API call failed. Last error: {last_error}"
     )  # <-- Use internal log_prefix
     # Return the error message without the prefix, as the caller doesn't need the internal ID
-    # Ensure API call failure returns error message, leading to -1 in check_correctness
+    # Ensure API call failure returns error message, leading to -1 in
+    # check_correctness
     return None, (
         last_error.replace(log_prefix, "API Call Failed: ")
         if last_error
@@ -273,9 +281,9 @@ def _execute_user_function():
             # Attempt to instantiate and get method.
             # Errors (e.g., Solution not a class, instantiation fails, method missing)
             # will be caught by the broad except block below.
-            _solution_instance = _Solution_class() 
+            _solution_instance = _Solution_class()
             _target_callable = getattr(_solution_instance, _SANDBOX_FN_NAME)
-        
+
         if not _target_callable:
             sys.stderr.write(f"WrapperError: Function or method '{{_SANDBOX_FN_NAME}}' not found.\\n")
             return None, True # result, error_occurred
@@ -300,7 +308,7 @@ if __name__ == '__main__':
             print(str(_result))
     # Optional: To explicitly exit with an error code if the sandbox relies on it
     # else:
-    #    sys.exit(1) 
+    #    sys.exit(1)
 """
         current_generation_code = wrapper_code
 
@@ -330,7 +338,8 @@ if __name__ == '__main__':
                 language=language,
             )
     except Exception as e:
-        error_msg = f"API Request Exception during check_correctness for case {case_index + 1}: {e}"
+        error_msg = f"API Request Exception during check_correctness for case {
+            case_index + 1}: {e}"
         logger.error(f"Case {case_index + 1}: {error_msg}")
         traceback.print_exc()
 
@@ -355,7 +364,8 @@ if __name__ == '__main__':
 
     if error_msg:
         metadata["status"] = "api_error"
-        result_status = -1  # API request itself failed (includes timeout after retries)
+        # API request itself failed (includes timeout after retries)
+        result_status = -1
         logger.error(f"Case {case_index}: API error occurred: {error_msg}")
         # Log code and input only on error for brevity
         generation_to_log = (
@@ -381,7 +391,8 @@ if __name__ == '__main__':
         if run_result:
             metadata["run_status"] = run_result.get("status")
             metadata["stdout"] = run_result.get("stdout")
-            metadata["stderr"] = run_result.get("stderr")  # stderr during runtime
+            metadata["stderr"] = run_result.get(
+                "stderr")  # stderr during runtime
             metadata["exit_code"] = run_result.get("return_code")
             metadata["duration"] = run_result.get("execution_time")
 
@@ -393,7 +404,8 @@ if __name__ == '__main__':
             result_status = -1  # Internal sandbox error
         elif api_status == "Failed":
             # --- Add debug logging ---
-            logger.debug(f"API returned Failed status. Response: {api_response}")
+            logger.debug(
+                f"API returned Failed status. Response: {api_response}")
             logger.debug(f"Compile Result: {compile_result}")
             logger.debug(f"Run Result: {run_result}")
             # --- Check the logic here ---
@@ -406,7 +418,8 @@ if __name__ == '__main__':
                 )
             )
             if is_compile_error:
-                # Differentiate between compile_error and compile_timeout based on specific status
+                # Differentiate between compile_error and compile_timeout based
+                # on specific status
                 if metadata["compile_status"] == "TimeLimitExceeded":
                     metadata["status"] = "compile_timeout"
                 else:  # Includes Error and Finished but return_code != 0 cases
@@ -414,7 +427,8 @@ if __name__ == '__main__':
                 result_status = -4
             # Run failed or timed out
             elif run_result:
-                # Modified condition: Check for TimeLimitExceeded OR (Finished with non-zero exit code) OR Error status
+                # Modified condition: Check for TimeLimitExceeded OR (Finished
+                # with non-zero exit code) OR Error status
                 is_runtime_error = (
                     metadata["run_status"] == "TimeLimitExceeded"
                     or metadata["run_status"] == "Error"
@@ -431,14 +445,16 @@ if __name__ == '__main__':
                         metadata["status"] = "runtime_error"
                         result_status = -2
                 else:
-                    # Other Failed status with run_result, classify as unknown failure
+                    # Other Failed status with run_result, classify as unknown
+                    # failure
                     logger.warning(
-                        f"Unknown run_status '{metadata['run_status']}' or state within Failed API status."
-                    )
+                        f"Unknown run_status '{
+                            metadata['run_status']}' or state within Failed API status.")
                     metadata["status"] = "unknown_failure"
                     result_status = -1  # Default to -1
             else:
-                # Status is Failed but neither a clear compile error nor run_result exists
+                # Status is Failed but neither a clear compile error nor
+                # run_result exists
                 logger.warning(
                     "API status Failed but cannot determine specific error type (compile/run)."
                 )
@@ -448,17 +464,19 @@ if __name__ == '__main__':
             # Run completed successfully, now check the answer
             if run_result and metadata["run_status"] == "Finished":
                 actual_output = (
-                    metadata["stdout"] if metadata["stdout"] is not None else ""
-                )
-                # Note: Output might contain trailing newlines, need normalization
-                if str(actual_output).rstrip("\n") == str(expected_output).rstrip("\n"):
+                    metadata["stdout"] if metadata["stdout"] is not None else "")
+                # Note: Output might contain trailing newlines, need
+                # normalization
+                if str(actual_output).rstrip("\n") == str(
+                        expected_output).rstrip("\n"):
                     result_status = True
                     metadata["status"] = "success"
                 else:
                     result_status = False
                     metadata["status"] = "wrong_answer"
             else:
-                # Status is Success but run_result status is not Finished, this is unexpected
+                # Status is Success but run_result status is not Finished, this
+                # is unexpected
                 metadata["status"] = "unexpected_success_state"
                 result_status = -1  # Classify as unknown error
         else:
@@ -466,12 +484,13 @@ if __name__ == '__main__':
             logger.warning(f"Unknown API status received: {api_status}")
             metadata["status"] = f"unknown_api_status_{api_status}"
             result_status = -1  # Default to -1
-    else:  # api_response is None and no error_msg (Should not happen with current call_sandbox_api logic)
+    # api_response is None and no error_msg (Should not happen with current
+    # call_sandbox_api logic)
+    else:
         metadata["status"] = "unknown_api_state"
         result_status = -1
         logger.error(
-            f"Case {case_index}: Unknown API state (no response and no error message)."
-        )
+            f"Case {case_index}: Unknown API state (no response and no error message).")
     return result_status, metadata
 
 
@@ -522,8 +541,9 @@ def check_correctness(
 
     if len(inputs) != len(expected_outputs):
         logger.warning(
-            f"Mismatch between number of inputs ({len(inputs)}) and outputs ({len(expected_outputs)})."
-        )
+            f"Mismatch between number of inputs ({
+                len(inputs)}) and outputs ({
+                len(expected_outputs)}).")
         # Return error based on the number of inputs provided
         return [-1] * num_cases, [
             {"error": "Input/output count mismatch", "case_index": i}
@@ -532,11 +552,13 @@ def check_correctness(
 
     first_compile_error_index = -1
 
-    # max_workers is limited by sandbox_fusion_max_concurrent from concurrent_semaphore
+    # max_workers is limited by sandbox_fusion_max_concurrent from
+    # concurrent_semaphore
     with concurrent.futures.ThreadPoolExecutor(
         max_workers=max(32, os.cpu_count() * 5)
     ) as executor:
-        # Submit all tasks, passing the concurrent_semaphore to _process_single_case
+        # Submit all tasks, passing the concurrent_semaphore to
+        # _process_single_case
         future_to_index = {
             executor.submit(
                 _process_single_case,
@@ -570,10 +592,12 @@ def check_correctness(
                     ):
                         first_compile_error_index = index
                     # Optimization: could potentially cancel futures for index > first_compile_error_index
-                    # However, cancellation is not guaranteed. Post-processing is safer.
+                    # However, cancellation is not guaranteed. Post-processing
+                    # is safer.
 
             except Exception as exc:
-                logger.error(f"Test case {index} generated an exception: {exc}")
+                logger.error(
+                    f"Test case {index} generated an exception: {exc}")
                 traceback.print_exc()
                 results[index] = -1  # Mark as API/internal error
                 metadata_list[index] = {
@@ -590,10 +614,13 @@ def check_correctness(
             f"Compile error detected in case {first_compile_error_index}. Marking subsequent cases as compile errors."
         )
         for i in range(first_compile_error_index + 1, num_cases):
-            # Only update if not already processed (though it should be None or have a result)
-            if results[i] != -4:  # Avoid overwriting if it somehow already got -4
+            # Only update if not already processed (though it should be None or
+            # have a result)
+            if results[i] != - \
+                    4:  # Avoid overwriting if it somehow already got -4
                 results[i] = -4
-                # Update or create metadata for skipped cases due to compile error
+                # Update or create metadata for skipped cases due to compile
+                # error
                 if (
                     metadata_list[i] is None
                 ):  # If future failed before returning metadata

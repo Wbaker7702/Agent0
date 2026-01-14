@@ -107,7 +107,8 @@ class Worker(WorkerHelper):
         rank = os.getenv("RANK", None)
         worker_group_prefix = os.getenv("WG_PREFIX", None)
 
-        # when decorator @ray.remote applies, __new__ will be called while we don't want to apply _configure_before_init
+        # when decorator @ray.remote applies, __new__ will be called while we
+        # don't want to apply _configure_before_init
         if (
             None not in [rank, worker_group_prefix]
             and "ActorClass(" not in cls.__name__
@@ -119,7 +120,9 @@ class Worker(WorkerHelper):
         return instance
 
     def _configure_before_init(self, register_center_name: str, rank: int):
-        assert isinstance(rank, int), f"rank must be int, instead of {type(rank)}"
+        assert isinstance(
+            rank, int), f"rank must be int, instead of {
+            type(rank)}"
 
         if rank == 0:
             master_addr, master_port = self.get_availale_master_addr_port()
@@ -133,14 +136,16 @@ class Worker(WorkerHelper):
             os.environ.update(rank_zero_info)
 
     def __init__(self, cuda_visible_devices=None) -> None:
-        # construct a meta from envrionment variable. Note that the import must be inside the class because it is executed remotely
+        # construct a meta from envrionment variable. Note that the import must
+        # be inside the class because it is executed remotely
         world_size = int(os.getenv("WORLD_SIZE"))
         rank = int(os.getenv("RANK"))
         self._rank = rank
         self._world_size = world_size
 
         if "AMD" in torch.cuda.get_device_name():
-            os.environ["CUDA_VISIBLE_DEVICES"] = os.getenv("ROCR_VISIBLE_DEVICES")
+            os.environ["CUDA_VISIBLE_DEVICES"] = os.getenv(
+                "ROCR_VISIBLE_DEVICES")
             os.environ["LOCAL_RANK"] = os.getenv("RAY_LOCAL_RANK")
             cuda_visible_devices = os.getenv("LOCAL_RANK", "0")
             torch.cuda.set_device(int(cuda_visible_devices))
@@ -208,7 +213,8 @@ class Worker(WorkerHelper):
         ret_proto = func(self, *args, **kwargs)
         return ret_proto
 
-    @register(dispatch_mode=Dispatch.ALL_TO_ALL, execute_mode=Execute.RANK_ZERO)
+    @register(dispatch_mode=Dispatch.ALL_TO_ALL,
+              execute_mode=Execute.RANK_ZERO)
     def execute_func_rank_zero(self, func, *args, **kwargs):
         result = func(*args, **kwargs)
         return result

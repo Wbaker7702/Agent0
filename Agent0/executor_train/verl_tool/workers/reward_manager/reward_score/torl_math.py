@@ -11,7 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# Adapted from https://github.com/EleutherAI/lm-evaluation-harness/blob/main/lm_eval/tasks/hendrycks_math/utils.py
+# Adapted from
+# https://github.com/EleutherAI/lm-evaluation-harness/blob/main/lm_eval/tasks/hendrycks_math/utils.py
 import signal
 import re
 from contextlib import contextmanager
@@ -116,7 +117,8 @@ def compute_score(solution_str, ground_truth, reward_type="default") -> float:
             return -1.0
 
 
-# string normalization from https://github.com/EleutherAI/lm-evaluation-harness/blob/master/lm_eval/tasks/hendrycks_math.py
+# string normalization from
+# https://github.com/EleutherAI/lm-evaluation-harness/blob/master/lm_eval/tasks/hendrycks_math.py
 def is_equiv(str1, str2, verbose=False):
     if str1 is None and str2 is None:
         print("WARNING: Both None")
@@ -131,7 +133,7 @@ def is_equiv(str1, str2, verbose=False):
         str1 = parse(str1)
         str2 = parse(str2)
         return verify(str1, str2)
-    except:
+    except BaseException:
         pass
 
     try:
@@ -148,14 +150,14 @@ def remove_boxed(s):
     if "\\boxed " in s:
         left = "\\boxed "
         assert s[: len(left)] == left
-        return s[len(left) :]
+        return s[len(left):]
 
     left = "\\boxed{"
 
     assert s[: len(left)] == left
     assert s[-1] == "}"
 
-    return s[len(left) : -1]
+    return s[len(left): -1]
 
 
 def last_boxed_only_string(string):
@@ -183,7 +185,7 @@ def last_boxed_only_string(string):
     if right_brace_idx is None:
         retval = None
     else:
-        retval = string[idx : right_brace_idx + 1]
+        retval = string[idx: right_brace_idx + 1]
 
     return retval
 
@@ -319,7 +321,8 @@ def strip_string(string):
     if string == "0.5":
         string = "\\frac{1}{2}"
 
-    # NOTE: X/Y changed to \frac{X}{Y} in dataset, but in simple cases fix in case the model output is X/Y
+    # NOTE: X/Y changed to \frac{X}{Y} in dataset, but in simple cases fix in
+    # case the model output is X/Y
     string = fix_a_slash_b(string)
 
     return string

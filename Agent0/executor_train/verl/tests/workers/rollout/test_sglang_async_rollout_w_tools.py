@@ -151,7 +151,8 @@ def test_async_sglang_rollout_w_tool():
         print(f"postprocessed {output.batch['responses'].shape=}")
         sglang_output = output.to("cpu")
 
-    sglang_response_tokens = tokenizer.batch_decode(sglang_output.batch["responses"])
+    sglang_response_tokens = tokenizer.batch_decode(
+        sglang_output.batch["responses"])
 
     print(f"hf response: {hf_response_tokens}")
     print(f"sglang response: {sglang_response_tokens}")
