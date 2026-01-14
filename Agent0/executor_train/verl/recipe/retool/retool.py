@@ -40,7 +40,8 @@ class CustomSandboxFusionTool(SandboxFusionTool):
         if matches:
             code = matches[0].strip()
 
-        # NOTE: some script may not explicitly print result, we need to add a print statement to the end of the script
+        # NOTE: some script may not explicitly print result, we need to add a
+        # print statement to the end of the script
         lines = code.split("\n")
         for i, line in reversed(list(enumerate(lines))):
             if line == "":
@@ -76,7 +77,9 @@ class CustomRLHFDataset(RLHFDataset):
             # read parquet files and cache
             dataframe = datasets.load_dataset(parquet_file)["train"]
             data_source = "/".join(parquet_file.split("/")[-2:])
-            if data_source in ["Maxwell-Jia/AIME_2024", "yentinglin/aime_2025"]:
+            if data_source in [
+                "Maxwell-Jia/AIME_2024",
+                    "yentinglin/aime_2025"]:
                 dataframe = dataframe.map(
                     self.map_fn,
                     fn_kwargs={"data_source": data_source},
@@ -85,7 +88,8 @@ class CustomRLHFDataset(RLHFDataset):
             else:
                 dataframe = dataframe.map(self.map_fn2, num_proc=16)
             dataframes.append(dataframe)
-        self.dataframe: datasets.Dataset = datasets.concatenate_datasets(dataframes)
+        self.dataframe: datasets.Dataset = datasets.concatenate_datasets(
+            dataframes)
 
         print(f"dataset len: {len(self.dataframe)}")
 
@@ -97,7 +101,8 @@ class CustomRLHFDataset(RLHFDataset):
 
         prompt = problem + answer_format
         data = {
-            "data_source": data_source.split("/")[1].lower(),  # aime_2024, aime_2025
+            # aime_2024, aime_2025
+            "data_source": data_source.split("/")[1].lower(),
             "prompt": [{"role": "user", "content": prompt}],
             "ability": "MATH",
             "reward_model": {"ground_truth": str(answer)},
@@ -114,7 +119,8 @@ class CustomRLHFDataset(RLHFDataset):
 
 def compute_score(data_source, solution_str, ground_truth, extra_info):
     # use \\boxed{...} answer
-    result = math_dapo.compute_score(solution_str, ground_truth, strict_box_verify=True)
+    result = math_dapo.compute_score(
+        solution_str, ground_truth, strict_box_verify=True)
 
     # encourage model to call tools
     num_turns = extra_info["num_turns"]

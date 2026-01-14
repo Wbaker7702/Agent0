@@ -175,15 +175,15 @@ def get_rope_index(
                 )
                 text_len = ed - st
 
-                st_idx = (
-                    llm_pos_ids_list[-1].max() + 1 if len(llm_pos_ids_list) > 0 else 0
-                )
+                st_idx = (llm_pos_ids_list[-1].max() +
+                          1 if len(llm_pos_ids_list) > 0 else 0)
                 llm_pos_ids_list.append(
                     torch.arange(text_len).view(1, -1).expand(3, -1) + st_idx
                 )
 
                 range_tensor = torch.arange(llm_grid_t).view(-1, 1)
-                expanded_range = range_tensor.expand(-1, llm_grid_h * llm_grid_w)
+                expanded_range = range_tensor.expand(-1,
+                                                     llm_grid_h * llm_grid_w)
 
                 time_tensor = expanded_range * second_per_grid_t * tokens_per_second
 
@@ -202,15 +202,13 @@ def get_rope_index(
                     .expand(llm_grid_t, llm_grid_h, -1)
                     .flatten()
                 )
-                llm_pos_ids_list.append(
-                    torch.stack([t_index, h_index, w_index]) + text_len + st_idx
-                )
+                llm_pos_ids_list.append(torch.stack(
+                    [t_index, h_index, w_index]) + text_len + st_idx)
                 st = ed + llm_grid_t * llm_grid_h * llm_grid_w
 
             if st < len(input_tokens):
-                st_idx = (
-                    llm_pos_ids_list[-1].max() + 1 if len(llm_pos_ids_list) > 0 else 0
-                )
+                st_idx = (llm_pos_ids_list[-1].max() +
+                          1 if len(llm_pos_ids_list) > 0 else 0)
                 text_len = len(input_tokens) - st
                 llm_pos_ids_list.append(
                     torch.arange(text_len).view(1, -1).expand(3, -1) + st_idx
@@ -231,13 +229,13 @@ def get_rope_index(
         if attention_mask is not None:
             position_ids = attention_mask.long().cumsum(-1) - 1
             position_ids.masked_fill_(attention_mask == 0, 1)
-            position_ids = (
-                position_ids.unsqueeze(0).expand(3, -1, -1).to(attention_mask.device)
-            )
+            position_ids = (position_ids.unsqueeze(0).expand(
+                3, -1, -1).to(attention_mask.device))
             max_position_ids = position_ids.max(0, keepdim=False)[0].max(
                 -1, keepdim=True
             )[0]
-            mrope_position_deltas = max_position_ids + 1 - attention_mask.shape[-1]
+            mrope_position_deltas = max_position_ids + \
+                1 - attention_mask.shape[-1]
         else:
             position_ids = (
                 torch.arange(input_ids.shape[1], device=input_ids.device)
@@ -254,8 +252,10 @@ def get_rope_index(
 
 
 def apply_rotary_pos_emb_thd_absolute(
-    t: Tensor, cu_seqlens: Tensor, freqs: Tensor, rotary_interleaved: bool = False
-) -> Tensor:
+        t: Tensor,
+        cu_seqlens: Tensor,
+        freqs: Tensor,
+        rotary_interleaved: bool = False) -> Tensor:
     """A baseline implementation of applying RoPE for `thd` format.
 
     Args:
@@ -304,5 +304,4 @@ def apply_rotary_pos_emb_absolute(
             )
         else:
             return apply_rotary_pos_emb_thd_absolute(
-                t, cu_seqlens, freqs, rotary_interleaved=config.rotary_interleaved
-            )
+                t, cu_seqlens, freqs, rotary_interleaved=config.rotary_interleaved)

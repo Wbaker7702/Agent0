@@ -57,17 +57,22 @@ def call_search_api(
     request_id = str(uuid.uuid4())
     log_prefix = f"[Search Request ID: {request_id}] "
 
-    payload = {"queries": query_list, "topk": topk, "return_scores": return_scores}
+    payload = {
+        "queries": query_list,
+        "topk": topk,
+        "return_scores": return_scores}
 
-    headers = {"Content-Type": "application/json", "Accept": "application/json"}
+    headers = {
+        "Content-Type": "application/json",
+        "Accept": "application/json"}
 
     last_error = None
 
     for attempt in range(MAX_RETRIES):
         try:
             logger.info(
-                f"{log_prefix}Attempt {attempt + 1}/{MAX_RETRIES}: Calling search API at {retrieval_service_url}"
-            )
+                f"{log_prefix}Attempt {
+                    attempt + 1}/{MAX_RETRIES}: Calling search API at {retrieval_service_url}")
             response = requests.post(
                 retrieval_service_url,
                 headers=headers,
@@ -75,16 +80,18 @@ def call_search_api(
                 timeout=timeout,
             )
 
-            # Check for Gateway Timeout (504) and other server errors for retrying
+            # Check for Gateway Timeout (504) and other server errors for
+            # retrying
             if response.status_code in [500, 502, 503, 504]:
                 last_error = (
-                    f"{log_prefix}API Request Error: Server Error ({response.status_code}) on attempt "
-                    f"{attempt + 1}/{MAX_RETRIES}"
-                )
+                    f"{log_prefix}API Request Error: Server Error ({
+                        response.status_code}) on attempt " f"{
+                        attempt + 1}/{MAX_RETRIES}")
                 logger.warning(last_error)
                 if attempt < MAX_RETRIES - 1:
                     delay = INITIAL_RETRY_DELAY * (attempt + 1)
-                    logger.info(f"{log_prefix}Retrying after {delay} seconds...")
+                    logger.info(
+                        f"{log_prefix}Retrying after {delay} seconds...")
                     time.sleep(delay)
                 continue
 
@@ -93,8 +100,8 @@ def call_search_api(
 
             # If successful (status code 2xx)
             logger.info(
-                f"{log_prefix}Search API call successful on attempt {attempt + 1}"
-            )
+                f"{log_prefix}Search API call successful on attempt {
+                    attempt + 1}")
             return response.json(), None
 
         except requests.exceptions.ConnectionError as e:
@@ -118,14 +125,18 @@ def call_search_api(
             break  # Exit retry loop on other request errors
         except json.JSONDecodeError as e:
             raw_response_text = response.text if "response" in locals() else "N/A"
-            last_error = f"{log_prefix}API Response JSON Decode Error: {e}, Response: {raw_response_text[:200]}"
+            last_error = f"{log_prefix}API Response JSON Decode Error: {e}, Response: {
+                raw_response_text[
+                    :200]}"
             break  # Exit retry loop on JSON decode errors
         except Exception as e:
             last_error = f"{log_prefix}Unexpected Error: {e}"
             break  # Exit retry loop on other unexpected errors
 
-    # If loop finishes without returning success, return the last recorded error
-    logger.error(f"{log_prefix}Search API call failed. Last error: {last_error}")
+    # If loop finishes without returning success, return the last recorded
+    # error
+    logger.error(
+        f"{log_prefix}Search API call failed. Last error: {last_error}")
     return None, (
         last_error.replace(log_prefix, "API Call Failed: ")
         if last_error
@@ -235,10 +246,10 @@ def perform_single_search_batch(
                 metadata["total_results"] = total_results
                 metadata["formatted_result"] = final_result
                 logger.info(
-                    f"Batch search: Successful, got {total_results} total results"
-                )
+                    f"Batch search: Successful, got {total_results} total results")
             else:
-                result_text = json.dumps({"result": "No search results found."})
+                result_text = json.dumps(
+                    {"result": "No search results found."})
                 metadata["status"] = "no_results"
                 metadata["total_results"] = 0
                 logger.info("Batch search: No results found")

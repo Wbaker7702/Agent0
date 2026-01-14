@@ -21,7 +21,8 @@ class MyAdvantageEstimator(str, Enum):
 
 
 # Vectorized version (more efficient for larger batches)
-def calculate_discounted_rewards_vectorized(mask, final_rewards, discount_factor):
+def calculate_discounted_rewards_vectorized(
+        mask, final_rewards, discount_factor):
     """
     Calculate discounted rewards for action sequences.
     Vectorized version for better performance on larger batches.
@@ -39,7 +40,11 @@ def calculate_discounted_rewards_vectorized(mask, final_rewards, discount_factor
 
     # Initialize output
     rewards = torch.zeros_like(mask, dtype=torch.float32, device=device)
-    if isinstance(final_rewards, torch.Tensor) or isinstance(final_rewards, np.ndarray):
+    if isinstance(
+            final_rewards,
+            torch.Tensor) or isinstance(
+            final_rewards,
+            np.ndarray):
         final_rewards = final_rewards.tolist()
 
     # For each batch, process action groups
@@ -54,7 +59,8 @@ def calculate_discounted_rewards_vectorized(mask, final_rewards, discount_factor
         )
 
         # Find start positions (0 -> 1 transitions)
-        starts = torch.where((padded_mask[:-1] == 0) & (padded_mask[1:] == 1))[0]
+        starts = torch.where(
+            (padded_mask[:-1] == 0) & (padded_mask[1:] == 1))[0]
 
         # Find end positions (1 -> 0 transitions)
         ends = torch.where((padded_mask[:-1] == 1) & (padded_mask[1:] == 0))[0]
@@ -66,7 +72,8 @@ def calculate_discounted_rewards_vectorized(mask, final_rewards, discount_factor
             # Calculate discounted reward for each group (working backwards)
             current_reward = final_reward
 
-            for i in range(num_groups - 1, -1, -1):  # Process groups in reverse order
+            for i in range(
+                    num_groups - 1, -1, -1):  # Process groups in reverse order
                 start_idx = starts[i]
                 end_idx = ends[i]
 
@@ -107,7 +114,8 @@ def get_num_actions(mask):
         )
 
         # Find start positions (0 -> 1 transitions)
-        starts = torch.where((padded_mask[:-1] == 0) & (padded_mask[1:] == 1))[0]
+        starts = torch.where(
+            (padded_mask[:-1] == 0) & (padded_mask[1:] == 1))[0]
 
         # Find end positions (1 -> 0 transitions)
         ends = torch.where((padded_mask[:-1] == 1) & (padded_mask[1:] == 0))[0]
@@ -118,7 +126,8 @@ def get_num_actions(mask):
     return torch.tensor(total_num_actions, device=device, dtype=torch.float32)
 
 
-# NOTE(sgm): this implementation only consider outcome supervision, where the reward is a scalar.
+# NOTE(sgm): this implementation only consider outcome supervision, where
+# the reward is a scalar.
 @register_adv_est(MyAdvantageEstimator.TDGRPO)
 def compute_tdgrpo_outcome_advantage(
     token_level_rewards: torch.Tensor,
@@ -189,7 +198,8 @@ def compute_tdgrpo_outcome_advantage(
         # response_mask is [bs, response_length]
         # each response is list [action_tokens, masked_observations, action_tokens, ..., padding]
         # in TD GRPO, we consider each turn as a action, since only the last action is associated with a reward,
-        # we propagate the reward to previous actions by temporal difference with factor lambda.
+        # we propagate the reward to previous actions by temporal difference
+        # with factor lambda.
 
         scores = calculate_discounted_rewards_vectorized(
             response_mask, scores, config.tdgrpo_lambda
@@ -198,7 +208,8 @@ def compute_tdgrpo_outcome_advantage(
     return scores, scores
 
 
-# NOTE(sgm): this implementation only consider outcome supervision, where the reward is a scalar.
+# NOTE(sgm): this implementation only consider outcome supervision, where
+# the reward is a scalar.
 @register_adv_est(MyAdvantageEstimator.GAPO)
 def compute_gapo_outcome_advantage(
     token_level_rewards: torch.Tensor,
@@ -245,7 +256,8 @@ def compute_gapo_outcome_advantage(
     with torch.no_grad():
         bsz = scores.shape[0]
         for i in range(bsz):
-            # id2score[index[i]].append(scores[i]* num_actions_per_sequence[i]) # treat each action as a separate seq
+            # id2score[index[i]].append(scores[i]* num_actions_per_sequence[i])
+            # # treat each action as a separate seq
             id2score[index[i]].extend(
                 [scores[i]] * int(num_actions_per_sequence[i].item())
             )
@@ -303,7 +315,8 @@ def compute_adpo_outcome_advantage(
     with torch.no_grad():
         bsz = scores.shape[0]
 
-        scores_tensor = torch.tensor(score, device=scores.device, dtype=torch.float32)
+        scores_tensor = torch.tensor(
+            score, device=scores.device, dtype=torch.float32)
 
         trust_weight = (scores_tensor - min_score) / (max_score - min_score)
         trust_weight = torch.clamp(trust_weight, 0.0, 1.0)
@@ -383,8 +396,9 @@ def compute_policy_loss_adpo(
     pg_losses = torch.maximum(pg_losses1, pg_losses2)
 
     pg_loss = agg_loss(
-        loss_mat=pg_losses, loss_mask=response_mask, loss_agg_mode=loss_agg_mode
-    )
+        loss_mat=pg_losses,
+        loss_mask=response_mask,
+        loss_agg_mode=loss_agg_mode)
 
     pg_clipfrac = verl_F.masked_mean(
         torch.gt(pg_losses2, pg_losses1).float(), response_mask
@@ -466,12 +480,15 @@ def compute_policy_loss_gspo(
     )
     pg_losses = torch.maximum(pg_losses1, pg_losses2)
 
-    # for GSPO, we need to aggregate the loss at the sequence level (seq-mean-token-mean)
+    # for GSPO, we need to aggregate the loss at the sequence level
+    # (seq-mean-token-mean)
     pg_loss = agg_loss(
-        loss_mat=pg_losses, loss_mask=response_mask, loss_agg_mode="seq-mean-token-mean"
-    )
+        loss_mat=pg_losses,
+        loss_mask=response_mask,
+        loss_agg_mode="seq-mean-token-mean")
 
-    # For compatibility, return zero for pg_clipfrac_lower (not used in standard GSPO)
+    # For compatibility, return zero for pg_clipfrac_lower (not used in
+    # standard GSPO)
     pg_clipfrac = verl_F.masked_mean(
         torch.gt(pg_losses2, pg_losses1).float(), response_mask
     )

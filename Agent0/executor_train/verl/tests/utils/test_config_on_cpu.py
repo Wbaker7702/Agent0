@@ -59,7 +59,8 @@ class TestConfigOnCPU(unittest.TestCase):
         assert isinstance(cfg, TestDataclass)
 
     def test_nested_omega_conf_to_dataclass(self):
-        cfg = omega_conf_to_dataclass(self.config.train_config, TestTrainConfig)
+        cfg = omega_conf_to_dataclass(
+            self.config.train_config, TestTrainConfig)
         self.assertEqual(cfg.batch_size, 32)
         self.assertEqual(cfg.model.hidden_size, 768)
         self.assertEqual(cfg.model.activation, "relu")

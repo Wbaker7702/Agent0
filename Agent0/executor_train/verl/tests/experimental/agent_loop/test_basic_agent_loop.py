@@ -90,7 +90,8 @@ def test_single_turn(init_config):
     assert len(result) == len(raw_prompts) * n
 
     # check result
-    seq_len = result.batch["prompts"].size(1) + result.batch["responses"].size(1)
+    seq_len = result.batch["prompts"].size(
+        1) + result.batch["responses"].size(1)
     assert result.batch["input_ids"].size(1) == seq_len
     assert result.batch["attention_mask"].size(1) == seq_len
     assert result.batch["position_ids"].size(1) == seq_len
@@ -139,7 +140,11 @@ class WeatherToolWithData(BaseTool):
         schema = get_json_schema(self.get_temperature_date)
         return OpenAIFunctionToolSchema(**schema)
 
-    def get_temperature_date(self, location: str, date: str, unit: str = "celsius"):
+    def get_temperature_date(
+            self,
+            location: str,
+            date: str,
+            unit: str = "celsius"):
         """Get temperature at a location and date.
 
         Args:
@@ -179,7 +184,7 @@ def test_tool_agent(init_config):
         }
     )
 
-    # =========================== 1. Init rollout manager ===========================
+    # =========================== 1. Init rollout manager ====================
     tool_config = {
         "tools": [
             {
@@ -202,29 +207,25 @@ def test_tool_agent(init_config):
     init_config.actor_rollout_ref.rollout.multi_turn.max_parallel_calls = 2
     agent_loop_manager = init_agent_loop_manager(init_config)
 
-    # =========================== 2. Generate sequences  ===========================
-    raw_prompts = [
-        [
-            {"role": "user", "content": "How are you?"},
-        ],
-        [
-            {"role": "user", "content": "What's the temperature in Los Angeles now?"},
-        ],
-        [
-            {"role": "user", "content": "What's the temperature in New York now?"},
-        ],
-        [
-            {
-                "role": "system",
-                "content": "You are Qwen, created by Alibaba Cloud. You are a helpful assistant.\n\n"
-                "Current Date: 2024-09-30",
-            },
-            {
-                "role": "user",
-                "content": "What's the temperature in San Francisco now? How about tomorrow?",
-            },
-        ],
-    ]
+    # =========================== 2. Generate sequences  =====================
+    raw_prompts = [[{"role": "user",
+                     "content": "How are you?"},
+                    ],
+                   [{"role": "user",
+                     "content": "What's the temperature in Los Angeles now?"},
+                    ],
+                   [{"role": "user",
+                     "content": "What's the temperature in New York now?"},
+                    ],
+                   [{"role": "system",
+                     "content": "You are Qwen, created by Alibaba Cloud. You are a helpful assistant.\n\n"
+                     "Current Date: 2024-09-30",
+                     },
+                    {"role": "user",
+                     "content": "What's the temperature in San Francisco now? How about tomorrow?",
+                     },
+                    ],
+                   ]
     batch = DataProto(
         non_tensor_batch={
             "raw_prompt": np.array(

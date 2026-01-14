@@ -36,18 +36,21 @@ def kill_python_subprocess_processes():
             # The command starts at index 7 in ps -ef output
             cmd = " ".join(parts[7:])
 
-            # Check for python/python3 -c pattern which indicates code execution
+            # Check for python/python3 -c pattern which indicates code
+            # execution
             if ("python -c" in cmd or "python3 -c" in cmd) and pid_str.isdigit():
                 pid = int(pid_str)
 
                 # Don't kill our own process or the ps process
                 if pid != own_pid and pid != ps_pid:
                     try:
-                        # Kill only this specific process, not its process group
+                        # Kill only this specific process, not its process
+                        # group
                         os.kill(pid, signal.SIGKILL)
                         killed_count += 1
                     except (ProcessLookupError, PermissionError) as e:
-                        # Process may have already terminated or we don't have permission
+                        # Process may have already terminated or we don't have
+                        # permission
                         print(f"Error killing process {pid}: {e}")
 
         return killed_count

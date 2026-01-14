@@ -46,7 +46,8 @@ def get_default_kwargs_for_model_parallel_config():
 def get_default_model_parallel_config():
     from megatron.core import ModelParallelConfig
 
-    return ModelParallelConfig(**get_default_kwargs_for_model_parallel_config())
+    return ModelParallelConfig(
+        **get_default_kwargs_for_model_parallel_config())
 
 
 def get_common_default_kwargs_for_parallel_linear():
@@ -93,7 +94,9 @@ def get_default_kwargs_for_parallel_embedding():
 
 
 def is_tensor_parallel_param(param):
-    return hasattr(param, "tensor_model_parallel") and param.tensor_model_parallel
+    return hasattr(
+        param,
+        "tensor_model_parallel") and param.tensor_model_parallel
 
 
 def get_tensor_parallel_partition_dim(param):
@@ -121,18 +124,19 @@ class _VocabParallelEntropy(torch.autograd.Function):
         )
         normalized_vocab_parallel_logits = vocab_parallel_logits - logits_max
         normalized_exp_logits = normalized_vocab_parallel_logits.exp_()
-        normalized_sum_exp_logits = normalized_exp_logits.sum(dim=-1, keepdim=True)
-        dist.all_reduce(
-            normalized_sum_exp_logits, group=mpu.get_tensor_model_parallel_group()
-        )
+        normalized_sum_exp_logits = normalized_exp_logits.sum(
+            dim=-1, keepdim=True)
+        dist.all_reduce(normalized_sum_exp_logits,
+                        group=mpu.get_tensor_model_parallel_group())
         softmax_logits = normalized_exp_logits.div_(normalized_sum_exp_logits)
-        sum_softmax_times_logits = mul_reduce(softmax_logits, vocab_parallel_logits)
-        dist.all_reduce(
-            sum_softmax_times_logits, group=mpu.get_tensor_model_parallel_group()
-        )
+        sum_softmax_times_logits = mul_reduce(
+            softmax_logits, vocab_parallel_logits)
+        dist.all_reduce(sum_softmax_times_logits,
+                        group=mpu.get_tensor_model_parallel_group())
         entropy = (
-            logits_max + normalized_sum_exp_logits.log() - sum_softmax_times_logits
-        )
+            logits_max +
+            normalized_sum_exp_logits.log() -
+            sum_softmax_times_logits)
         ctx.save_for_backward(
             vocab_parallel_logits, softmax_logits, sum_softmax_times_logits
         )
@@ -153,7 +157,8 @@ class _VocabParallelEntropy(torch.autograd.Function):
         return softmax_logits
 
 
-def vocab_parallel_entropy(vocab_parallel_logits: torch.Tensor) -> torch.Tensor:
+def vocab_parallel_entropy(
+        vocab_parallel_logits: torch.Tensor) -> torch.Tensor:
     """Compute entropy when the logits are sharded in tp ranks
 
     Args:
@@ -206,6 +211,6 @@ def vocab_parallel_log_probs_from_logits_response_rmpad(
         seqlen=seqlen,
     )
     output = full_output.squeeze(-1)[
-        :, -response_length - 1 : -1
+        :, -response_length - 1: -1
     ]  # [batch_size, response_length]
     return output

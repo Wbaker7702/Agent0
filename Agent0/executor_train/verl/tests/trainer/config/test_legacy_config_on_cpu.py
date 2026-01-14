@@ -32,7 +32,11 @@ class TestConfigComparison(unittest.TestCase):
             legacy_allow_missing (bool): sometimes the legacy megatron config contains fewer keys and
               we allow that to happen
         """
-        if isinstance(current_config, dict) and isinstance(legacy_config, dict):
+        if isinstance(
+                current_config,
+                dict) and isinstance(
+                legacy_config,
+                dict):
             current_keys = set(current_config.keys())
             legacy_keys = set(legacy_config.keys())
 
@@ -41,8 +45,7 @@ class TestConfigComparison(unittest.TestCase):
 
             if missing_in_current:
                 self.fail(
-                    f"Keys missing in current config at {path}: {missing_in_current}"
-                )
+                    f"Keys missing in current config at {path}: {missing_in_current}")
             if missing_in_legacy:
                 # if the legacy
                 msg = f"Keys missing in legacy config at {path}: {missing_in_legacy}"
@@ -61,7 +64,9 @@ class TestConfigComparison(unittest.TestCase):
             self.assertEqual(
                 len(current_config),
                 len(legacy_config),
-                f"List lengths differ at {path}: current={len(current_config)}, legacy={len(legacy_config)}",
+                f"List lengths differ at {path}: current={
+                    len(current_config)}, legacy={
+                    len(legacy_config)}",
             )
             for i, (current_item, legacy_item) in enumerate(
                 zip(current_config, legacy_config, strict=True)

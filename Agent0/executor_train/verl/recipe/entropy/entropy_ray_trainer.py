@@ -106,7 +106,10 @@ class RayEntropyTrainer(RayPPOTrainer):
                 # pop those keys for generation
                 if "multi_modal_inputs" in new_batch.non_tensor_batch.keys():
                     gen_batch = new_batch.pop(
-                        batch_keys=["input_ids", "attention_mask", "position_ids"],
+                        batch_keys=[
+                            "input_ids",
+                            "attention_mask",
+                            "position_ids"],
                         non_tensor_batch_keys=[
                             "raw_prompt_ids",
                             "multi_modal_data",
@@ -115,7 +118,10 @@ class RayEntropyTrainer(RayPPOTrainer):
                     )
                 else:
                     gen_batch = new_batch.pop(
-                        batch_keys=["input_ids", "attention_mask", "position_ids"],
+                        batch_keys=[
+                            "input_ids",
+                            "attention_mask",
+                            "position_ids"],
                         non_tensor_batch_keys=["raw_prompt_ids"],
                     )
                 gen_batch = gen_batch.repeat(
@@ -132,12 +138,10 @@ class RayEntropyTrainer(RayPPOTrainer):
                     with simple_timer("gen", timing_raw):
                         if not self.async_rollout_mode:
                             gen_batch_output = self.actor_rollout_wg.generate_sequences(
-                                gen_batch
-                            )
+                                gen_batch)
                         else:
                             gen_batch_output = (
-                                self.async_rollout_manager.generate_sequences(gen_batch)
-                            )
+                                self.async_rollout_manager.generate_sequences(gen_batch))
 
                     if self.config.algorithm.adv_estimator == AdvantageEstimator.REMAX:
                         with simple_timer("gen_max", timing_raw):
@@ -151,11 +155,12 @@ class RayEntropyTrainer(RayPPOTrainer):
 
                             new_batch = new_batch.union(gen_baseline_output)
                             reward_baseline_tensor = self.reward_fn(new_batch)
-                            reward_baseline_tensor = reward_baseline_tensor.sum(dim=-1)
+                            reward_baseline_tensor = reward_baseline_tensor.sum(
+                                dim=-1)
 
                             new_batch.pop(
-                                batch_keys=list(gen_baseline_output.batch.keys())
-                            )
+                                batch_keys=list(
+                                    gen_baseline_output.batch.keys()))
 
                             new_batch.batch["reward_baselines"] = reward_baseline_tensor
 
@@ -178,13 +183,15 @@ class RayEntropyTrainer(RayPPOTrainer):
                         # the results from reward model and rule-based results.
                         if self.use_rm:
                             # we first compute reward model score
-                            reward_tensor = self.rm_wg.compute_rm_score(new_batch)
+                            reward_tensor = self.rm_wg.compute_rm_score(
+                                new_batch)
                             new_batch = new_batch.union(reward_tensor)
 
                         # we combine with rule-based rm
                         reward_extra_infos_dict: dict[str, list]
                         try:
-                            reward_result = self.reward_fn(new_batch, return_dict=True)
+                            reward_result = self.reward_fn(
+                                new_batch, return_dict=True)
                             reward_tensor = reward_result["reward_tensor"]
                             reward_extra_infos_dict = reward_result["reward_extra_info"]
                         except Exception as e:
@@ -210,9 +217,9 @@ class RayEntropyTrainer(RayPPOTrainer):
                                 kl_ctrl=self.kl_ctrl_in_reward,
                                 kl_penalty=self.config.algorithm.kl_penalty,
                             )
-                            metrics.update(
-                                kl_metrics
-                            )  # TODO: This will be cleared if we use multiple genenration batches
+                            # TODO: This will be cleared if we use multiple
+                            # genenration batches
+                            metrics.update(kl_metrics)
                         else:
                             new_batch.batch["token_level_rewards"] = new_batch.batch[
                                 "token_level_scores"
@@ -248,7 +255,8 @@ class RayEntropyTrainer(RayPPOTrainer):
 
                         prompt_uid2metric_std = {}
                         for prompt_uid, metric_vals in prompt_uid2metric_vals.items():
-                            prompt_uid2metric_std[prompt_uid] = np.std(metric_vals)
+                            prompt_uid2metric_std[prompt_uid] = np.std(
+                                metric_vals)
 
                         kept_prompt_uids = [
                             uid
@@ -275,8 +283,7 @@ class RayEntropyTrainer(RayPPOTrainer):
                         if num_prompt_in_batch < prompt_bsz:
                             print(f"{num_prompt_in_batch=} < {prompt_bsz=}")
                             max_num_gen_batches = (
-                                self.config.algorithm.filter_groups.max_num_gen_batches
-                            )
+                                self.config.algorithm.filter_groups.max_num_gen_batches)
                             if (
                                 max_num_gen_batches <= 0
                                 or num_gen_batches < max_num_gen_batches
@@ -285,10 +292,11 @@ class RayEntropyTrainer(RayPPOTrainer):
                                 continue
                             else:
                                 raise ValueError(
-                                    f"{num_gen_batches=} >= {max_num_gen_batches=}."
-                                    + " Generated too many. Please check if your data are too difficult."
-                                    + " You could also try set max_num_gen_batches=0 to enable endless trials."
-                                )
+                                    f"{
+                                        num_gen_batches=} >= {
+                                        max_num_gen_batches=}." +
+                                    " Generated too many. Please check if your data are too difficult." +
+                                    " You could also try set max_num_gen_batches=0 to enable endless trials.")
                         else:
                             # Align the batch
                             traj_bsz = (
@@ -307,7 +315,8 @@ class RayEntropyTrainer(RayPPOTrainer):
 
                     # balance the number of valid tokens on each dp rank.
                     # Note that this breaks the order of data inside the batch.
-                    # Please take care when you implement group based adv computation such as GRPO and rloo
+                    # Please take care when you implement group based adv
+                    # computation such as GRPO and rloo
                     if self.config.trainer.balance_batch:
                         self._balance_batch(batch, metrics=metrics)
 
@@ -318,15 +327,15 @@ class RayEntropyTrainer(RayPPOTrainer):
 
                     # recompute old_log_probs
                     with simple_timer("old_log_prob", timing_raw):
-                        old_log_prob = self.actor_rollout_wg.compute_log_prob(batch)
+                        old_log_prob = self.actor_rollout_wg.compute_log_prob(
+                            batch)
                         batch = batch.union(old_log_prob)
 
                     if self.use_reference_policy:
                         # compute reference log_prob
                         with simple_timer("ref", timing_raw):
                             ref_log_prob = self.ref_policy_wg.compute_ref_log_prob(
-                                batch
-                            )
+                                batch)
                             batch = batch.union(ref_log_prob)
 
                     # compute values
@@ -362,7 +371,8 @@ class RayEntropyTrainer(RayPPOTrainer):
                     if self.config.trainer.critic_warmup <= self.global_steps:
                         # update actor
                         with simple_timer("update_actor", timing_raw):
-                            actor_output = self.actor_rollout_wg.update_actor(batch)
+                            actor_output = self.actor_rollout_wg.update_actor(
+                                batch)
                         actor_output_metrics = reduce_metrics(
                             actor_output.meta_info["metrics"]
                         )
@@ -384,16 +394,16 @@ class RayEntropyTrainer(RayPPOTrainer):
                         metrics.update(val_metrics)
 
                     if self.config.trainer.save_freq > 0 and (
-                        is_last_step
-                        or self.global_steps % self.config.trainer.save_freq == 0
-                    ):
+                            is_last_step or self.global_steps %
+                            self.config.trainer.save_freq == 0):
                         with simple_timer("save_checkpoint", timing_raw):
                             self._save_checkpoint()
 
                 # collect metrics
                 metrics.update(
-                    compute_data_metrics(batch=batch, use_critic=self.use_critic)
-                )
+                    compute_data_metrics(
+                        batch=batch,
+                        use_critic=self.use_critic))
                 metrics.update(
                     compute_timing_metrics(batch=batch, timing_raw=timing_raw)
                 )

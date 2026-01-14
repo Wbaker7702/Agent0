@@ -59,7 +59,9 @@ def test_colocated_workers():
     critic_cls = RayClassWithInitArgs(cls=Critic, config={"b": 10})
     resource_pool = RayResourcePool(process_on_nodes=[2])
 
-    actor_wg = RayWorkerGroup(resource_pool=resource_pool, ray_cls_with_init=actor_cls)
+    actor_wg = RayWorkerGroup(
+        resource_pool=resource_pool,
+        ray_cls_with_init=actor_cls)
     critic_wg = RayWorkerGroup(
         resource_pool=resource_pool, ray_cls_with_init=critic_cls
     )

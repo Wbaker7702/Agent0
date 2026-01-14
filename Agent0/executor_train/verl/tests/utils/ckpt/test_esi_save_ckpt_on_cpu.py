@@ -23,7 +23,8 @@ class TestShouldSaveCkptEsi(TestCase):
     def test_no_expiration_timestamp(self):
         """Test case when no expiration timestamp is set"""
         os.environ.pop("MLP_CURRENT_CAPACITY_BLOCK_EXPIRATION_TIMESTAMP", None)
-        os.environ.pop("SAGEMAKER_CURRENT_CAPACITY_BLOCK_EXPIRATION_TIMESTAMP", None)
+        os.environ.pop(
+            "SAGEMAKER_CURRENT_CAPACITY_BLOCK_EXPIRATION_TIMESTAMP", None)
         self.assertFalse(should_save_ckpt_esi(100))
 
     def test_mlp_expiration_valid(self):
@@ -32,7 +33,8 @@ class TestShouldSaveCkptEsi(TestCase):
         os.environ["MLP_CURRENT_CAPACITY_BLOCK_EXPIRATION_TIMESTAMP"] = str(
             current_time + 90
         )
-        self.assertTrue(should_save_ckpt_esi(30))  # max_steps_duration=30 seconds
+        # max_steps_duration=30 seconds
+        self.assertTrue(should_save_ckpt_esi(30))
 
     def test_mlp_expiration_passed(self):
         """Test expired MLP timestamp"""
@@ -58,10 +60,10 @@ class TestShouldSaveCkptEsi(TestCase):
     def test_aws_expiration_not_reached(self):
         """Test AWS expiration timestamp with sufficient remaining time"""
         now = datetime.now()
-        expiration = now + timedelta(minutes=100)  # Exceeds 90-minute threshold
+        # Exceeds 90-minute threshold
+        expiration = now + timedelta(minutes=100)
         os.environ["SAGEMAKER_CURRENT_CAPACITY_BLOCK_EXPIRATION_TIMESTAMP"] = str(
-            int(expiration.timestamp())
-        )
+            int(expiration.timestamp()))
         self.assertFalse(should_save_ckpt_esi(30 * 60))
 
     def test_redundant_time(self):

@@ -33,7 +33,8 @@ logger.setLevel(os.getenv("VERL_LOGGING_LEVEL", "WARN"))
 
 
 def _get_unique_tensor_key(tensor):
-    key = (tensor.untyped_storage().data_ptr() + tensor.storage_offset(), tensor.dtype)
+    key = (tensor.untyped_storage().data_ptr() +
+           tensor.storage_offset(), tensor.dtype)
     return key
 
 
@@ -103,15 +104,13 @@ class OffloadHandler:
         """Tensor push."""
         raise NotImplementedError(
             "`tensor_push is not implented in OffloadHandler class. Inherit this class and implement your "
-            "custom tensor_push."
-        )
+            "custom tensor_push.")
 
     def tensor_pop(self, tensor_tag: Any, **kwargs):
         """Tensor pop."""
         raise NotImplementedError(
             "`tensor_pop is not implented in OffloadHandler class. Inherit this class and implement your "
-            "custom tensor_pop."
-        )
+            "custom tensor_pop.")
 
 
 class GroupCommitFunction(torch.autograd.Function):
@@ -147,8 +146,10 @@ class SynchronizedGroupOffloadHandler(OffloadHandler):
     """
 
     def __init__(
-        self, num_offload_group, tensor_need_offloading_checker=(lambda _: True)
-    ) -> None:
+            self,
+            num_offload_group,
+            tensor_need_offloading_checker=(
+            lambda _: True)) -> None:
         super().__init__()
 
         self.num_offload_group = num_offload_group
@@ -238,7 +239,8 @@ class AsyncDoubleBufferGroupOffloadHandler(SynchronizedGroupOffloadHandler):
 
     def __init__(
         self,
-        num_offload_group,  # must be <= actual number of groups (number of commits)
+        num_offload_group,
+        # must be <= actual number of groups (number of commits)
         num_model_group,
         tensor_need_offloading_checker=(lambda t: True),
     ) -> None:
@@ -280,7 +282,8 @@ class AsyncDoubleBufferGroupOffloadHandler(SynchronizedGroupOffloadHandler):
             | torch._subclasses.functional_tensor.FunctionalTensor,
         )
         need_offload = not torch_stray_tensor
-        need_offload = need_offload and self.tensor_need_offloading_checker(tensor)
+        need_offload = need_offload and self.tensor_need_offloading_checker(
+            tensor)
 
         if need_offload:
             # obtain a unique tensor tag
@@ -375,10 +378,12 @@ class AsyncDoubleBufferGroupOffloadHandler(SynchronizedGroupOffloadHandler):
             offload_mapping = self.group_offload_mapping.pop(group_to_reload)
             assert offload_mapping is not None
             for key, state in offload_mapping.items():
-                offload_mapping[key] = SynchronizedGroupOffloadHandler.reload(state)
+                offload_mapping[key] = SynchronizedGroupOffloadHandler.reload(
+                    state)
             for tensor_label, state in self.tensor_tag_to_state.items():
                 group_id, _ = tensor_label
-                if group_id == group_to_reload and not isinstance(state, torch.Tensor):
+                if group_id == group_to_reload and not isinstance(
+                        state, torch.Tensor):
                     assert isinstance(state, tuple), f"{group_id} {state}"
                     key, shape = state
                     recovered_tensor = offload_mapping[key].view(shape)
@@ -392,7 +397,8 @@ class AsyncDoubleBufferGroupOffloadHandler(SynchronizedGroupOffloadHandler):
         assert self.current_group >= 0
 
         # Layer window data structure helps us to reload at right times
-        if self.layer_window_map[self.offloaded_group_count - 1] == self.current_group:
+        if self.layer_window_map[self.offloaded_group_count -
+                                 1] == self.current_group:
             # Stream synchronization both ways
             self.h2d_stream.wait_stream(get_torch_device().current_stream())
             get_torch_device().current_stream().wait_stream(self.h2d_stream)
@@ -466,7 +472,8 @@ class ActivationHandler:
         if len(kwarg_keys) == 0:
             return flat_args, {}
         args = flat_args[: -len(kwarg_keys)]
-        kwargs = dict(zip(kwarg_keys, flat_args[-len(kwarg_keys) :], strict=True))
+        kwargs = dict(
+            zip(kwarg_keys, flat_args[-len(kwarg_keys):], strict=True))
         return args, kwargs
 
     def _ckpt_forward(self, forward_method, *args, **kwargs):
@@ -475,7 +482,8 @@ class ActivationHandler:
         def my_function(*inputs):
             # unpack back into args and kwargs
             nonlocal forward_method, kwarg_keys
-            unpacked_args, unpacked_kwargs = self._unpack_kwargs(inputs, kwarg_keys)
+            unpacked_args, unpacked_kwargs = self._unpack_kwargs(
+                inputs, kwarg_keys)
             # run original module
             return forward_method(*unpacked_args, **unpacked_kwargs)
 
@@ -550,15 +558,16 @@ def enable_activation_offloading(model, strategy, enable_ckpt=False):
                 if isinstance(child, FSDP):
                     wrapped_module = child._fsdp_wrapped_module
                 # In some cases, torch.nn.Embedding is wrapped with FSDP alone. However, the activation
-                # size of torch.nn.Embedding is small, so it's not necessary to offload it.
+                # size of torch.nn.Embedding is small, so it's not necessary to
+                # offload it.
                 if not isinstance(wrapped_module, torch.nn.Embedding):
                     layers.append(child)
 
     get_layers(model)
     if len(layers) < 3:
         logger.warning(
-            f"Find only {len(layers)} fsdp layers, not neccessary to enable async activation offloading"
-        )
+            f"Find only {
+                len(layers)} fsdp layers, not neccessary to enable async activation offloading")
         return
 
     tensor_filter = FSDPParameterFilter()

@@ -86,8 +86,9 @@ async def test_rollout_trace_on_untraced_class():
 async def test_rollout_trace_with_tracer(mock_weave_client):
     """Tests that the decorator calls the tracer's methods correctly."""
     RolloutTraceConfig.init(
-        project_name="my-project", experiment_name="my-experiment", backend="weave"
-    )
+        project_name="my-project",
+        experiment_name="my-experiment",
+        backend="weave")
     instance = TracedClass()
     assert RolloutTraceConfig.get_client() is mock_weave_client
 
@@ -101,14 +102,16 @@ async def test_rollout_trace_with_tracer(mock_weave_client):
     assert call_kwargs["inputs"] == expected_inputs
 
     mock_call = mock_weave_client.create_call.return_value
-    mock_weave_client.finish_call.assert_called_once_with(mock_call, output=result)
+    mock_weave_client.finish_call.assert_called_once_with(
+        mock_call, output=result)
 
 
 async def test_rollout_trace_with_exception(mock_weave_client):
     """Tests that `finish` is called with the exception when one is raised."""
     RolloutTraceConfig.init(
-        project_name="my-project", experiment_name="my-experiment", backend="weave"
-    )
+        project_name="my-project",
+        experiment_name="my-experiment",
+        backend="weave")
     instance = TracedClass()
 
     with pytest.raises(ValueError, match="Test Exception"):
@@ -128,8 +131,9 @@ async def test_rollout_trace_with_exception(mock_weave_client):
 async def test_rollout_trace_with_dummy_backend(mock_weave_client):
     """Tests that the tracer is not called when the backend is 'dummy'."""
     RolloutTraceConfig.init(
-        project_name="my-project", experiment_name="my-experiment", backend="dummy"
-    )
+        project_name="my-project",
+        experiment_name="my-experiment",
+        backend="dummy")
     instance = TracedClass()
 
     await instance.my_method("test_a")
@@ -146,8 +150,9 @@ async def test_rollout_trace_with_real_weave_backend():
 
     # This assumes that the weave environment (e.g., project) is configured
     RolloutTraceConfig.init(
-        project_name="my-project", experiment_name="my-experiment", backend="weave"
-    )
+        project_name="my-project",
+        experiment_name="my-experiment",
+        backend="weave")
 
     instance = TracedClass()
 

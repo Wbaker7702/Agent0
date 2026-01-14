@@ -39,7 +39,10 @@ def preprocess_packed_seqs(
 
     pad_size = (align_size - seqlens_in_batch % align_size) % align_size
     seqlens_in_batch_padded = seqlens_in_batch + pad_size
-    cu_seqlens = torch.zeros(batch_size + 1, dtype=torch.int32, device=input_ids.device)
+    cu_seqlens = torch.zeros(
+        batch_size + 1,
+        dtype=torch.int32,
+        device=input_ids.device)
     cu_seqlens[1:] = torch.cumsum(seqlens_in_batch, dim=0)
     cu_seqlens_padded = torch.zeros(
         batch_size + 1, dtype=torch.int32, device=input_ids.device
@@ -57,7 +60,7 @@ def preprocess_packed_seqs(
             if cp_size <= 1:
                 seqlen = seqlens_in_batch[i]
                 input_ids_rmpad[
-                    cu_seqlens_padded[i] : cu_seqlens_padded[i] + seqlen
+                    cu_seqlens_padded[i]: cu_seqlens_padded[i] + seqlen
                 ] = input_ids[i, attention_mask[i]]
                 continue
             seqlen = seqlens_in_batch_padded[i] // cp_size
@@ -65,18 +68,20 @@ def preprocess_packed_seqs(
             start_idx = cu_seqlens_padded[i] // cp_size
             # split to 2 chunks
             d = input_ids[i, attention_mask[i]]
-            input_ids_rmpad[start_idx : start_idx + half_seqlen] = d[
-                half_seqlen * cp_rank : half_seqlen * (cp_rank + 1)
+            input_ids_rmpad[start_idx: start_idx + half_seqlen] = d[
+                half_seqlen * cp_rank: half_seqlen * (cp_rank + 1)
             ]
 
-            remain_start = seqlens_in_batch_padded[i] - half_seqlen * (cp_rank + 1)
+            remain_start = seqlens_in_batch_padded[i] - \
+                half_seqlen * (cp_rank + 1)
             remain_end = seqlens_in_batch_padded[i] - half_seqlen * cp_rank
             remain_end = min(remain_end, d.shape[0])
             remain_len = remain_end - remain_start
             if remain_len > 0:
-                input_ids_rmpad[
-                    start_idx + half_seqlen : start_idx + half_seqlen + remain_len
-                ] = d[remain_start:remain_end]
+                input_ids_rmpad[start_idx +
+                                half_seqlen: start_idx +
+                                half_seqlen +
+                                remain_len] = d[remain_start:remain_end]
 
     packed_seq_params = PackedSeqParams(
         qkv_format="thd",
@@ -118,8 +123,9 @@ def postprocess_packed_seqs(
         # need to gather across cp group and concatenate in sequence dimension
         output_list = [torch.empty_like(output) for _ in range(cp_size)]
         torch.distributed.all_gather(
-            output_list, output.detach(), group=mpu.get_context_parallel_group()
-        )
+            output_list,
+            output.detach(),
+            group=mpu.get_context_parallel_group())
         output_list[mpu.get_context_parallel_rank()] = output
     else:
         output_list = [output]
@@ -129,7 +135,7 @@ def postprocess_packed_seqs(
             output_new[i, attention_mask[i]] = output[0][
                 packed_seq_params.cu_seqlens_q_padded[
                     i
-                ] : packed_seq_params.cu_seqlens_q_padded[i]
+                ]: packed_seq_params.cu_seqlens_q_padded[i]
                 + s
             ]
             continue
@@ -140,23 +146,23 @@ def postprocess_packed_seqs(
         half_seqlen = s_len_padded_chunk // 2
         s_len = attention_mask[i].sum().item()
         s_len_padded = s_len_padded_chunk * cp_size
-        tmp = torch.empty(s_len_padded, *output.shape[2:], device=output.device)
+        tmp = torch.empty(s_len_padded, *
+                          output.shape[2:], device=output.device)
         for j in range(cp_size):
             o = output_list[j][0]
             # split to 2 chunks
             packed_start_idx = packed_seq_params.cu_seqlens_q_padded[i] // cp_size
             o0, o1 = (
-                o[packed_start_idx : packed_start_idx + half_seqlen],
+                o[packed_start_idx: packed_start_idx + half_seqlen],
                 o[
                     packed_start_idx
-                    + half_seqlen : packed_start_idx
+                    + half_seqlen: packed_start_idx
                     + s_len_padded_chunk
                 ],
             )
-            tmp[j * half_seqlen : (j + 1) * half_seqlen] = o0
-            tmp[
-                s_len_padded - (j + 1) * half_seqlen : s_len_padded - j * half_seqlen
-            ] = o1
+            tmp[j * half_seqlen: (j + 1) * half_seqlen] = o0
+            tmp[s_len_padded -
+                (j + 1) * half_seqlen: s_len_padded - j * half_seqlen] = o1
         output_new[i, attention_mask[i]] = tmp[:s_len]
 
     return output_new
@@ -196,12 +202,16 @@ def remove_left_padding(
         size=(batch_size, seq_len),
     )
     new_position_ids = torch.zeros(
-        dtype=position_ids.dtype, device=position_ids.device, size=(batch_size, seq_len)
-    )
+        dtype=position_ids.dtype,
+        device=position_ids.device,
+        size=(
+            batch_size,
+            seq_len))
     for i in range(batch_size):
         if pre_process:
             new_input_ids[i, : seq_lens[i]] = input_ids[i, attention_mask[i]]
-        new_attention_mask[i, : seq_lens[i]] = attention_mask[i, attention_mask[i]]
+        new_attention_mask[i, : seq_lens[i]
+                           ] = attention_mask[i, attention_mask[i]]
         new_position_ids[i, : seq_lens[i]] = position_ids[i, attention_mask[i]]
     if pre_process:
         return new_input_ids, new_attention_mask, new_position_ids
@@ -225,9 +235,13 @@ def recover_left_padding(
     shape = list(result.shape)
     batch_size = shape[0]
     shape[1] = origin_seqlen
-    new_result = torch.zeros(dtype=result.dtype, device=result.device, size=shape)
+    new_result = torch.zeros(
+        dtype=result.dtype,
+        device=result.device,
+        size=shape)
     for i in range(batch_size):
-        new_result[i, original_attention_mask[i]] = result[i, attention_mask[i]]
+        new_result[i, original_attention_mask[i]
+                   ] = result[i, attention_mask[i]]
     return new_result
 
 

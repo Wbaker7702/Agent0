@@ -40,10 +40,11 @@ class BaseTool:
         self.name = self.tool_schema.function.name
         print(
             json.dumps(
-                self.tool_schema.model_dump(exclude_unset=True, exclude_none=True),
+                self.tool_schema.model_dump(
+                    exclude_unset=True,
+                    exclude_none=True),
                 indent=2,
-            )
-        )
+            ))
 
     def get_openai_tool_schema(self) -> OpenAIFunctionToolSchema:
         return self.tool_schema

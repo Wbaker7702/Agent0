@@ -13,5 +13,6 @@
 # limitations under the License.
 
 # APIs kept for backward compatibility purpose
-# This file is deprecated, for new features please develop in profiler/performance.py
+# This file is deprecated, for new features please develop in
+# profiler/performance.py
 from verl.utils.profiler.performance import simple_timer, reduce_timing  # noqa

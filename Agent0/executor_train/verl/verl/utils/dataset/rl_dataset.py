@@ -43,7 +43,7 @@ def collate_fn(data_list: list[dict]) -> dict:
 
     Returns:
         Dict where tensor entries are stacked into a torch.Tensor of shape
-        (batch_size, \*dims) and non-tensor entries are converted to
+        (batch_size, \\*dims) and non-tensor entries are converted to
         np.ndarray of dtype object with shape (batch_size,).
     """
     tensors = defaultdict(list)
@@ -108,7 +108,8 @@ class RLHFDataset(Dataset):
         self.return_raw_chat = config.get("return_raw_chat", False)
         self.return_full_prompt = config.get("return_full_prompt", False)
         self.truncation = config.get("truncation", "error")
-        self.filter_overlong_prompts = config.get("filter_overlong_prompts", True)
+        self.filter_overlong_prompts = config.get(
+            "filter_overlong_prompts", True)
 
         self.num_workers = config.get(
             "filter_overlong_prompts_workers", max(1, os.cpu_count() // 4)
@@ -119,7 +120,8 @@ class RLHFDataset(Dataset):
         self.need_tools_kwargs = config.get("need_tools_kwargs", False)
         self.filter_prompts = config.get("filter_prompts", True)
         self.serialize_dataset = False
-        self.return_multi_modal_inputs = config.get("return_multi_modal_inputs", True)
+        self.return_multi_modal_inputs = config.get(
+            "return_multi_modal_inputs", True)
 
         self._download()
         self._read_files_and_tokenize()
@@ -128,28 +130,29 @@ class RLHFDataset(Dataset):
         from verl.utils.fs import copy_to_local
 
         data_files = (
-            self.data_files if not use_origin_parquet else self.original_data_files
-        )
+            self.data_files if not use_origin_parquet else self.original_data_files)
         for i, parquet_file in enumerate(data_files):
             self.data_files[i] = copy_to_local(
-                src=parquet_file, cache_dir=self.cache_dir, use_shm=self.use_shm
-            )
+                src=parquet_file,
+                cache_dir=self.cache_dir,
+                use_shm=self.use_shm)
 
     def _read_files_and_tokenize(self):
         dataframes = []
         for parquet_file in self.data_files:
             # read parquet files and cache
-            dataframe = datasets.load_dataset("parquet", data_files=parquet_file)[
-                "train"
-            ]
+            dataframe = datasets.load_dataset(
+                "parquet", data_files=parquet_file)["train"]
             dataframes.append(dataframe)
-        self.dataframe: datasets.Dataset = datasets.concatenate_datasets(dataframes)
+        self.dataframe: datasets.Dataset = datasets.concatenate_datasets(
+            dataframes)
 
         print(f"dataset len: {len(self.dataframe)}")
 
         self.dataframe = self.maybe_filter_out_long_prompts(self.dataframe)
 
-    def maybe_filter_out_long_prompts(self, dataframe: datasets.Dataset = None):
+    def maybe_filter_out_long_prompts(
+            self, dataframe: datasets.Dataset = None):
         # filter out too long prompts
         if self.filter_overlong_prompts:
             tokenizer = self.tokenizer
@@ -178,10 +181,10 @@ class RLHFDataset(Dataset):
                     )
 
                     return len(
-                        processor(text=[raw_prompt], images=images, videos=videos)[
-                            "input_ids"
-                        ][0]
-                    )
+                        processor(
+                            text=[raw_prompt],
+                            images=images,
+                            videos=videos)["input_ids"][0])
 
             else:
 
@@ -195,7 +198,8 @@ class RLHFDataset(Dataset):
             dataframe = dataframe.filter(
                 lambda doc: doc2len(doc) <= self.max_prompt_length,
                 num_proc=self.num_workers,
-                desc=f"Filtering prompts longer than {self.max_prompt_length} tokens",
+                desc=f"Filtering prompts longer than {
+                    self.max_prompt_length} tokens",
             )
 
             print(f"filter dataset len: {len(dataframe)}")
@@ -260,11 +264,12 @@ class RLHFDataset(Dataset):
                 and row_dict.get(self.image_key, None) is not None
             ):
                 images = [
-                    process_image(image) for image in row_dict.pop(self.image_key)
-                ]
+                    process_image(image) for image in row_dict.pop(
+                        self.image_key)]
 
                 # due to the image key is "image" instead of "images" in vllm, we need to use "image" here
-                # link: https://github.com/vllm-project/vllm/blob/3c545c0c3b98ee642373a308197d750d0e449403/vllm/multimodal/parse.py#L205
+                # link:
+                # https://github.com/vllm-project/vllm/blob/3c545c0c3b98ee642373a308197d750d0e449403/vllm/multimodal/parse.py#L205
                 multi_modal_data["image"] = images
 
             videos = None
@@ -273,16 +278,19 @@ class RLHFDataset(Dataset):
                 and row_dict.get(self.video_key, None) is not None
             ):
                 videos = [
-                    process_video(video) for video in row_dict.pop(self.video_key)
-                ]
+                    process_video(video) for video in row_dict.pop(
+                        self.video_key)]
 
                 # due to the video key is "video" instead of "videos" in vllm, we need to use "video" here
-                # link: https://github.com/vllm-project/vllm/blob/3c545c0c3b98ee642373a308197d750d0e449403/vllm/multimodal/parse.py#L205
+                # link:
+                # https://github.com/vllm-project/vllm/blob/3c545c0c3b98ee642373a308197d750d0e449403/vllm/multimodal/parse.py#L205
                 multi_modal_data["video"] = [video.numpy() for video in videos]
 
             model_inputs = self.processor(
-                text=[raw_prompt], images=images, videos=videos, return_tensors="pt"
-            )
+                text=[raw_prompt],
+                images=images,
+                videos=videos,
+                return_tensors="pt")
 
             input_ids = model_inputs.pop("input_ids")
             attention_mask = model_inputs.pop("attention_mask")
@@ -290,11 +298,13 @@ class RLHFDataset(Dataset):
             if "second_per_grid_ts" in model_inputs:
                 model_inputs.pop("second_per_grid_ts")
 
-            # There's a trap here, multi_modal_inputs has to be a dict, not BatchFeature
+            # There's a trap here, multi_modal_inputs has to be a dict, not
+            # BatchFeature
             row_dict["multi_modal_data"] = multi_modal_data
 
             # We will do batch.union() in the trainer,
-            # so we cannot have "multi_modal_inputs" in row_dict if rollout generates new multi_modal_inputs
+            # so we cannot have "multi_modal_inputs" in row_dict if rollout
+            # generates new multi_modal_inputs
             if self.return_multi_modal_inputs:
                 row_dict["multi_modal_inputs"] = dict(model_inputs)
 
@@ -345,10 +355,11 @@ class RLHFDataset(Dataset):
         row_dict["attention_mask"] = attention_mask[0]
         row_dict["position_ids"] = position_ids[0]
 
-        raw_prompt_ids = self.tokenizer.encode(raw_prompt, add_special_tokens=False)
+        raw_prompt_ids = self.tokenizer.encode(
+            raw_prompt, add_special_tokens=False)
         if len(raw_prompt_ids) > self.max_prompt_length:
             if self.truncation == "left":
-                raw_prompt_ids = raw_prompt_ids[-self.max_prompt_length :]
+                raw_prompt_ids = raw_prompt_ids[-self.max_prompt_length:]
             elif self.truncation == "right":
                 raw_prompt_ids = raw_prompt_ids[: self.max_prompt_length]
             elif self.truncation == "middle":
@@ -359,8 +370,9 @@ class RLHFDataset(Dataset):
                 )
             elif self.truncation == "error":
                 raise RuntimeError(
-                    f"Prompt length {len(raw_prompt_ids)} is longer than {self.max_prompt_length}."
-                )
+                    f"Prompt length {
+                        len(raw_prompt_ids)} is longer than {
+                        self.max_prompt_length}.")
 
         row_dict["raw_prompt_ids"] = raw_prompt_ids
         # encode prompts without chat template

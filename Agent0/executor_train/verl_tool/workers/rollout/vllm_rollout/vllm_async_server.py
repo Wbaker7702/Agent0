@@ -86,7 +86,8 @@ class AsyncvLLMServer(VerlAsyncvLLMServer.__ray_actor_class__):
             disable_log_stats=config.disable_log_stats,
             max_num_batched_tokens=max_num_batched_tokens,
             enable_chunked_prefill=config.enable_chunked_prefill,
-            enable_prefix_caching=False,  # changed to False by verl-tool for higher output quality
+            enable_prefix_caching=False,
+            # changed to False by verl-tool for higher output quality
             trust_remote_code=trust_remote_code,
             seed=config.get("seed", 0),
         )
@@ -97,8 +98,12 @@ class AsyncvLLMServer(VerlAsyncvLLMServer.__ray_actor_class__):
 
         # build serving chat
         model_config = self.engine.model_config
-        BASE_MODEL_PATHS = [BaseModelPath(name=model_name, model_path=model_path)]
-        models = OpenAIServingModels(self.engine, model_config, BASE_MODEL_PATHS)
+        BASE_MODEL_PATHS = [
+            BaseModelPath(
+                name=model_name,
+                model_path=model_path)]
+        models = OpenAIServingModels(
+            self.engine, model_config, BASE_MODEL_PATHS)
         self.openai_serving_chat = OpenAIServingChat(
             self.engine,
             model_config,
@@ -135,7 +140,9 @@ class AsyncvLLMServer(VerlAsyncvLLMServer.__ray_actor_class__):
                 content=generator.model_dump(), status_code=generator.code
             )
         if request.stream:
-            return StreamingResponse(content=generator, media_type="text/event-stream")
+            return StreamingResponse(
+                content=generator,
+                media_type="text/event-stream")
         else:
             assert isinstance(generator, CompletionResponse)
             return JSONResponse(content=generator.model_dump())
@@ -148,7 +155,8 @@ class AsyncvLLMServer(VerlAsyncvLLMServer.__ray_actor_class__):
             yield
 
             # There's no way to gracefully restart uvicorn server if port is already in use,
-            # so we exit the process directly and let AsyncLLMServerManager restart it.
+            # so we exit the process directly and let AsyncLLMServerManager
+            # restart it.
             print(
                 "FastAPI shutdown, maybe address already in use, exit process immediately."
             )

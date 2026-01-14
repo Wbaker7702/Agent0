@@ -37,7 +37,7 @@ from .grader import math_equal
 
 # sympy might hang -- we don't care about trying to be lenient in these cases
 BAD_SUBSTRINGS = ["^{", "^("]
-BAD_REGEXES = ["\^[0-9]+\^", "\^[0-9][0-9]+"]
+BAD_REGEXES = ["\\^[0-9]+\\^", "\\^[0-9][0-9]+"]
 TUPLE_CHARS = "()[]"
 
 
@@ -111,13 +111,13 @@ def _inject_implicit_mixed_number(step: str):
     e.g. 7 3/4 => 7+3/4
     """
     p1 = re.compile("([0-9]) +([0-9])")
-    step = p1.sub("\\1+\\2", step)  ## implicit mults
+    step = p1.sub("\\1+\\2", step)  # implicit mults
     return step
 
 
 def _strip_properly_formatted_commas(expr: str):
     # We want to be careful because we don't want to strip tuple commas
-    p1 = re.compile("(\d)(,)(\d\d\d)($|\D)")
+    p1 = re.compile("(\\d)(,)(\\d\\d\\d)($|\\D)")
     while True:
         next_expr = p1.sub("\\1\\3\\4", expr)
         if next_expr == expr:
@@ -132,7 +132,7 @@ def _normalize(expr: str) -> str:
         return None
 
     # Remove enclosing `\text{}`.
-    m = re.search("^\\\\text\{(?P<text>.+?)\}$", expr)
+    m = re.search("^\\\\text\\{(?P<text>.+?)\\}$", expr)
     if m is not None:
         expr = m.group("text")
 
@@ -166,8 +166,8 @@ def _normalize(expr: str) -> str:
         "yard",
         "liter",
     ]:
-        expr = re.sub(f"{unit}(es)?(s)? *(\^[0-9]+)?", "", expr)
-    expr = re.sub("\^ *\\\\circ", "", expr)
+        expr = re.sub(f"{unit}(es)?(s)? *(\\^[0-9]+)?", "", expr)
+    expr = re.sub("\\^ *\\\\circ", "", expr)
 
     if len(expr) > 0 and expr[0] == "{" and expr[-1] == "}":
         expr = expr[1:-1]
@@ -201,7 +201,8 @@ def count_unknown_letters_in_expr(expr: str):
 
 
 def should_allow_eval(expr: str):
-    # we don't want to try parsing unknown text or functions of more than two variables
+    # we don't want to try parsing unknown text or functions of more than two
+    # variables
     if count_unknown_letters_in_expr(expr) > 2:
         return False
 
@@ -256,8 +257,10 @@ def grade_answer(given_answer: str, ground_truth: str) -> bool:
     if given_answer is None:
         return False
 
-    ground_truth_normalized_mathd = math_normalize.normalize_answer(ground_truth)
-    given_answer_normalized_mathd = math_normalize.normalize_answer(given_answer)
+    ground_truth_normalized_mathd = math_normalize.normalize_answer(
+        ground_truth)
+    given_answer_normalized_mathd = math_normalize.normalize_answer(
+        given_answer)
 
     # be at least as lenient as mathd
     if ground_truth_normalized_mathd == given_answer_normalized_mathd:
@@ -301,13 +304,13 @@ def grade_answer(given_answer: str, ground_truth: str) -> bool:
                 is_correct = False
             else:
                 try:
-                    is_correct = are_equal_under_sympy(ground_truth_elem, given_elem)
+                    is_correct = are_equal_under_sympy(
+                        ground_truth_elem, given_elem)
                 except Exception as e:
                     # if there's an error, we'll just say it's not correct
                     is_correct = False
                     print(
-                        f"Error: {e} from are_equal_under_sympy, {ground_truth_elem}, {given_elem}"
-                    )
+                        f"Error: {e} from are_equal_under_sympy, {ground_truth_elem}, {given_elem}")
             if not is_correct:
                 break
 
@@ -319,7 +322,7 @@ def remove_boxed(s):
     try:
         assert s[: len(left)] == left
         assert s[-1] == "}"
-        return s[len(left) : -1]
+        return s[len(left): -1]
     except Exception:
         return None
 
@@ -351,7 +354,7 @@ def _last_boxed_only_string(string):
     if left_brace_idx is None or right_brace_idx is None:
         return None
 
-    return string[left_brace_idx + 1 : right_brace_idx].strip()
+    return string[left_brace_idx + 1: right_brace_idx].strip()
 
 
 def match_answer(response):
@@ -360,11 +363,15 @@ def match_answer(response):
         ans_idx = response.lower().rfind(ans_marker)
         if ans_idx != -1:
             is_matched = True
-            response = response[ans_idx + len(ans_marker) :].strip()
+            response = response[ans_idx + len(ans_marker):].strip()
             if response.endswith("\n"):
                 response = response[:-2]
 
-    for ans_marker in ["is answer", "is the answer", "are answers", "are the answers"]:
+    for ans_marker in [
+        "is answer",
+        "is the answer",
+        "are answers",
+            "are the answers"]:
         ans_idx = response.lower().rfind(ans_marker)
         if ans_idx != -1:
             is_matched = True
@@ -399,7 +406,7 @@ def match_answer(response):
         ans_idx = response.lower().rfind(ans_marker)
         if ans_idx != -1:
             is_matched = True
-            response = response[ans_idx + len(ans_marker) :].strip()
+            response = response[ans_idx + len(ans_marker):].strip()
             if response.endswith("\n"):
                 response = response[:-2]
 
@@ -417,22 +424,27 @@ def compute_score(model_output: str, ground_truth: str) -> bool:
     is_matched, extracted_model_output = match_answer(model_output)
     format_correctness = "Step 2:" in model_output and "\\box" in model_output
 
-    # grade simple algebra questions. if succeeded, return; otherwise, proceed to more complex grading
+    # grade simple algebra questions. if succeeded, return; otherwise, proceed
+    # to more complex grading
     if grade_answer(extracted_model_output, ground_truth):
         return True, True, extracted_model_output
 
     try:
-        if "\pi" in extracted_model_output or "\pi" in ground_truth:
+        if "\\pi" in extracted_model_output or "\\pi" in ground_truth:
             equivs = []
             for pi in [math.pi, 3.14]:
                 equivs.append(
                     math_equal(
-                        extracted_model_output, ground_truth, timeout=True, pi=pi
-                    )
-                )
+                        extracted_model_output,
+                        ground_truth,
+                        timeout=True,
+                        pi=pi))
             is_correct = any(equivs)
         else:
-            is_correct = math_equal(extracted_model_output, ground_truth, timeout=True)
+            is_correct = math_equal(
+                extracted_model_output,
+                ground_truth,
+                timeout=True)
     except Exception:
         is_correct = False
 

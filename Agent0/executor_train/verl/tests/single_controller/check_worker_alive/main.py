@@ -61,7 +61,9 @@ if __name__ == "__main__":
 
     print(
         time.time(),
-        f"wait 6x wait time {wait_time * 6} to let signal returned to process but still not exceed process wait time",
+        f"wait 6x wait time {
+            wait_time *
+            6} to let signal returned to process but still not exceed process wait time",
     )
     time.sleep(wait_time * 6)
 

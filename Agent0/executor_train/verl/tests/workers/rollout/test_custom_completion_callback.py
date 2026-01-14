@@ -111,7 +111,10 @@ class Sandbox:
             os._exit(-1)
 
         app = fastapi.FastAPI(lifespan=lifespan)
-        app.router.add_api_route("/run_code", self.code_execution, methods=["POST"])
+        app.router.add_api_route(
+            "/run_code",
+            self.code_execution,
+            methods=["POST"])
 
         self.port = _get_free_port()
         config = uvicorn.Config(
@@ -186,31 +189,32 @@ class CustomCompletionCallback(ToolCompletionCallback):
         # STEP 0: check if we reach max turns
         if len(messages) >= self.max_assistant_turns:
             print(
-                f"[id={completions.id},turn={turn},finish_reason={finish_reason}] Reach max turns, done!"
-            )
+                f"[id={
+                    completions.id},turn={turn},finish_reason={finish_reason}] Reach max turns, done!")
             return
 
         # STEP 1: check if we reach max tokens
         if finish_reason == "length":
             print(
-                f"[id={completions.id},turn={turn},finish_reason={finish_reason}] Reach max tokens, done!"
-            )
+                f"[id={
+                    completions.id},turn={turn},finish_reason={finish_reason}] Reach max tokens, done!")
             return
 
         # STEP 2: check if we got answer
         matches = self.answer_pattern.findall(content)
         if matches:
             print(
-                f"[id={completions.id},turn={turn},finish_reason={finish_reason}] Got answer: {matches[0]}, done!"
-            )
+                f"[id={
+                    completions.id},turn={turn},finish_reason={finish_reason}] Got answer: {
+                    matches[0]}, done!")
             return
 
         # STEP 3: check if we got code block
         matches = self.code_pattern.findall(content)
         if not matches:
             print(
-                f"[id={completions.id},turn={turn},finish_reason={finish_reason}] No code block found, done!"
-            )
+                f"[id={
+                    completions.id},turn={turn},finish_reason={finish_reason}] No code block found, done!")
             return
 
         # STEP 4: execute code block in sandbox
@@ -228,8 +232,8 @@ class CustomCompletionCallback(ToolCompletionCallback):
             {"role": "tool", "content": f"<interpreter>{stdout}{stderr}</interpreter>"}
         )
         print(
-            f"[id={completions.id},turn={turn},finish_reason={finish_reason}] Code block executed, continue..."
-        )
+            f"[id={
+                completions.id},turn={turn},finish_reason={finish_reason}] Code block executed, continue...")
 
         # STEP 5: resubmit chat completions with code block output
         self.scheduler.submit_chat_completions(
@@ -251,10 +255,10 @@ print(...)
 ```
 </code>
 
-The code must explictly print necessary output to stdout. Remember stop generation at </code> immediately and 
+The code must explictly print necessary output to stdout. Remember stop generation at </code> immediately and
 return the code.
 2. User will send the python code to a external sandbox to execute and get output from stdout.
-3. User will send the output in format <interpreter>output</interpreter> to you, and you should use the 
+3. User will send the output in format <interpreter>output</interpreter> to you, and you should use the
 output to answer the question.
 The answer format must be: <answer>\\boxed{'The final answer goes here.'}</answer>
 

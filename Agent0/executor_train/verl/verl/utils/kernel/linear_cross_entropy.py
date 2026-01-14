@@ -70,7 +70,8 @@ class LinearCrossEntropy(torch.autograd.Function):
             reduction, str
         ), f"reduction must be a str, but got {type(reduction)}"
         with torch.cuda.nvtx.range("LinearCrossEntropy-forward"):
-            REDUCTION = kernels.get_entropy_reduction_enum_number(reduction.lower())
+            REDUCTION = kernels.get_entropy_reduction_enum_number(
+                reduction.lower())
 
             original_hidden_shape = hidden.shape
             if len(hidden.shape) != 2:
@@ -82,9 +83,7 @@ class LinearCrossEntropy(torch.autograd.Function):
 
             logprobs, entropy, _maximum, _accumulate, _entropy_b = (
                 kernels.efficient_entropy_forward(
-                    hidden, weight, labels, REDUCTION, temperature, dist_process_group
-                )
-            )
+                    hidden, weight, labels, REDUCTION, temperature, dist_process_group))
 
             ctx.save_for_backward(
                 hidden, weight, labels, _maximum, _accumulate, _entropy_b

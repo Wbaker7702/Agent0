@@ -106,7 +106,8 @@ class BingSearchEngine:
                         if "query" in entry and "result" in entry:
                             cache_data[entry["query"]] = entry["result"]
                         else:
-                            print(f"Invalid cache entry format at line {line_num}")
+                            print(
+                                f"Invalid cache entry format at line {line_num}")
                     except json.JSONDecodeError as e:
                         print(f"Invalid JSON at line {line_num}: {e}")
                         continue
@@ -116,7 +117,8 @@ class BingSearchEngine:
                 self._cache = cache_data
 
             self._last_cache_check = time.time()
-            print(f"Loaded {len(self._cache)} cache entries from {self._cache_file}")
+            print(
+                f"Loaded {len(self._cache)} cache entries from {self._cache_file}")
 
         except Exception as e:
             print(f"Failed to load cache file: {str(e)}")
@@ -198,7 +200,8 @@ class BingSearchEngine:
 
         # Prepare URL with query parameters
         encoded_query = urlencode({"q": query, "mkt": mkt, "setLang": setLang})
-        target_url = f"https://www.bing.com/search?{encoded_query}&brd_json=1&cc={self._location}"
+        target_url = f"https://www.bing.com/search?{encoded_query}&brd_json=1&cc={
+            self._location}"
 
         # Prepare headers and payload
         headers = {
@@ -309,7 +312,8 @@ class BingSearchEngine:
             return "No search results found."
 
         formatted = []
-        for idx, snippet in enumerate(results["chunk_content"][: self._max_results], 1):
+        for idx, snippet in enumerate(
+                results["chunk_content"][: self._max_results], 1):
             snippet = snippet[: self._result_length]
             formatted.append(f"Page {idx}: {snippet}")
 
@@ -398,10 +402,12 @@ class BingSearchTool(BaseTool):
             tuple: (search_query, is_valid)
         """
         # Try to find search query in various formats
-        search_queries = re.findall(r"<search>(.*?)</search>", action, re.DOTALL)
+        search_queries = re.findall(
+            r"<search>(.*?)</search>", action, re.DOTALL)
 
         if not search_queries:
-            search_queries = re.findall(r"```\n?search\n(.*?)\n```", action, re.DOTALL)
+            search_queries = re.findall(
+                r"```\n?search\n(.*?)\n```", action, re.DOTALL)
 
         if not search_queries:
             # Try to find any search-like patterns
@@ -482,7 +488,8 @@ class BingSearchTool(BaseTool):
         for i, (trajectory_id, action, extra_field) in enumerate(
             zip(trajectory_ids, actions, extra_fields)
         ):
-            task = self._conduct_action_async(trajectory_id, action, extra_field)
+            task = self._conduct_action_async(
+                trajectory_id, action, extra_field)
             tasks.append(task)
 
         # Wait for all tasks to complete
@@ -538,15 +545,14 @@ class BingSearchTool(BaseTool):
                 # Execute the async search
                 search_results = await self.search_engine.execute(parsed_query, timeout)
 
-                if search_results and not search_results.startswith("Search failed:"):
+                if search_results and not search_results.startswith(
+                        "Search failed:"):
                     observation = (
-                        f"Search results for '{parsed_query}':\n\n{search_results}"
-                    )
+                        f"Search results for '{parsed_query}':\n\n{search_results}")
                     valid = True
                 else:
                     observation = (
-                        f"Search for '{parsed_query}' returned no results or failed."
-                    )
+                        f"Search for '{parsed_query}' returned no results or failed.")
                     valid = False
 
                 # Search action is typically always done after one execution
@@ -561,8 +567,12 @@ class BingSearchTool(BaseTool):
 
         # Update environment
         self.update_env(
-            trajectory_id, env, parsed_query, is_valid, extra_field, observation
-        )
+            trajectory_id,
+            env,
+            parsed_query,
+            is_valid,
+            extra_field,
+            observation)
         self.save_env(trajectory_id, env)
         return observation, done, valid
 
@@ -581,12 +591,16 @@ class BingSearchTool(BaseTool):
 
     def __del__(self):
         """Cleanup when tool is destroyed."""
-        if hasattr(self, "search_engine") and hasattr(self.search_engine, "_session"):
+        if hasattr(
+                self,
+                "search_engine") and hasattr(
+                self.search_engine,
+                "_session"):
             if self.search_engine._session and not self.search_engine._session.closed:
                 # Try to close session gracefully
                 try:
                     loop = asyncio.get_event_loop()
                     if not loop.is_closed():
                         loop.create_task(self.search_engine.close())
-                except:
+                except BaseException:
                     pass  # Best effort cleanup

@@ -16,7 +16,10 @@ except KeyError:
 parser = argparse.ArgumentParser()
 parser.add_argument("--max_score", type=float, default=0.7)
 parser.add_argument("--min_score", type=float, default=0.3)
-parser.add_argument("--experiment_name", type=str, default="Qwen_Qwen3-4B-Base_all")
+parser.add_argument(
+    "--experiment_name",
+    type=str,
+    default="Qwen_Qwen3-4B-Base_all")
 args = parser.parse_args()
 
 datas = []
@@ -29,7 +32,9 @@ for i in range(8):
             data = json.load(f)
             datas.extend(data)
     except FileNotFoundError:
-        print(f"Warning: File {file_path} not found, skipping.", file=sys.stderr)
+        print(
+            f"Warning: File {file_path} not found, skipping.",
+            file=sys.stderr)
         continue
 
 print("Cleaning up temporary JSON files...", file=sys.stderr)

@@ -31,21 +31,23 @@ if is_package_available("swanlab"):
 @dataclass
 class GenerationLogger(ABC):
     @abstractmethod
-    def log(self, samples: List[Tuple[str, str, str, float]], step: int) -> None: ...
+    def log(self, samples: List[Tuple[str, str,
+            str, float]], step: int) -> None: ...
 
 
 @dataclass
 class ConsoleGenerationLogger(GenerationLogger):
-    def log(self, samples: List[Tuple[str, str, str, float]], step: int) -> None:
+    def log(self, samples: List[Tuple[str, str,
+            str, float]], step: int) -> None:
         for inp, out, lab, score in samples:
             print(
-                f"[prompt] {inp}\n[output] {out}\n[ground_truth] {lab}\n[score] {score}\n"
-            )
+                f"[prompt] {inp}\n[output] {out}\n[ground_truth] {lab}\n[score] {score}\n")
 
 
 @dataclass
 class WandbGenerationLogger(GenerationLogger):
-    def log(self, samples: List[Tuple[str, str, str, float]], step: int) -> None:
+    def log(self, samples: List[Tuple[str, str,
+            str, float]], step: int) -> None:
         # Create column names for all samples
         columns = ["step"] + sum(
             [
@@ -65,8 +67,11 @@ class WandbGenerationLogger(GenerationLogger):
             self.validation_table = wandb.Table(columns=columns)
 
         # Create a new table with same columns and existing data
-        # Workaround for https://github.com/wandb/wandb/issues/2981#issuecomment-1997445737
-        new_table = wandb.Table(columns=columns, data=self.validation_table.data)
+        # Workaround for
+        # https://github.com/wandb/wandb/issues/2981#issuecomment-1997445737
+        new_table = wandb.Table(
+            columns=columns,
+            data=self.validation_table.data)
 
         # Add new row with all data
         row_data = [step]
@@ -80,7 +85,8 @@ class WandbGenerationLogger(GenerationLogger):
 
 @dataclass
 class SwanlabGenerationLogger(GenerationLogger):
-    def log(self, samples: List[Tuple[str, str, str, float]], step: int) -> None:
+    def log(self, samples: List[Tuple[str, str,
+            str, float]], step: int) -> None:
         swanlab_text_list = []
         for i, sample in enumerate(samples):
             row_text = "\n\n---\n\n".join(
@@ -91,7 +97,11 @@ class SwanlabGenerationLogger(GenerationLogger):
                     f"score: {sample[3]}",
                 )
             )
-            swanlab_text_list.append(swanlab.Text(row_text, caption=f"sample {i + 1}"))
+            swanlab_text_list.append(
+                swanlab.Text(
+                    row_text,
+                    caption=f"sample {
+                        i + 1}"))
 
         swanlab.log({"val/generations": swanlab_text_list}, step=step)
 
@@ -112,6 +122,7 @@ class AggregateGenerationsLogger:
             if logger in GEN_LOGGERS:
                 self.loggers.append(GEN_LOGGERS[logger]())
 
-    def log(self, samples: List[Tuple[str, str, str, float]], step: int) -> None:
+    def log(self, samples: List[Tuple[str, str,
+            str, float]], step: int) -> None:
         for logger in self.loggers:
             logger.log(samples, step)

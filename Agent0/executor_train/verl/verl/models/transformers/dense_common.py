@@ -57,7 +57,8 @@ def forward_base_model(
         else self.config.output_hidden_states
     )
 
-    # decoder outputs consists of (dec_features, layer_state, dec_hidden, dec_attn)
+    # decoder outputs consists of (dec_features, layer_state, dec_hidden,
+    # dec_attn)
     outputs = self.model(
         input_ids=input_ids,
         attention_mask=attention_mask,
@@ -109,7 +110,8 @@ def forward_with_torch_backend(
     hidden_states = outputs[0]
 
     if not return_dict:
-        raise NotImplementedError("forward_with_torch_backend has to return_dict")
+        raise NotImplementedError(
+            "forward_with_torch_backend has to return_dict")
 
     # Loss calculations
     if labels is not None:
@@ -174,7 +176,8 @@ def forward_with_triton_backend(
     hidden_states = outputs[0]
 
     if not return_dict:
-        raise NotImplementedError("forward_with_triton_backend has to return_dict")
+        raise NotImplementedError(
+            "forward_with_triton_backend has to return_dict")
 
     # Loss calculations
     if labels is not None:

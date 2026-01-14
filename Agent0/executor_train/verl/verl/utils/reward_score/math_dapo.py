@@ -11,7 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# Adapted from https://github.com/EleutherAI/lm-evaluation-harness/blob/main/lm_eval/tasks/hendrycks_math/utils.py
+# Adapted from
+# https://github.com/EleutherAI/lm-evaluation-harness/blob/main/lm_eval/tasks/hendrycks_math/utils.py
 
 import re
 from typing import Optional
@@ -44,7 +45,8 @@ def last_boxed_only_string(string: str) -> Optional[str]:
                 break
         i += 1
 
-    return string[idx : right_brace_idx + 1] if right_brace_idx is not None else None
+    return string[idx: right_brace_idx +
+                  1] if right_brace_idx is not None else None
 
 
 def remove_boxed(s: str) -> str:
@@ -59,7 +61,7 @@ def remove_boxed(s: str) -> str:
     left = "\\boxed{"
     assert s[: len(left)] == left, f"box error: {s}"
     assert s[-1] == "}", f"box error: {s}"
-    return s[len(left) : -1]
+    return s[len(left): -1]
 
 
 # Constants for normalization
@@ -209,13 +211,14 @@ def is_correct_strict_box(
     # Extract the relevant part of the prediction
     if pause_tokens_index is not None:
         assert len(pause_tokens_index) == 4
-        pred = pred[pause_tokens_index[-1] - 100 :]
+        pred = pred[pause_tokens_index[-1] - 100:]
     else:
         pred = pred[-100:]
 
     # Extract and check the boxed answer
     boxed_pred = last_boxed_only_string(pred)
-    extracted_pred = remove_boxed(boxed_pred) if boxed_pred is not None else None
+    extracted_pred = remove_boxed(
+        boxed_pred) if boxed_pred is not None else None
 
     return 1 if (extracted_pred == gt) else -1, extracted_pred
 
@@ -238,7 +241,8 @@ def verify(
         True if the solution is correct, False otherwise
     """
     if strict_box_verify:
-        correct, pred = is_correct_strict_box(solution_str, answer, pause_tokens_index)
+        correct, pred = is_correct_strict_box(
+            solution_str, answer, pause_tokens_index)
         return correct == 1, pred
 
     correct, pred = is_correct_minerva(solution_str, answer)

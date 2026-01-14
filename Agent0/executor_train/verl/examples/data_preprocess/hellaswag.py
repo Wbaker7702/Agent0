@@ -79,9 +79,15 @@ if __name__ == "__main__":
     val_dataset = val_dataset.filter(lambda x: len(x["label"]) > 0)
     test_dataset = test_dataset.filter(lambda x: len(x["label"]) > 0)
 
-    train_dataset = train_dataset.map(function=make_map_fn("train"), with_indices=True)
-    val_dataset = val_dataset.map(function=make_map_fn("validation"), with_indices=True)
-    test_dataset = test_dataset.map(function=make_map_fn("test"), with_indices=True)
+    train_dataset = train_dataset.map(
+        function=make_map_fn("train"),
+        with_indices=True)
+    val_dataset = val_dataset.map(
+        function=make_map_fn("validation"),
+        with_indices=True)
+    test_dataset = test_dataset.map(
+        function=make_map_fn("test"),
+        with_indices=True)
 
     local_dir = args.local_dir
     hdfs_dir = args.hdfs_dir

@@ -24,7 +24,8 @@ class ToolConfig:
     max_obs_length: int = 512  # maximum length of observation
     enable_mtrl: bool = False
     mtrl_sep: str = (
-        None  # "\n<|im_start|>system\n{obs}<|im_end|>\n<|im_start|>assistant\n"
+        # "\n<|im_start|>system\n{obs}<|im_end|>\n<|im_start|>assistant\n"
+        None
     )
     turn_end_token: str = "<|im_end|>"
     min_turns: int = 0

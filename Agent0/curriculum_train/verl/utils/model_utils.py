@@ -32,12 +32,14 @@ def print_gpu_memory_usage(prefix: str = "GPU memory usage") -> None:
     """Report the current GPU VRAM usage."""
     if is_rank0():
         free_mem, total_mem = torch.cuda.mem_get_info()
-        print(
-            f"{prefix}: {(total_mem - free_mem) / (1024**3):.2f} GB / {total_mem / (1024**3):.2f} GB."
-        )
+        print(f"{prefix}: {(total_mem -
+                            free_mem) /
+                           (1024**3):.2f} GB / {total_mem /
+                                                (1024**3):.2f} GB.")
 
 
-def _get_model_size(model: nn.Module, scale: str = "auto") -> Tuple[float, str]:
+def _get_model_size(
+        model: nn.Module, scale: str = "auto") -> Tuple[float, str]:
     """Compute the model size."""
     n_params = sum(p.numel() for p in model.parameters())
 

@@ -86,7 +86,8 @@ class MegatronModelMerger(BaseModelMerger):
 
     def __init__(self, config: ModelMergerConfig):
         super().__init__(config)
-        # Currently we use only 1 rank to merge the dist_ckpt, we will move to multi-process save shortly afterwards
+        # Currently we use only 1 rank to merge the dist_ckpt, we will move to
+        # multi-process save shortly afterwards
         os.environ["RANK"] = "0"
         os.environ["WORLD_SIZE"] = "1"
         os.environ["MASTER_ADDR"] = "localhost"
@@ -99,7 +100,8 @@ class MegatronModelMerger(BaseModelMerger):
             expert_model_parallel_size=1,
         )
         model_parallel_cuda_manual_seed(0)
-        self.hf_config = AutoConfig.from_pretrained(self.config.hf_model_config_path)
+        self.hf_config = AutoConfig.from_pretrained(
+            self.config.hf_model_config_path)
         print(self.hf_config, flush=True)
 
         self.params_mapping = {
@@ -154,7 +156,8 @@ class MegatronModelMerger(BaseModelMerger):
         # init hf config
         tf_config = hf_to_mcore_config(self.hf_config, torch.bfloat16)
         tf_config.use_cpu_initialization = self.config.use_cpu_initialization
-        tie_word_embeddings = getattr(self.hf_config, "tie_word_embeddings", False)
+        tie_word_embeddings = getattr(
+            self.hf_config, "tie_word_embeddings", False)
 
         # init megatron model
         def megatron_model_provider(pre_process, post_process):
@@ -182,8 +185,10 @@ class MegatronModelMerger(BaseModelMerger):
             )
 
         if self.config.use_cpu_initialization:
-            # convert meta device to empty tensor so it can use `copy_` function
-            whole_model[0].module = whole_model[0].module.to_empty(device="cpu")
+            # convert meta device to empty tensor so it can use `copy_`
+            # function
+            whole_model[0].module = whole_model[0].module.to_empty(
+                device="cpu")
 
         # load state dicts
         sharded_state_dict = {}
@@ -191,7 +196,8 @@ class MegatronModelMerger(BaseModelMerger):
             key = f"model{vpp_rank}" if len(whole_model) > 1 else "model"
             mpu.set_virtual_pipeline_model_parallel_rank(vpp_rank)
             sharded_state_dict[key] = model.sharded_state_dict()
-        model_state_dict = load_dist_checkpointing(sharded_state_dict, model_ckpt_path)
+        model_state_dict = load_dist_checkpointing(
+            sharded_state_dict, model_ckpt_path)
         model_state_dict_list = []
         for vpp_rank, model in enumerate(whole_model):
             key = f"model{vpp_rank}" if len(whole_model) > 1 else "model"
@@ -222,8 +228,7 @@ class MegatronModelMerger(BaseModelMerger):
         # Exclude extra state keys
         if not key.startswith("decoder"):
             raise ValueError(
-                f"Invalid key {key} in Megatron state_dict. Expected keys to start with 'decoder' in TransformerLayer."
-            )
+                f"Invalid key {key} in Megatron state_dict. Expected keys to start with 'decoder' in TransformerLayer.")
 
     def _split_tensors(
         self,
@@ -326,12 +331,15 @@ class MegatronModelMerger(BaseModelMerger):
                     state_dict[hf_name] = split_tensor[0]
                 elif len(split_tensor) == 3:
                     # split qkv
-                    for n, d in zip(["q", "k", "v"], split_tensor, strict=True):
+                    for n, d in zip(["q", "k", "v"],
+                                    split_tensor, strict=True):
                         state_dict[hf_name.replace("qkv", n)] = d
                 elif len(split_tensor) == 2:
                     # split gate up
-                    state_dict[hf_name.replace("gate_up", "gate")] = split_tensor[0]
-                    state_dict[hf_name.replace("gate_up", "up")] = split_tensor[1]
+                    state_dict[hf_name.replace(
+                        "gate_up", "gate")] = split_tensor[0]
+                    state_dict[hf_name.replace(
+                        "gate_up", "up")] = split_tensor[1]
                 shape_info = (
                     split_tensor.shape
                     if isinstance(split_tensor, torch.Tensor)
@@ -354,7 +362,8 @@ class MegatronModelMerger(BaseModelMerger):
 
         if self.config.operation == "test":
             if not self.config.test_hf_dir:
-                raise ValueError("test_hf_dir must be provided for test operation")
+                raise ValueError(
+                    "test_hf_dir must be provided for test operation")
             self._validate_state_dict(merged_state_dict)
         elif self.config.operation == "merge":
             self.save_hf_model_and_tokenizer(merged_state_dict)
@@ -368,11 +377,15 @@ class MegatronModelMerger(BaseModelMerger):
         Compares the merged Megatron state_dict against a reference safetensors model.
         Applies necessary name mappings from Megatron to Hugging Face conventions using _replace_name.
         """
-        ref_state_dict = load_file(Path(self.config.test_hf_dir) / "model.safetensors")
+        ref_state_dict = load_file(
+            Path(
+                self.config.test_hf_dir) /
+            "model.safetensors")
 
         for name, loaded_weight in state_dict.items():
             # name = self._replace_name(original_name, self.params_mapping)
-            if not name or name.endswith(".bias") and name not in ref_state_dict:
+            if not name or name.endswith(
+                    ".bias") and name not in ref_state_dict:
                 continue
             if "rotary_emb.inv_freq" in name:
                 continue
@@ -387,7 +400,8 @@ class MegatronModelMerger(BaseModelMerger):
                 loaded_weight.to("cpu"), param, atol=1e-2, rtol=5e-2
             )
 
-    def _replace_name(self, megatron_name: str, name_mapping: dict[str, str]) -> str:
+    def _replace_name(self, megatron_name: str,
+                      name_mapping: dict[str, str]) -> str:
         for m_name, v_name in name_mapping.items():
             if m_name not in megatron_name:
                 continue

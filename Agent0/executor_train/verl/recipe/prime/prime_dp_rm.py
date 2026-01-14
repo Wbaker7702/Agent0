@@ -47,9 +47,11 @@ class DataParallelPRIMERewardModel:
         self.reward_module = reward_module
         self.ref_module = ref_module
         self.reward_optimizer = reward_optimizer
-        self.use_remove_padding = self.config.model.get("use_remove_padding", False)
+        self.use_remove_padding = self.config.model.get(
+            "use_remove_padding", False)
         print(f"Reward model use_remove_padding={self.use_remove_padding}")
-        self.use_fused_kernels = self.config.model.get("use_fused_kernels", False)
+        self.use_fused_kernels = self.config.model.get(
+            "use_fused_kernels", False)
         print(f"Reward model use_fused_kernels={self.use_fused_kernels}")
 
         self.ulysses_sequence_parallel_size = self.config.get(
@@ -63,7 +65,8 @@ class DataParallelPRIMERewardModel:
         position_ids = micro_batch["position_ids"]
 
         num_actions = micro_batch["input_ids"].shape[-1] - prompt_length
-        max_positions = micro_batch["attention_mask"][:, prompt_length:].sum(-1)
+        max_positions = micro_batch["attention_mask"][:,
+                                                      prompt_length:].sum(-1)
 
         if self.use_remove_padding:
             input_ids_rmpad, indices, *_ = unpad_input(
@@ -91,8 +94,7 @@ class DataParallelPRIMERewardModel:
                     )
                 )
                 input_ids_rmpad_rolled, _, _ = ulysses_pad_and_slice_inputs(
-                    input_ids_rmpad_rolled, None, self.ulysses_sequence_parallel_size
-                )
+                    input_ids_rmpad_rolled, None, self.ulysses_sequence_parallel_size)
 
             input_ids_rmpad_rolled = input_ids_rmpad_rolled.squeeze(0)
             output = self.reward_module(
@@ -116,14 +118,13 @@ class DataParallelPRIMERewardModel:
 
             if self.ulysses_sequence_parallel_size > 1:
                 rm_log_labels = gather_outpus_and_unpad(
-                    rm_log_labels, gather_dim=0, unpad_dim=0, padding_size=pad_size
-                )
+                    rm_log_labels, gather_dim=0, unpad_dim=0, padding_size=pad_size)
             rm_log_labels = pad_input(
                 hidden_states=rm_log_labels.unsqueeze(-1),
                 indices=indices,
                 batch=batch_size,
                 seqlen=seqlen,
-            ).squeeze(-1)[:, -num_actions - 1 : -1]
+            ).squeeze(-1)[:, -num_actions - 1: -1]
 
         else:
             output = self.reward_module(
@@ -163,24 +164,23 @@ class DataParallelPRIMERewardModel:
                     )
 
                     if self.use_fused_kernels:
-                        ref_log_labels = ref_output.log_probs.squeeze(0)  # (total_nnz,)
+                        ref_log_labels = ref_output.log_probs.squeeze(
+                            0)  # (total_nnz,)
                         ref_log_labels = ref_log_labels.to(torch.float32)
 
                     else:
                         ref_output_logits = ref_output.logits.squeeze(0)
                         ref_log_labels = verl_F.logprobs_from_logits(
-                            logits=ref_output_logits, labels=input_ids_rmpad_rolled
-                        )
+                            logits=ref_output_logits, labels=input_ids_rmpad_rolled)
 
                     ref_log_labels = gather_outpus_and_unpad(
-                        ref_log_labels, gather_dim=0, unpad_dim=0, padding_size=pad_size
-                    )
+                        ref_log_labels, gather_dim=0, unpad_dim=0, padding_size=pad_size)
                     ref_log_labels = pad_input(
                         hidden_states=ref_log_labels.unsqueeze(-1),
                         indices=indices,
                         batch=batch_size,
                         seqlen=seqlen,
-                    ).squeeze(-1)[:, -num_actions - 1 : -1]
+                    ).squeeze(-1)[:, -num_actions - 1: -1]
                 else:
                     ref_output = self.ref_module(
                         input_ids=micro_batch["input_ids"],
@@ -216,7 +216,7 @@ class DataParallelPRIMERewardModel:
 
         # trim unnecessary logprobs here
         for i in range(micro_batch["input_ids"].shape[0]):
-            q[i, max_positions[i] :] = 0
+            q[i, max_positions[i]:] = 0
 
         # reward computation does not need gradient. only q needs
         with torch.no_grad():
@@ -239,7 +239,7 @@ class DataParallelPRIMERewardModel:
                         q_[i, max_positions[i] - 1] = (
                             acc[i] - q_[i, : max_positions[i] - 1].sum()
                         )
-                    q_[i, max_positions[i] :] = 0
+                    q_[i, max_positions[i]:] = 0
 
                 for t in reversed(range(num_actions)):
                     delta = q_[:, t]
@@ -308,8 +308,8 @@ class DataParallelPRIMERewardModel:
         if use_dynamic_bsz:
             # split using dynamic bsz
             max_token_len = (
-                data.meta_info["max_token_len"] * self.ulysses_sequence_parallel_size
-            )
+                data.meta_info["max_token_len"] *
+                self.ulysses_sequence_parallel_size)
             micro_batches, indices = rearrange_micro_batches(
                 batch=batch, max_token_len=max_token_len
             )
@@ -320,7 +320,8 @@ class DataParallelPRIMERewardModel:
         q_lst = []
         for micro_batch in micro_batches:
             with torch.no_grad():
-                rm_score, q = self._forward_micro_batch(micro_batch, prompt_length)
+                rm_score, q = self._forward_micro_batch(
+                    micro_batch, prompt_length)
             rm_scores_lst.append(rm_score)
             q_lst.append(q)
         rm_scores = torch.concat(rm_scores_lst, dim=0)
@@ -333,7 +334,8 @@ class DataParallelPRIMERewardModel:
             assert len(indices) == rm_scores.size(
                 0
             ), f"{len(indices)} vs. {rm_scores.size()}"
-            revert_indices = torch.tensor(get_reverse_idx(indices), dtype=torch.long)
+            revert_indices = torch.tensor(
+                get_reverse_idx(indices), dtype=torch.long)
             rm_scores = rm_scores[revert_indices]
 
         return (
@@ -385,10 +387,11 @@ class DataParallelPRIMERewardModel:
                     batch=mini_batch, max_token_len=max_token_len
                 )
             else:
-                micro_batches = mini_batch.split(self.config.micro_batch_size_per_gpu)
+                micro_batches = mini_batch.split(
+                    self.config.micro_batch_size_per_gpu)
                 self.gradient_accumulation = (
-                    self.config.mini_batch_size // self.config.micro_batch_size_per_gpu
-                )
+                    self.config.mini_batch_size //
+                    self.config.micro_batch_size_per_gpu)
 
             self.reward_optimizer.zero_grad()
 
@@ -423,7 +426,8 @@ class DataParallelPRIMERewardModel:
                         beta=beta,
                     )
                 elif self.config.model.loss_type == "bon_acc":
-                    # change the original distribution of each sample to BoN distribution, then update reward model
+                    # change the original distribution of each sample to BoN
+                    # distribution, then update reward model
                     dpo_loss = compute_detach_dpo_loss_rm(
                         q,
                         acc,
@@ -450,7 +454,8 @@ class DataParallelPRIMERewardModel:
 
                 if self.config.use_dynamic_bsz:
                     # relative to the dynamic bsz
-                    loss = dpo_loss * (len(data) / self.config.ppo_mini_batch_size)
+                    loss = dpo_loss * \
+                        (len(data) / self.config.ppo_mini_batch_size)
                 else:
                     loss = dpo_loss / self.gradient_accumulation
 

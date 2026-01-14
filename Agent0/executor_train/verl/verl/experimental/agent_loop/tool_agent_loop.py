@@ -46,7 +46,8 @@ class FunctionCall(BaseModel):
 
 class ToolParser(ABC):
     @abstractmethod
-    async def extract_tool_calls(self, responses_ids: list[int]) -> list[FunctionCall]:
+    async def extract_tool_calls(
+            self, responses_ids: list[int]) -> list[FunctionCall]:
         """Extract tool calls from the responses.
 
         Args:
@@ -66,10 +67,12 @@ class HermesToolParser(ToolParser):
 
         self.tool_call_start_token: str = "<tool_call>"
         self.tool_call_end_token: str = "</tool_call>"
-        self.tool_call_regex = re.compile(r"<tool_call>(.*?)</tool_call>", re.DOTALL)
+        self.tool_call_regex = re.compile(
+            r"<tool_call>(.*?)</tool_call>", re.DOTALL)
 
     @rollout_trace_op
-    async def extract_tool_calls(self, responses_ids: list[int]) -> list[FunctionCall]:
+    async def extract_tool_calls(
+            self, responses_ids: list[int]) -> list[FunctionCall]:
         loop = asyncio.get_running_loop()
         text = await loop.run_in_executor(None, self.tokenizer.decode, responses_ids)
         if (
@@ -86,9 +89,10 @@ class HermesToolParser(ToolParser):
                 name, arguments = function_call["name"], function_call["arguments"]
                 function_calls.append(
                     FunctionCall(
-                        name=name, arguments=json.dumps(arguments, ensure_ascii=False)
-                    )
-                )
+                        name=name,
+                        arguments=json.dumps(
+                            arguments,
+                            ensure_ascii=False)))
             except Exception as e:
                 logger.error(f"Failed to decode tool call: {e}")
         return function_calls
@@ -115,15 +119,12 @@ class ToolAgentLoop(AgentLoopBase):
             config.actor_rollout_ref.rollout.multi_turn.max_parallel_calls
         )
         cls.max_tool_response_length = (
-            config.actor_rollout_ref.rollout.multi_turn.max_tool_response_length
-        )
+            config.actor_rollout_ref.rollout.multi_turn.max_tool_response_length)
         cls.tool_response_truncate_side = (
-            config.actor_rollout_ref.rollout.multi_turn.tool_response_truncate_side
-        )
+            config.actor_rollout_ref.rollout.multi_turn.tool_response_truncate_side)
         tool_config_path = config.actor_rollout_ref.rollout.multi_turn.tool_config_path
-        tool_list = (
-            initialize_tools_from_config(tool_config_path) if tool_config_path else []
-        )
+        tool_list = (initialize_tools_from_config(
+            tool_config_path) if tool_config_path else [])
         cls.tools = {tool.name: tool for tool in tool_list}
         cls.tool_schemas = [
             tool.tool_schema.model_dump(exclude_unset=True, exclude_none=True)
@@ -202,18 +203,19 @@ class ToolAgentLoop(AgentLoopBase):
                     messages, add_generation_prompt=True, tokenize=True
                 ),
             )
-            tool_response_ids = tool_response_ids[len(self.system_prompt) :]
+            tool_response_ids = tool_response_ids[len(self.system_prompt):]
 
             # NOTE: last turn should not be user turn, or the EOS token reward
             # can't be propagated to previous token in GAE.
-            if len(response_mask) + len(tool_response_ids) >= self.response_length:
+            if len(response_mask) + \
+                    len(tool_response_ids) >= self.response_length:
                 break
 
             prompt_ids += tool_response_ids
             response_mask += [0] * len(tool_response_ids)
             user_turns += 1
 
-        response_ids = prompt_ids[-len(response_mask) :]
+        response_ids = prompt_ids[-len(response_mask):]
         prompt_ids = prompt_ids[: len(prompt_ids) - len(response_mask)]
 
         output = AgentLoopOutput(
@@ -229,7 +231,8 @@ class ToolAgentLoop(AgentLoopBase):
         """Call tool and return tool response."""
         tool, instance_id = None, None
         try:
-            # TODO: append malformed tool_call to the prompt: invalid function name or arguments
+            # TODO: append malformed tool_call to the prompt: invalid function
+            # name or arguments
             tool_name = tool_call.name
             tool_args = json.loads(tool_call.arguments)
             tool = self.tools[tool_name]
@@ -250,7 +253,7 @@ class ToolAgentLoop(AgentLoopBase):
                 )
             elif self.tool_response_truncate_side == "right":
                 tool_response = (
-                    "(truncated)..." + tool_response[-self.max_tool_response_length :]
+                    "(truncated)..." + tool_response[-self.max_tool_response_length:]
                 )
             else:
                 length = self.max_tool_response_length // 2

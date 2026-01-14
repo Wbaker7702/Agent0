@@ -60,13 +60,13 @@ logger.setLevel(os.getenv("VERL_LOGGING_LEVEL", "WARN"))
 
 
 class DataParallelPPOCritic(BasePPOCritic):
-    def __init__(
-        self, config, critic_module: nn.Module, critic_optimizer: optim.Optimizer
-    ):
+    def __init__(self, config, critic_module: nn.Module,
+                 critic_optimizer: optim.Optimizer):
         super().__init__(config=config)
         self.critic_module = critic_module
         self.critic_optimizer = critic_optimizer
-        self.use_remove_padding = self.config.model.get("use_remove_padding", False)
+        self.use_remove_padding = self.config.model.get(
+            "use_remove_padding", False)
         print(f"Critic use_remove_padding={self.use_remove_padding}")
 
         self.ulysses_sequence_parallel_size = self.config.get(
@@ -95,17 +95,19 @@ class DataParallelPPOCritic(BasePPOCritic):
                 input_ids_rmpad, indices, *_ = unpad_input(
                     input_ids.unsqueeze(-1), attention_mask
                 )  # input_ids_rmpad (total_nnz, ...)
-                input_ids_rmpad = input_ids_rmpad.transpose(0, 1)  # (1, total_nnz)
+                input_ids_rmpad = input_ids_rmpad.transpose(
+                    0, 1)  # (1, total_nnz)
 
                 # unpad the position_ids to align the rotary
                 if position_ids.dim() == 3:
                     position_ids_rmpad = (
                         index_first_axis(
-                            rearrange(position_ids, "c b s ... -> (b s) c ..."), indices
-                        )
-                        .transpose(0, 1)
-                        .unsqueeze(1)
-                    )  # (3, bsz, seqlen) -> (3, 1, bsz * seqlen)
+                            rearrange(
+                                position_ids,
+                                "c b s ... -> (b s) c ..."),
+                            indices) .transpose(
+                            0,
+                            1) .unsqueeze(1))  # (3, bsz, seqlen) -> (3, 1, bsz * seqlen)
                 else:
                     position_ids_rmpad = index_first_axis(
                         rearrange(position_ids.unsqueeze(-1), "b s ... -> (b s) ..."),
@@ -122,7 +124,8 @@ class DataParallelPPOCritic(BasePPOCritic):
                         )
                     )
 
-                # only pass input_ids and position_ids to enable flash_attn_varlen
+                # only pass input_ids and position_ids to enable
+                # flash_attn_varlen
                 output = self.critic_module(
                     input_ids=input_ids_rmpad,
                     attention_mask=None,
@@ -141,14 +144,13 @@ class DataParallelPPOCritic(BasePPOCritic):
                 # gather output if sp > 1
                 if self.ulysses_sequence_parallel_size > 1:
                     values_rmpad = gather_outpus_and_unpad(
-                        values_rmpad, gather_dim=0, unpad_dim=0, padding_size=pad_size
-                    )
+                        values_rmpad, gather_dim=0, unpad_dim=0, padding_size=pad_size)
 
                 # pad it back
                 values = pad_input(
                     values_rmpad, indices=indices, batch=batch, seqlen=seqlen
                 ).squeeze(-1)
-                values = values[:, -response_length - 1 : -1]
+                values = values[:, -response_length - 1: -1]
             else:
                 output = self.critic_module(
                     input_ids=input_ids,
@@ -162,14 +164,15 @@ class DataParallelPPOCritic(BasePPOCritic):
                     values = output[2]
                 else:
                     values = output.logits
-                values = values[:, -response_length - 1 : -1].squeeze(-1)
+                values = values[:, -response_length - 1: -1].squeeze(-1)
             return values
 
     def _optimizer_step(self):
         assert self.config.grad_clip is not None
 
         if isinstance(self.critic_module, FSDP):
-            grad_norm = self.critic_module.clip_grad_norm_(self.config.grad_clip)
+            grad_norm = self.critic_module.clip_grad_norm_(
+                self.config.grad_clip)
         elif isinstance(self.critic_module, FSDPModule):
             grad_norm = fsdp2_clip_grad_norm_(
                 self.critic_module.parameters(), max_norm=self.config.grad_clip
@@ -191,7 +194,11 @@ class DataParallelPPOCritic(BasePPOCritic):
     def compute_values(self, data: DataProto) -> torch.Tensor:
         self.critic_module.eval()
         micro_batch_size = data.meta_info["micro_batch_size"]
-        select_keys = ["responses", "input_ids", "attention_mask", "position_ids"]
+        select_keys = [
+            "responses",
+            "input_ids",
+            "attention_mask",
+            "position_ids"]
         batch = data.select(batch_keys=select_keys).batch
         use_dynamic_bsz = data.meta_info["use_dynamic_bsz"]
         has_multi_modal_inputs = "multi_modal_inputs" in data.non_tensor_batch.keys()
@@ -199,14 +206,13 @@ class DataParallelPPOCritic(BasePPOCritic):
         if has_multi_modal_inputs:
             num_micro_batches = data.batch.batch_size[0] // micro_batch_size
             non_tensor_select_keys = ["multi_modal_inputs"]
-            micro_batches = data.select(select_keys, non_tensor_select_keys).chunk(
-                num_micro_batches
-            )
+            micro_batches = data.select(
+                select_keys, non_tensor_select_keys).chunk(num_micro_batches)
         elif use_dynamic_bsz:
             # split using dynamic bsz
             max_token_len = (
-                data.meta_info["max_token_len"] * self.ulysses_sequence_parallel_size
-            )
+                data.meta_info["max_token_len"] *
+                self.ulysses_sequence_parallel_size)
             micro_batches, indices = rearrange_micro_batches(
                 batch=batch, max_token_len=max_token_len
             )
@@ -216,7 +222,9 @@ class DataParallelPPOCritic(BasePPOCritic):
         values_lst = []
         for micro_batch in micro_batches:
             if isinstance(micro_batch, DataProto):
-                micro_batch = {**micro_batch.batch, **micro_batch.non_tensor_batch}
+                micro_batch = {
+                    **micro_batch.batch,
+                    **micro_batch.non_tensor_batch}
 
             with torch.no_grad():
                 values = self._forward_micro_batch(micro_batch)
@@ -225,8 +233,10 @@ class DataParallelPPOCritic(BasePPOCritic):
 
         if use_dynamic_bsz:
             indices = list(itertools.chain.from_iterable(indices))
-            assert len(indices) == values.size(0), f"{len(indices)} vs. {values.size()}"
-            revert_indices = torch.tensor(get_reverse_idx(indices), dtype=torch.long)
+            assert len(indices) == values.size(
+                0), f"{len(indices)} vs. {values.size()}"
+            revert_indices = torch.tensor(
+                get_reverse_idx(indices), dtype=torch.long)
             values = values[revert_indices]
 
         response_mask = data.batch["response_mask"]
@@ -258,9 +268,8 @@ class DataParallelPPOCritic(BasePPOCritic):
                 data.batch.batch_size[0] // self.config.ppo_mini_batch_size
             )
             non_tensor_select_keys = ["multi_modal_inputs"]
-            dataloader = data.select(select_keys, non_tensor_select_keys).chunk(
-                num_mini_batches
-            )
+            dataloader = data.select(
+                select_keys, non_tensor_select_keys).chunk(num_mini_batches)
         else:
             dataloader = batch.split(self.config.ppo_mini_batch_size)
 
@@ -330,7 +339,8 @@ class DataParallelPPOCritic(BasePPOCritic):
                     )
                     if self.config.use_dynamic_bsz:
                         # relative to the dynamic bsz
-                        loss = vf_loss * (len(data) / self.config.ppo_mini_batch_size)
+                        loss = vf_loss * \
+                            (len(data) / self.config.ppo_mini_batch_size)
                     else:
                         loss = vf_loss / self.gradient_accumulation
 
@@ -340,16 +350,16 @@ class DataParallelPPOCritic(BasePPOCritic):
                         {
                             "critic/vf_loss": vf_loss.detach().item(),
                             "critic/vf_clipfrac": vf_clipfrac.detach().item(),
-                            "critic/vpred_mean": masked_mean(vpreds, response_mask)
-                            .detach()
-                            .item(),
-                        }
-                    )
+                            "critic/vpred_mean": masked_mean(
+                                vpreds,
+                                response_mask) .detach() .item(),
+                        })
 
                     append_to_dict(metrics, micro_batch_metrics)
 
                 grad_norm = self._optimizer_step()
-                mini_batch_metrics = {"critic/grad_norm": grad_norm.detach().item()}
+                mini_batch_metrics = {
+                    "critic/grad_norm": grad_norm.detach().item()}
                 append_to_dict(metrics, mini_batch_metrics)
         self.critic_optimizer.zero_grad()
         return metrics

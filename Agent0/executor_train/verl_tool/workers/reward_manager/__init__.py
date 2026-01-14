@@ -16,9 +16,8 @@ def get_reward_manager_cls(name):
     """
     if name not in REWARD_MANAGER_REGISTRY:
         if name in error_loaded_reward_manager:
-            print(
-                "Error loading reward manager:", name, "Please check your dependencies."
-            )
+            print("Error loading reward manager:", name,
+                  "Please check your dependencies.")
             raise error_loaded_reward_manager[name]
         raise ValueError(f"Unknown reward manager: {name}")
     return REWARD_MANAGER_REGISTRY[name]
@@ -32,8 +31,9 @@ for file in current_dir.glob("*.py"):
     try:
         # import
         module = __import__(
-            f"verl_tool.workers.reward_manager.{file.stem}", fromlist=[file.stem]
-        )
+            f"verl_tool.workers.reward_manager.{
+                file.stem}", fromlist=[
+                file.stem])
     except ImportError as e:
         error_loaded_reward_manager[file.stem] = e
         pass

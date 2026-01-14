@@ -6,7 +6,8 @@
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 # All rights reserved.
 #
-# This source code is licensed under the BSD-style license in https://github.com/pytorch/torchtune/blob/main/LICENSE
+# This source code is licensed under the BSD-style license in
+# https://github.com/pytorch/torchtune/blob/main/LICENSE
 
 import logging
 
@@ -62,8 +63,7 @@ def get_torch_device() -> any:
         return getattr(torch, device_name)
     except AttributeError:
         logger.warning(
-            f"Device namespace '{device_name}' not found in torch, try to load torch.cuda."
-        )
+            f"Device namespace '{device_name}' not found in torch, try to load torch.cuda.")
         return torch.cuda
 
 
@@ -86,5 +86,5 @@ def get_nccl_backend() -> str:
         return "hccl"
     else:
         raise RuntimeError(
-            f"No available nccl backend found on device type {get_device_name()}."
-        )
+            f"No available nccl backend found on device type {
+                get_device_name()}.")

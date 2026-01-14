@@ -131,7 +131,11 @@ class RaySPPOTrainer(RayPPOTrainer):
         self.use_critic = False
 
         self._validate_config()
-        self._create_dataloader(train_dataset, val_dataset, collate_fn, train_sampler)
+        self._create_dataloader(
+            train_dataset,
+            val_dataset,
+            collate_fn,
+            train_sampler)
 
     def fit(self):
         """
@@ -185,7 +189,8 @@ class RaySPPOTrainer(RayPPOTrainer):
                 batch: DataProto = DataProto.from_single_dict(batch_dict)
 
                 # pop those keys for generation
-                batch_keys_to_pop = ["input_ids", "attention_mask", "position_ids"]
+                batch_keys_to_pop = [
+                    "input_ids", "attention_mask", "position_ids"]
                 non_tensor_batch_keys_to_pop = ["raw_prompt_ids"]
                 if "multi_modal_data" in batch.non_tensor_batch:
                     non_tensor_batch_keys_to_pop.append("multi_modal_data")
@@ -209,12 +214,10 @@ class RaySPPOTrainer(RayPPOTrainer):
                     with simple_timer("gen", timing_raw):
                         if not self.async_rollout_mode:
                             gen_batch_output = self.actor_rollout_wg.generate_sequences(
-                                gen_batch
-                            )
+                                gen_batch)
                         else:
                             gen_batch_output = (
-                                self.async_rollout_manager.generate_sequences(gen_batch)
-                            )
+                                self.async_rollout_manager.generate_sequences(gen_batch))
                         timing_raw.update(gen_batch_output.meta_info["timing"])
                         gen_batch_output.meta_info.pop("timing", None)
 
@@ -230,9 +233,12 @@ class RaySPPOTrainer(RayPPOTrainer):
 
                             batch = batch.union(gen_baseline_output)
                             reward_baseline_tensor = self.reward_fn(batch)
-                            reward_baseline_tensor = reward_baseline_tensor.sum(dim=-1)
+                            reward_baseline_tensor = reward_baseline_tensor.sum(
+                                dim=-1)
 
-                            batch.pop(batch_keys=list(gen_baseline_output.batch.keys()))
+                            batch.pop(
+                                batch_keys=list(
+                                    gen_baseline_output.batch.keys()))
 
                             batch.batch["reward_baselines"] = reward_baseline_tensor
 
@@ -275,12 +281,12 @@ class RaySPPOTrainer(RayPPOTrainer):
                         )
                     else:
                         reward_tensor, reward_extra_infos_dict = compute_reward(
-                            batch, self.reward_fn
-                        )
+                            batch, self.reward_fn)
 
                 # recompute old_log_probs
                 with simple_timer("old_log_prob", timing_raw):
-                    old_log_prob = self.actor_rollout_wg.compute_log_prob(batch)
+                    old_log_prob = self.actor_rollout_wg.compute_log_prob(
+                        batch)
                     entropys = old_log_prob.batch["entropys"]
                     response_masks = batch.batch["response_mask"]
                     loss_agg_mode = self.config.actor_rollout_ref.actor.loss_agg_mode
@@ -299,7 +305,8 @@ class RaySPPOTrainer(RayPPOTrainer):
                 if self.use_reference_policy:
                     # compute reference log_prob
                     with simple_timer("ref", timing_raw):
-                        ref_log_prob = self.ref_policy_wg.compute_ref_log_prob(batch)
+                        ref_log_prob = self.ref_policy_wg.compute_ref_log_prob(
+                            batch)
                         batch = batch.union(ref_log_prob)
 
                 # compute values
@@ -312,7 +319,8 @@ class RaySPPOTrainer(RayPPOTrainer):
                     # we combine with rule-based rm
                     reward_extra_infos_dict: dict[str, list]
                     if self.config.reward_model.launch_reward_fn_async:
-                        reward_tensor, reward_extra_infos_dict = ray.get(future_reward)
+                        reward_tensor, reward_extra_infos_dict = ray.get(
+                            future_reward)
                     batch.batch["token_level_scores"] = reward_tensor
 
                     if reward_extra_infos_dict:
@@ -353,16 +361,17 @@ class RaySPPOTrainer(RayPPOTrainer):
                     # update actor
                     with simple_timer("update_actor", timing_raw):
                         batch.meta_info["multi_turn"] = (
-                            self.config.actor_rollout_ref.rollout.multi_turn.enable
-                        )
-                        actor_output = self.actor_rollout_wg.update_actor(batch)
+                            self.config.actor_rollout_ref.rollout.multi_turn.enable)
+                        actor_output = self.actor_rollout_wg.update_actor(
+                            batch)
                     actor_output_metrics = reduce_metrics(
                         actor_output.meta_info["metrics"]
                     )
                     metrics.update(actor_output_metrics)
 
                 # Log rollout generations if enabled
-                rollout_data_dir = self.config.trainer.get("rollout_data_dir", None)
+                rollout_data_dir = self.config.trainer.get(
+                    "rollout_data_dir", None)
                 if rollout_data_dir:
                     with simple_timer("dump_rollout_generations", timing_raw):
                         print(batch.batch.keys())

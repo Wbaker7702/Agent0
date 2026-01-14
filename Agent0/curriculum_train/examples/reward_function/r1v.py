@@ -19,7 +19,9 @@ from mathruler.grader import grade_answer
 
 
 def format_reward(predict: str) -> float:
-    pattern = re.compile(r"<think>.*?</think>\s*<answer>.*?</answer>", re.DOTALL)
+    pattern = re.compile(
+        r"<think>.*?</think>\s*<answer>.*?</answer>",
+        re.DOTALL)
     format_match = re.fullmatch(pattern, predict)
     return 1.0 if format_match else 0.0
 
@@ -27,9 +29,8 @@ def format_reward(predict: str) -> float:
 def accuracy_reward(predict: str, ground_truth: str) -> float:
     try:
         content_match = re.search(r"<answer>(.*?)</answer>", predict)
-        given_answer = (
-            content_match.group(1).strip() if content_match else predict.strip()
-        )
+        given_answer = (content_match.group(1).strip()
+                        if content_match else predict.strip())
         if grade_answer(given_answer, ground_truth.strip()):
             return 1.0
 
@@ -45,7 +46,12 @@ def compute_score(
     format_score = format_reward(predict)
     accuracy_score = accuracy_reward(predict, ground_truth)
     return {
-        "overall": (1 - format_weight) * accuracy_score + format_weight * format_score,
+        "overall": (
+            1 -
+            format_weight) *
+        accuracy_score +
+        format_weight *
+        format_score,
         "format": format_score,
         "accuracy": accuracy_score,
     }

@@ -28,10 +28,16 @@ logger = logging.getLogger(__file__)
 
 @ray.remote(num_cpus=1)
 class AsyncSglangServer(AsyncServerBase):
-    def __init__(self, config: DictConfig, dp_size: int, dp_rank: int, wg_prefix: str):
+    def __init__(
+            self,
+            config: DictConfig,
+            dp_size: int,
+            dp_rank: int,
+            wg_prefix: str):
         super().__init__()
         self.config = config.actor_rollout_ref
-        self._tp_size = self.config.rollout.get("tensor_model_parallel_size", 1)
+        self._tp_size = self.config.rollout.get(
+            "tensor_model_parallel_size", 1)
         self._dp_size = dp_size
         self._dp_rank = dp_rank
         self.wg_prefix = wg_prefix
@@ -44,15 +50,16 @@ class AsyncSglangServer(AsyncServerBase):
             return
         all_actors = ray.util.list_named_actors(all_namespaces=True)
         matched_actors = [
-            actor
-            for actor in all_actors
-            if actor.get("name", None).startswith(self.wg_prefix + "WorkerDict_")
-        ]
+            actor for actor in all_actors if actor.get(
+                "name", None).startswith(
+                self.wg_prefix + "WorkerDict_")]
 
         for matched_actor in matched_actors:
             fields = matched_actor["name"].split(":")
-            assert len(fields) == 2, f"invalid actor name: {matched_actor['name']}"
-            pg_index, local_rank = int(fields[0].split("_")[-1]), int(fields[1])
+            assert len(fields) == 2, f"invalid actor name: {
+                matched_actor['name']}"
+            pg_index, local_rank = int(
+                fields[0].split("_")[-1]), int(fields[1])
 
             if (
                 self._dp_size * pg_index + local_rank
@@ -72,9 +79,11 @@ class AsyncSglangServer(AsyncServerBase):
         [outputs] = await asyncio.gather(output_future)
         return JSONResponse(outputs)
 
-    async def generate(
-        self, prompt_ids: list[int], sampling_params: dict[str, Any], request_id: str
-    ) -> list[int]:
+    async def generate(self,
+                       prompt_ids: list[int],
+                       sampling_params: dict[str,
+                                             Any],
+                       request_id: str) -> list[int]:
         return await self.master_worker.generate.remote(
             prompt_ids, sampling_params, request_id
         )

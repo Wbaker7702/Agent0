@@ -70,7 +70,8 @@ def forward_base_model(
         if pixel_values is not None:
             pixel_values = pixel_values.type(self.visual.dtype)
             image_embeds = self.visual(pixel_values, grid_thw=image_grid_thw)
-            n_image_tokens = (input_ids == self.config.image_token_id).sum().item()
+            n_image_tokens = (
+                input_ids == self.config.image_token_id).sum().item()
             n_image_features = image_embeds.shape[0]
             if n_image_tokens != n_image_features:
                 raise ValueError(
@@ -83,13 +84,17 @@ def forward_base_model(
             mask_expanded = mask_unsqueezed.expand_as(inputs_embeds)
             image_mask = mask_expanded.to(inputs_embeds.device)
 
-            image_embeds = image_embeds.to(inputs_embeds.device, inputs_embeds.dtype)
-            inputs_embeds = inputs_embeds.masked_scatter(image_mask, image_embeds)
+            image_embeds = image_embeds.to(
+                inputs_embeds.device, inputs_embeds.dtype)
+            inputs_embeds = inputs_embeds.masked_scatter(
+                image_mask, image_embeds)
 
         if pixel_values_videos is not None:
             pixel_values_videos = pixel_values_videos.type(self.visual.dtype)
-            video_embeds = self.visual(pixel_values_videos, grid_thw=video_grid_thw)
-            n_video_tokens = (input_ids == self.config.video_token_id).sum().item()
+            video_embeds = self.visual(
+                pixel_values_videos, grid_thw=video_grid_thw)
+            n_video_tokens = (
+                input_ids == self.config.video_token_id).sum().item()
             n_video_features = video_embeds.shape[0]
             if n_video_tokens != n_video_features:
                 raise ValueError(
@@ -102,14 +107,18 @@ def forward_base_model(
             mask_expanded = mask_unsqueezed.expand_as(inputs_embeds)
             video_mask = mask_expanded.to(inputs_embeds.device)
 
-            video_embeds = video_embeds.to(inputs_embeds.device, inputs_embeds.dtype)
-            inputs_embeds = inputs_embeds.masked_scatter(video_mask, video_embeds)
+            video_embeds = video_embeds.to(
+                inputs_embeds.device, inputs_embeds.dtype)
+            inputs_embeds = inputs_embeds.masked_scatter(
+                video_mask, video_embeds)
 
         if attention_mask is not None:
             attention_mask = attention_mask.to(inputs_embeds.device)
 
-    # if we get 4D attention mask we cannot calculate rope deltas anymore. TODO @raushan fixme
-    if position_ids is None and (attention_mask is None or attention_mask.ndim == 2):
+    # if we get 4D attention mask we cannot calculate rope deltas anymore.
+    # TODO @raushan fixme
+    if position_ids is None and (
+            attention_mask is None or attention_mask.ndim == 2):
         # calculate RoPE index once per generation in the pre-fill stage only
         if (
             cache_position is not None and cache_position[0] == 0
@@ -122,7 +131,8 @@ def forward_base_model(
                 attention_mask,
             )
             self.rope_deltas = rope_deltas
-        # then use the prev pre-calculated rope-deltas to get the correct position ids
+        # then use the prev pre-calculated rope-deltas to get the correct
+        # position ids
         else:
             batch_size, seq_length, _ = inputs_embeds.shape
             delta = (
@@ -130,10 +140,12 @@ def forward_base_model(
                 if cache_position is not None
                 else 0
             )
-            position_ids = torch.arange(seq_length, device=inputs_embeds.device)
+            position_ids = torch.arange(
+                seq_length, device=inputs_embeds.device)
             position_ids = position_ids.view(1, -1).expand(batch_size, -1)
             if cache_position is not None:  # otherwise `deltas` is an int `0`
-                delta = delta.repeat_interleave(batch_size // delta.shape[0], dim=0)
+                delta = delta.repeat_interleave(
+                    batch_size // delta.shape[0], dim=0)
             position_ids = position_ids.add(delta)
             position_ids = position_ids.unsqueeze(0).expand(3, -1, -1)
 
@@ -199,7 +211,8 @@ def forward_with_torch_backend(
     hidden_states = outputs[0]
 
     if not return_dict:
-        raise NotImplementedError("forward_with_torch_backend has to return_dict")
+        raise NotImplementedError(
+            "forward_with_torch_backend has to return_dict")
 
     # Loss calculations
     if labels is not None:
@@ -276,7 +289,8 @@ def forward_with_triton_backend(
     hidden_states = outputs[0]
 
     if not return_dict:
-        raise NotImplementedError("forward_with_triton_backend has to return_dict")
+        raise NotImplementedError(
+            "forward_with_triton_backend has to return_dict")
 
     # Loss calculations
     if labels is not None:

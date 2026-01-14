@@ -80,7 +80,9 @@ def import_external_libs(external_libs=None):
         importlib.import_module(external_lib)
 
 
-def load_extern_type(file_path: Optional[str], type_name: Optional[str]) -> type:
+def load_extern_type(
+        file_path: Optional[str],
+        type_name: Optional[str]) -> type:
     """Load a external data type based on the file path and type name"""
     if not file_path:
         return None
@@ -99,17 +101,21 @@ def load_extern_type(file_path: Optional[str], type_name: Optional[str]) -> type
             file_path = file_path[7:]
 
         if not os.path.exists(file_path):
-            raise FileNotFoundError(f"Custom type file '{file_path}' not found.")
+            raise FileNotFoundError(
+                f"Custom type file '{file_path}' not found.")
 
-        spec = importlib.util.spec_from_file_location("custom_module", file_path)
+        spec = importlib.util.spec_from_file_location(
+            "custom_module", file_path)
         module = importlib.util.module_from_spec(spec)
         try:
             spec.loader.exec_module(module)
         except Exception as e:
-            raise RuntimeError(f"Error loading module from '{file_path}'") from e
+            raise RuntimeError(
+                f"Error loading module from '{file_path}'") from e
 
     if not hasattr(module, type_name):
-        raise AttributeError(f"Custom type '{type_name}' not found in '{file_path}'.")
+        raise AttributeError(
+            f"Custom type '{type_name}' not found in '{file_path}'.")
 
     return getattr(module, type_name)
 

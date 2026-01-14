@@ -31,9 +31,8 @@ def sanitize_request(obj: Any) -> Any:
       - Leave other types untouched
     """
     if isinstance(obj, dict):
-        return {
-            sanitize_request(key): sanitize_request(val) for key, val in obj.items()
-        }
+        return {sanitize_request(key): sanitize_request(val)
+                for key, val in obj.items()}
     elif isinstance(obj, (list, tuple)):
         return type(obj)(sanitize_request(item) for item in obj)
     elif isinstance(obj, str):
@@ -140,7 +139,11 @@ class ModelService:
         finishs: List[bool],
     ):
         """Process observations using the tokenizer with proper async locks"""
-        next_obs = [obs if not done else "" for obs, done in zip(next_obs, dones)]
+        next_obs = [
+            obs if not done else "" for obs,
+            done in zip(
+                next_obs,
+                dones)]
         async with self.encode_lock:
             mtrl_sep = self.tool_config.mtrl_sep
             if self.tool_config.truncate_obs_side == "left":
@@ -153,9 +156,11 @@ class ModelService:
                 )["input_ids"].to(torch.int64)
                 if next_obs_ids.shape[1] > self.tool_config.max_obs_length:
                     print(
-                        f"[WARNING] OBSERVATION TOO LONG, CONSIDER CHANGING YOUR CONFIG, {next_obs_ids.shape[1]} & {self.tool_config.max_obs_length}"
-                    )
-                    next_obs_ids = next_obs_ids[:, -self.tool_config.max_obs_length :]
+                        f"[WARNING] OBSERVATION TOO LONG, CONSIDER CHANGING YOUR CONFIG, {
+                            next_obs_ids.shape[1]} & {
+                            self.tool_config.max_obs_length}")
+                    next_obs_ids = next_obs_ids[:, -
+                                                self.tool_config.max_obs_length:]
             elif self.tool_config.truncate_obs_side == "right":
                 next_obs_ids = self.tokenizer(
                     next_obs,
@@ -166,13 +171,15 @@ class ModelService:
                 )["input_ids"].to(torch.int64)
                 if next_obs_ids.shape[1] > self.tool_config.max_obs_length:
                     print(
-                        f"[WARNING] OBSERVATION TOO LONG, CONSIDER CHANGING YOUR CONFIG, {next_obs_ids.shape[1]} & {self.tool_config.max_obs_length}"
-                    )
-                    next_obs_ids = next_obs_ids[:, : self.tool_config.max_obs_length]
+                        f"[WARNING] OBSERVATION TOO LONG, CONSIDER CHANGING YOUR CONFIG, {
+                            next_obs_ids.shape[1]} & {
+                            self.tool_config.max_obs_length}")
+                    next_obs_ids = next_obs_ids[:,
+                                                : self.tool_config.max_obs_length]
             else:
                 raise ValueError(
-                    f"Invalid truncate_obs_side: {self.tool_config.truncate_obs_side}"
-                )
+                    f"Invalid truncate_obs_side: {
+                        self.tool_config.truncate_obs_side}")
             if self.tool_config.enable_mtrl:
                 next_obs = self.tokenizer.batch_decode(
                     next_obs_ids, skip_special_tokens=True
@@ -182,18 +189,17 @@ class ModelService:
                     if finishs[i] or dones[i]:
                         # do action is false
                         assert (
-                            next_obs[i] == ""
-                        ), f"next_obs should be empty when finishs is True, but got {next_obs[i]}"
+                            next_obs[i] == ""), f"next_obs should be empty when finishs is True, but got {
+                            next_obs[i]}"
                         processed_next_obs.append("")
                     elif valid_action[i]:
-                        processed_next_obs.append(mtrl_sep.format(obs=next_obs[i]))
+                        processed_next_obs.append(
+                            mtrl_sep.format(obs=next_obs[i]))
                     else:
                         processed_next_obs.append(
                             mtrl_sep.format(
-                                obs="Your action is not valid, please check the format and try again."
-                                + next_obs[i]
-                            )
-                        )
+                                obs="Your action is not valid, please check the format and try again." +
+                                next_obs[i]))
                 next_obs = processed_next_obs
                 next_obs_ids = self.tokenizer(
                     next_obs,
@@ -267,7 +273,7 @@ class ModelService:
         ).split(",")
         tensor_parallel_size = self.model_config.tensor_parallel_size
         gpu_ids_per_model = [
-            gpu_ids[i : i + tensor_parallel_size]
+            gpu_ids[i: i + tensor_parallel_size]
             for i in range(0, len(gpu_ids), tensor_parallel_size)
         ]
         assert (
@@ -317,8 +323,8 @@ class ModelService:
                     continue
             if all(vllm_model_status):
                 print(
-                    f"✅ vLLM service started successfully with model: {self.model_config.model}"
-                )
+                    f"✅ vLLM service started successfully with model: {
+                        self.model_config.model}")
                 return
             else:
                 time.sleep(retry_interval)
@@ -339,7 +345,8 @@ class ModelService:
         sampling_params = sampling_params.copy()
         # Use the async encode method to get tokens
         async with self.encode_lock:
-            prompt_lens = [len(self.tokenizer.encode(prompt)) for prompt in prompts]
+            prompt_lens = [len(self.tokenizer.encode(prompt))
+                           for prompt in prompts]
             max_prompt_tokens = max(prompt_lens)
 
         sampling_params["max_tokens"] = min(
@@ -383,7 +390,8 @@ class ModelService:
         finish_reasons = [None for _ in range(len(prompts))]
         model = self.model_config.model
 
-        # keep trying to generate the response until reached the tool-calling limit
+        # keep trying to generate the response until reached the tool-calling
+        # limit
         for action_step in range(self.tool_config.max_turns + 1):
             # print(f"Action step: {action_step}/{self.tool_config.max_turns}")
             if action_step == self.tool_config.max_turns:
@@ -458,13 +466,14 @@ class ModelService:
 
         return final_responses, finish_reasons
 
-    async def chat_completions_async(self, body: Dict[str, Any]) -> Dict[str, Any]:
+    async def chat_completions_async(
+            self, body: Dict[str, Any]) -> Dict[str, Any]:
         """process API request and generate response"""
         # print(f"Received request: {body}")
 
         if "messages" not in body or not body["messages"]:
             raise ValueError("No messages found in the request.")
-        if not "user" in [message["role"] for message in body["messages"]]:
+        if "user" not in [message["role"] for message in body["messages"]]:
             raise ValueError("No user message found in the request.")
 
         assert (
@@ -617,5 +626,6 @@ class ModelService:
         try:
             asyncio.run(self.close())
         except RuntimeError:
-            # Handle "Event loop is closed" error that can happen during shutdown
+            # Handle "Event loop is closed" error that can happen during
+            # shutdown
             pass

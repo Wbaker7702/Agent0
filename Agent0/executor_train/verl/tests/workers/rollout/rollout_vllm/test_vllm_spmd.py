@@ -42,7 +42,8 @@ def levenshtein(s1, s2):
     # Compute the Levenshtein distance matrix
     for i in range(1, m + 1):
         for j in range(1, n + 1):
-            cost = 0 if s1[i - 1] == s2[j - 1] else 1  # No cost if characters match
+            # No cost if characters match
+            cost = 0 if s1[i - 1] == s2[j - 1] else 1
             dp[i][j] = min(
                 dp[i - 1][j] + 1,  # Deletion
                 dp[i][j - 1] + 1,  # Insertion
@@ -64,7 +65,8 @@ def are_lists_similar(a, b):
         total_length += max_len
         diff = levenshtein(s1, s2)
         total_diff += diff
-        print(f"Comparing strings:\n{s1}\n{s2}\nDifference: {diff} characters\n")
+        print(
+            f"Comparing strings:\n{s1}\n{s2}\nDifference: {diff} characters\n")
 
     percentage_difference = (total_diff / total_length) * 100
     print(f"Total difference: {percentage_difference:.2f}%")

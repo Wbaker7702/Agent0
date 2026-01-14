@@ -49,8 +49,7 @@ class TestGsm8kInteraction:
         assert instance_id in self.interaction._instance_dict
         assert self.interaction._instance_dict[instance_id]["response"] == ""
         assert (
-            self.interaction._instance_dict[instance_id]["ground_truth"] == ground_truth
-        )
+            self.interaction._instance_dict[instance_id]["ground_truth"] == ground_truth)
         assert self.interaction._instance_dict[instance_id]["reward"] == 0.0
 
     @pytest.mark.asyncio
@@ -64,8 +63,7 @@ class TestGsm8kInteraction:
         assert len(result_id) == 36  # UUID4 length
         assert result_id in self.interaction._instance_dict
         assert (
-            self.interaction._instance_dict[result_id]["ground_truth"] == ground_truth
-        )
+            self.interaction._instance_dict[result_id]["ground_truth"] == ground_truth)
 
     @pytest.mark.asyncio
     async def test_start_interaction_without_ground_truth(self):

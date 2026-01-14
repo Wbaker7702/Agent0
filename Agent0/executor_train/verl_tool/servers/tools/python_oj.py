@@ -69,12 +69,12 @@ def custom_compare(output: str, expected: str):
                 # check float
                 output_float = [float(e) for e in output]
                 gt_float = [float(e) for e in expected_lines]
-                tmp_result = (len(output_float) == len(gt_float)) and np.allclose(
-                    output_float, gt_float
-                )
+                tmp_result = (
+                    len(output_float) == len(gt_float)) and np.allclose(
+                    output_float, gt_float)
                 if tmp_result:
                     return True
-        except:
+        except BaseException:
             pass
     return False
 
@@ -125,7 +125,8 @@ class PythonOJTool(PythonCodeTool):
 
             new_code = parsed_action  #
             if self.enable_history_code_execution:
-                previous_parsed_code = [obs["action"] for obs in env["previous_obs"]]
+                previous_parsed_code = [obs["action"]
+                                        for obs in env["previous_obs"]]
                 code_to_execute = wrap_code_blocks(
                     previous_parsed_code + [parsed_action]
                 )
@@ -137,7 +138,8 @@ class PythonOJTool(PythonCodeTool):
 
             # if not has_error and self.force_run_test_cases:
             observation = ""
-            test_cases = extra_field.get("public_tests", None) if extra_field else None
+            test_cases = extra_field.get(
+                "public_tests", None) if extra_field else None
             if self.force_run_test_cases and test_cases is not None:
                 # print(test_cases)
                 if isinstance(test_cases, str):
@@ -184,7 +186,8 @@ class PythonOJTool(PythonCodeTool):
                                     input_arg = input_case
                                 if isinstance(output_case, str):
                                     try:
-                                        expected_return = json.loads(output_case)
+                                        expected_return = json.loads(
+                                            output_case)
                                     except json.JSONDecodeError:
                                         expected_return = output_case
                                 elif isinstance(output_case, list):
@@ -195,10 +198,10 @@ class PythonOJTool(PythonCodeTool):
                                         expected_return = f"({expected_return})"
                                 else:
                                     raise ValueError(
-                                        f"Invalid output case format: {output_case}"
-                                    )
+                                        f"Invalid output case format: {output_case}")
                             elif isinstance(input_case, list):
-                                input_arg = ", ".join([str(x) for x in input_case])
+                                input_arg = ", ".join(
+                                    [str(x) for x in input_case])
                                 if isinstance(output_case, str):
                                     expected_return = output_case
                                 elif isinstance(output_case, list):
@@ -206,11 +209,11 @@ class PythonOJTool(PythonCodeTool):
                                         [str(x) for x in output_case]
                                     )
                                     if len(output_case) > 1:
-                                        expected_return = f"({expected_return})"  # men_still_standing([]) == [11,11]
+                                        # men_still_standing([]) == [11,11]
+                                        expected_return = f"({expected_return})"
                                 else:
                                     raise ValueError(
-                                        f"Invalid output case format: {output_case}"
-                                    )
+                                        f"Invalid output case format: {output_case}")
                             else:
                                 raise ValueError(
                                     f"Invalid input case format: {input_case}"
@@ -296,21 +299,34 @@ class PythonOJTool(PythonCodeTool):
                         # not runtime err or time-limit exceeded
                         if not has_error:
                             # case: wrong answer
-                            message = f"The above code is incorrect and got a wrong answer.\nInput: {metadata['inputs']}\nGenerated Output: {metadata['output']}\nExpected: {metadata['expected']}"
+                            message = f"The above code is incorrect and got a wrong answer.\nInput: {
+                                metadata['inputs']}\nGenerated Output: {
+                                metadata['output']}\nExpected: {
+                                metadata['expected']}"
                         else:
                             # time limit exceeded
                             if "execution timed out" in observation.lower():
-                                message = f"The above code is incorrect and got time limit exceeded.\n{metadata['error']}\nInput: {metadata['inputs']}\nExpected: {metadata['expected']}"
+                                message = f"The above code is incorrect and got time limit exceeded.\n{
+                                    metadata['error']}\nInput: {
+                                    metadata['inputs']}\nExpected: {
+                                    metadata['expected']}"
                             elif "syntaxerror" in observation.lower():
-                                message = f"The above code is incorrect and got a syntax error.\nInput: {metadata['inputs']}\nExpected: {metadata['expected']}\n{metadata['error']}"
+                                message = f"The above code is incorrect and got a syntax error.\nInput: {
+                                    metadata['inputs']}\nExpected: {
+                                    metadata['expected']}\n{
+                                    metadata['error']}"
                             else:
-                                message = f"The above code is incorrect and got a runtime error.\nInput: {metadata['inputs']}\nExpected: {metadata['expected']}\n{metadata['error']}"
+                                message = f"The above code is incorrect and got a runtime error.\nInput: {
+                                    metadata['inputs']}\nExpected: {
+                                    metadata['expected']}\n{
+                                    metadata['error']}"
                         test_result = message
                         code_has_error = True
                     else:
                         test_result = "All public test cases passed!\n"
                 else:
-                    raise ValueError(f"Invalid test cases format: {test_cases}")
+                    raise ValueError(
+                        f"Invalid test cases format: {test_cases}")
                 observation = test_result
 
             if self.done_without_error:
@@ -323,8 +339,12 @@ class PythonOJTool(PythonCodeTool):
             valid = True
 
         self.update_env(
-            trajectory_id, env, parsed_action, is_valid, extra_field, execution_result
-        )
+            trajectory_id,
+            env,
+            parsed_action,
+            is_valid,
+            extra_field,
+            execution_result)
         self.save_env(trajectory_id, env)
 
         return observation, done, valid

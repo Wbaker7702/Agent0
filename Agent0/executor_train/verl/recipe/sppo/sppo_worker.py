@@ -73,10 +73,14 @@ class SPPOActorRolloutRefWorker(ActorRolloutRefWorker):
                 use_remove_padding=use_remove_padding,
                 use_fused_kernels=use_fused_kernels,
                 enable_gradient_checkpointing=self.config.model.get(
-                    "enable_gradient_checkpointing", False
-                ),
-                trust_remote_code=self.config.model.get("trust_remote_code", False),
-                use_liger=self.config.model.get("use_liger", False),
+                    "enable_gradient_checkpointing",
+                    False),
+                trust_remote_code=self.config.model.get(
+                    "trust_remote_code",
+                    False),
+                use_liger=self.config.model.get(
+                    "use_liger",
+                    False),
                 role="actor",
             )
 
@@ -119,8 +123,12 @@ class SPPOActorRolloutRefWorker(ActorRolloutRefWorker):
                 override_model_config=override_model_config,
                 use_remove_padding=use_remove_padding,
                 use_fused_kernels=use_fused_kernels,
-                trust_remote_code=self.config.model.get("trust_remote_code", False),
-                use_liger=self.config.model.get("use_liger", False),
+                trust_remote_code=self.config.model.get(
+                    "trust_remote_code",
+                    False),
+                use_liger=self.config.model.get(
+                    "use_liger",
+                    False),
                 role="ref",
             )[0]
             OmegaConf.set_struct(self.config.ref, True)
@@ -138,7 +146,6 @@ class SPPOActorRolloutRefWorker(ActorRolloutRefWorker):
                 optimizer=self.actor.actor_optimizer,
                 lr_scheduler=self.actor_lr_scheduler,
                 processing_class=(
-                    self.processor if self.processor is not None else self.tokenizer
-                ),
+                    self.processor if self.processor is not None else self.tokenizer),
                 checkpoint_config=self.config.actor.checkpoint,
             )

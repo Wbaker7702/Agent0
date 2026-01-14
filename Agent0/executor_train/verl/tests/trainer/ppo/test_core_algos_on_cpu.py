@@ -52,7 +52,9 @@ class TestRegisterAdvEst(unittest.TestCase):
             pass
 
         self.assertIn("test_estimator", self.ADV_ESTIMATOR_REGISTRY)
-        self.assertEqual(self.ADV_ESTIMATOR_REGISTRY["test_estimator"], test_fn)
+        self.assertEqual(
+            self.ADV_ESTIMATOR_REGISTRY["test_estimator"],
+            test_fn)
 
     def test_register_with_enum(self):
         """Test registering with an enum value (assuming AdvantageEstimator exists)"""
@@ -66,14 +68,18 @@ class TestRegisterAdvEst(unittest.TestCase):
             pass
 
         self.assertIn("test_enum_estimator", self.ADV_ESTIMATOR_REGISTRY)
-        self.assertEqual(self.ADV_ESTIMATOR_REGISTRY["test_enum_estimator"], test_fn)
+        self.assertEqual(
+            self.ADV_ESTIMATOR_REGISTRY["test_enum_estimator"],
+            test_fn)
 
     def test_duplicate_registration_same_function(self):
         """Test that registering the same function twice doesn't raise an error"""
         register_adv_est("duplicate_test")(mock_test_fn)
         register_adv_est("duplicate_test")(mock_test_fn)
 
-        self.assertEqual(self.ADV_ESTIMATOR_REGISTRY["duplicate_test"], mock_test_fn)
+        self.assertEqual(
+            self.ADV_ESTIMATOR_REGISTRY["duplicate_test"],
+            mock_test_fn)
 
     def test_duplicate_registration_different_function(self):
         """Test that registering different functions with same name raises ValueError"""
@@ -127,7 +133,8 @@ class TestRegisterAdvEst(unittest.TestCase):
         """Test that invalid names raise ValueError."""
         with pytest.raises(ValueError) as excinfo:
             get_adv_estimator_fn("invalid_name")
-        assert "Unknown advantage estimator simply: invalid_name" in str(excinfo.value)
+        assert "Unknown advantage estimator simply: invalid_name" in str(
+            excinfo.value)
 
     def test_get_adv_estimator_fn_case_sensitive(self):
         """Test that name lookup is case-sensitive."""
@@ -182,7 +189,8 @@ def test_multi_turn_compute_gae_advantage_return():
         dtype=torch.float,
     )
 
-    response_mask = torch.tensor([[0, 0, 1, 1, 1, 0, 0, 1, 1, 0, 0]], dtype=torch.float)
+    response_mask = torch.tensor(
+        [[0, 0, 1, 1, 1, 0, 0, 1, 1, 0, 0]], dtype=torch.float)
 
     adv1, ret1 = compute_gae_advantage_return(
         rewards, values1, response_mask, gamma, lam

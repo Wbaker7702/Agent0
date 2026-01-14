@@ -97,8 +97,12 @@ def initialize(
     )
     dataloader = StatefulDataLoader(
         dataset=dataset,
-        batch_size=config.data.get("gen_batch_size", config.data.train_batch_size),
-        num_workers=config.data.get("dataloader_num_workers", 8),
+        batch_size=config.data.get(
+            "gen_batch_size",
+            config.data.train_batch_size),
+        num_workers=config.data.get(
+            "dataloader_num_workers",
+            8),
         drop_last=True,
         collate_fn=default_collate_fn,
         sampler=SequentialSampler(dataset),
@@ -122,9 +126,9 @@ def perf_rollout(mode, backend, n_gpus_per_node, num_steps):
         gen_batch = agent_loop_manager.generate_sequences(batch)
         t_end = time.time()
         print(
-            f"[DEBUG] backend: {backend}, n_gpus_per_node: {n_gpus_per_node}, batch_size: {len(gen_batch)}, "
-            f"step: {step}, step_time: {t_end - t_start:.2f} secs"
-        )
+            f"[DEBUG] backend: {backend}, n_gpus_per_node: {n_gpus_per_node}, batch_size: {
+                len(gen_batch)}, " f"step: {step}, step_time: {
+                t_end - t_start:.2f} secs")
         if step + 1 >= num_steps:
             break
 

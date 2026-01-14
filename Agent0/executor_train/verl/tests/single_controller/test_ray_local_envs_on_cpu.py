@@ -50,7 +50,8 @@ def test_basics():
         name_prefix="worker_group_basic",
     )
 
-    output = worker_group.execute_all_sync("getenv", key="RAY_LOCAL_WORLD_SIZE")
+    output = worker_group.execute_all_sync(
+        "getenv", key="RAY_LOCAL_WORLD_SIZE")
     assert output == ["4", "4", "4", "4"]
 
     output = worker_group.execute_all_sync("getenv", key="RAY_LOCAL_RANK")

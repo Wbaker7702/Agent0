@@ -33,7 +33,7 @@ def extract_code_message(content: str) -> tuple[dict[str, Any], str]:
     j = content.find(stop)
     assert j > i
 
-    code = content[i + len(start) : j]
+    code = content[i + len(start): j]
     matches = code_pattern.findall(code)
     if matches:
         code = matches[0].strip()
@@ -51,7 +51,7 @@ def extract_code_message(content: str) -> tuple[dict[str, Any], str]:
             },
         ],
     }
-    return message, content[j + len(stop) :]
+    return message, content[j + len(stop):]
 
 
 def extract_answer_message(content: str) -> tuple[dict[str, Any], str]:
@@ -62,12 +62,12 @@ def extract_answer_message(content: str) -> tuple[dict[str, Any], str]:
     j = content.find(stop)
     assert j > i
 
-    answer = content[:i] + content[i + len(start) : j]
+    answer = content[:i] + content[i + len(start): j]
     message = {
         "role": "assistant",
         "content": answer.strip(),
     }
-    return message, content[j + len(stop) :]
+    return message, content[j + len(stop):]
 
 
 def extract_interpreter_message(content: str) -> tuple[dict[str, Any], str]:
@@ -78,12 +78,12 @@ def extract_interpreter_message(content: str) -> tuple[dict[str, Any], str]:
     j = content.find(stop)
     assert j > i
 
-    interpreter = content[i + len(start) : j]
+    interpreter = content[i + len(start): j]
     message = {
         "role": "tool",
         "content": interpreter.strip(),
     }
-    return message, content[j + len(stop) :]
+    return message, content[j + len(stop):]
 
 
 def process(row: dict, *, tools: str):
@@ -95,7 +95,7 @@ def process(row: dict, *, tools: str):
     i = content.find(start)
     assert i != -1
     prompt = (
-        content[i + len(start) :]
+        content[i + len(start):]
         .replace("<answer>", "")
         .replace("</answer>", "")
         .strip()
@@ -130,7 +130,8 @@ def process(row: dict, *, tools: str):
 if __name__ == "__main__":
     tools_config_file = "recipe/retool/sandbox_fusion_tool_config.yaml"
     tools_config = OmegaConf.load(tools_config_file)
-    tool_schema = OmegaConf.to_container(tools_config["tools"][0]["tool_schema"])
+    tool_schema = OmegaConf.to_container(
+        tools_config["tools"][0]["tool_schema"])
     tools = json.dumps([tool_schema])
 
     data = datasets.load_dataset("JoeYing/ReTool-SFT")["train"]

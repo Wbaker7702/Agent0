@@ -57,7 +57,8 @@ class TestActor(Worker):
     def foo(self, y):
         return self._x + y
 
-    @register(dispatch_mode=Dispatch.ALL_TO_ALL, execute_mode=Execute.RANK_ZERO)
+    @register(dispatch_mode=Dispatch.ALL_TO_ALL,
+              execute_mode=Execute.RANK_ZERO)
     def foo_rank_zero(self, x, y):
         return self._x + y + x
 
@@ -83,8 +84,9 @@ class TestActor(Worker):
 def remote_call_wg(worker_names):
     class_with_args = RayClassWithInitArgs(cls=TestActor, x=2)
     worker_group = RayWorkerGroup.from_detached(
-        worker_names=worker_names, ray_cls_with_init=class_with_args, name_prefix=None
-    )
+        worker_names=worker_names,
+        ray_cls_with_init=class_with_args,
+        name_prefix=None)
     print(worker_group.worker_names)
 
     output_ref = worker_group.foo_custom(x=[1, 2], y=[5, 6])

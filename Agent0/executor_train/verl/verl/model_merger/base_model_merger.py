@@ -34,8 +34,9 @@ from verl.utils import hf_processor, hf_tokenizer
 def parse_args():
     parser = argparse.ArgumentParser(description="verl model merger")
     subparsers = parser.add_subparsers(
-        dest="operation", required=True, help="Specify 'merge' or 'test' operation."
-    )
+        dest="operation",
+        required=True,
+        help="Specify 'merge' or 'test' operation.")
 
     base_op_parser = argparse.ArgumentParser(add_help=False)
     base_op_parser.add_argument(
@@ -69,8 +70,9 @@ def parse_args():
     )
 
     merge_parser = subparsers.add_parser(
-        "merge", parents=[base_op_parser], help="Merge model checkpoints and save."
-    )
+        "merge",
+        parents=[base_op_parser],
+        help="Merge model checkpoints and save.")
     merge_parser.add_argument(
         "--target_dir",
         default="tmp",
@@ -121,7 +123,8 @@ class ModelMergerConfig:
     use_cpu_initialization: bool = False
 
     def __post_init__(self):
-        self.hf_upload = self.operation == "merge" and bool(self.hf_upload_path)
+        self.hf_upload = self.operation == "merge" and bool(
+            self.hf_upload_path)
         if self.operation == "test":
             self.target_dir = None
             self.hf_upload_path = None
@@ -187,7 +190,8 @@ class BaseModelMerger(ABC):
     def __init__(self, config: ModelMergerConfig):
         self.config = config
         self.hf_model_config_path = config.hf_model_config_path
-        self.model_config = AutoConfig.from_pretrained(self.hf_model_config_path)
+        self.model_config = AutoConfig.from_pretrained(
+            self.hf_model_config_path)
 
     def get_transformers_auto_model_class(self):
         if "ForTokenClassification" in self.model_config.architectures[0]:
@@ -230,7 +234,8 @@ class BaseModelMerger(ABC):
         Note:
             This function change the 'state_dict' in place.
         """
-        lora_params_names = [name for name in state_dict.keys() if "lora_" in name]
+        lora_params_names = [
+            name for name in state_dict.keys() if "lora_" in name]
 
         if len(lora_params_names) == 0:
             return None
@@ -250,19 +255,21 @@ class BaseModelMerger(ABC):
             target_modules.add(lora_key.split(".")[-3])
             lora_params[lora_key] = state_dict.pop(name)
 
-        lora_rank = min(lora_params[lora_key].shape[0], lora_params[lora_key].shape[1])
+        lora_rank = min(
+            lora_params[lora_key].shape[0],
+            lora_params[lora_key].shape[1])
         peft_dict = {
             "r": lora_rank,
-            "lora_alpha": 0,  # lora_alpha is not set. An error should be raised to inform the user to set it manually.
+            # lora_alpha is not set. An error should be raised to inform the
+            # user to set it manually.
+            "lora_alpha": 0,
             "target_modules": list(target_modules),
         }
         peft_config = peft.LoraConfig(**peft_dict).to_dict()
         peft_config["task_type"] = (
-            peft_config["task_type"].value if peft_config["task_type"] else None
-        )
+            peft_config["task_type"].value if peft_config["task_type"] else None)
         peft_config["peft_type"] = (
-            peft_config["peft_type"].value if peft_config["peft_type"] else None
-        )
+            peft_config["peft_type"].value if peft_config["peft_type"] else None)
         peft_config["target_modules"] = list(peft_config["target_modules"])
 
         lora_path = os.path.join(self.config.target_dir, "lora_adapter")
@@ -271,7 +278,11 @@ class BaseModelMerger(ABC):
             os.path.join(lora_path, "adapter_config.json"), "w", encoding="utf-8"
         ) as f:
             json.dump(peft_config, f, ensure_ascii=False, indent=4)
-        save_file(lora_params, os.path.join(lora_path, "adapter_model.safetensors"))
+        save_file(
+            lora_params,
+            os.path.join(
+                lora_path,
+                "adapter_model.safetensors"))
 
         for name in list(state_dict.keys()):
             key = (
@@ -335,8 +346,8 @@ class BaseModelMerger(ABC):
                 ) from e
             else:
                 raise ConnectionError(
-                    f"Failed to create repository ({e.response.status_code}): {e}"
-                ) from e
+                    f"Failed to create repository ({
+                        e.response.status_code}): {e}") from e
         except requests.exceptions.ConnectionError as e:
             raise ConnectionError(
                 "Network connection failed. Check your internet connection."
@@ -367,7 +378,9 @@ class BaseModelMerger(ABC):
                 f"Local folder error: {self.config.target_dir} - {str(e)}"
             ) from e
         except Exception as e:
-            raise RuntimeError(f"Unexpected error during upload: {str(e)}") from e
+            raise RuntimeError(
+                f"Unexpected error during upload: {
+                    str(e)}") from e
 
     @abstractmethod
     def merge_and_save(self):

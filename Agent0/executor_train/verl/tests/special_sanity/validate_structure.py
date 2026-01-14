@@ -54,8 +54,8 @@ def find_violations(
         rel_parts = test_file.relative_to(tests_root).parts
         if len(rel_parts) < 2:
             errors.append(
-                f"{test_file}: must be inside one of {sorted(allowed)} (not at tests root)"
-            )
+                f"{test_file}: must be inside one of {
+                    sorted(allowed)} (not at tests root)")
             continue
 
         first_folder = rel_parts[0]
@@ -97,13 +97,17 @@ def main() -> None:
     parser.add_argument(
         "--allow-files",
         nargs="*",
-        default=["tests/test_protocol_on_cpu.py", "tests/test_base_config_on_cpu.py"],
+        default=[
+            "tests/test_protocol_on_cpu.py",
+            "tests/test_base_config_on_cpu.py"],
         help="Extra top-level test folders that are exempt from the rule",
     )
     args = parser.parse_args()
 
     if not args.impl_root.is_dir():
-        raise Exception(f"Implementation root '{args.impl_root}' does not exist.")
+        raise Exception(
+            f"Implementation root '{
+                args.impl_root}' does not exist.")
     if not args.tests_root.is_dir():
         raise Exception(f"Tests root '{args.tests_root}' does not exist.")
 

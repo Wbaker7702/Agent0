@@ -68,7 +68,8 @@ class Gsm8kInteraction(BaseInteraction):
         if content and content.startswith("#### "):
             self._instance_dict[instance_id]["response"] = content
         else:
-            self._instance_dict[instance_id]["response"] = "#### " + (content or "")
+            self._instance_dict[instance_id]["response"] = "#### " + \
+                (content or "")
 
         reward = await self.calculate_score(instance_id)
         if reward == 1.0:

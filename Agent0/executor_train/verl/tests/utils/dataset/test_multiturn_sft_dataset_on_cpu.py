@@ -73,10 +73,15 @@ def test_multiturn_sft_dataset():
     item1 = dataset[1]  # Joke conversation
 
     # Test 2: Required Keys and Types
-    required_keys = ["input_ids", "attention_mask", "position_ids", "loss_mask"]
+    required_keys = [
+        "input_ids",
+        "attention_mask",
+        "position_ids",
+        "loss_mask"]
     for key in required_keys:
         assert key in item0, f"Missing key {key} in dataset item"
-        assert isinstance(item0[key], torch.Tensor), f"Expected torch.Tensor for {key}"
+        assert isinstance(
+            item0[key], torch.Tensor), f"Expected torch.Tensor for {key}"
         assert (
             item0[key].dtype == torch.long
         ), f"Expected torch.long for {key}, got {item0[key].dtype}"
@@ -98,7 +103,8 @@ def test_multiturn_sft_dataset():
 
     # Find assistant response positions
     assistant_positions0 = torch.where(loss_mask0 == 1)[0]
-    assert len(assistant_positions0) > 0, "No assistant positions found in loss mask"
+    assert len(
+        assistant_positions0) > 0, "No assistant positions found in loss mask"
 
     # Decode and verify assistant responses
     assistant_text0 = tokenizer.decode(input_ids0[loss_mask0 == 1])
@@ -112,7 +118,8 @@ def test_multiturn_sft_dataset():
 
     # Find assistant response positions
     assistant_positions1 = torch.where(loss_mask1 == 1)[0]
-    assert len(assistant_positions1) > 0, "No assistant positions found in loss mask"
+    assert len(
+        assistant_positions1) > 0, "No assistant positions found in loss mask"
 
     # Decode and verify assistant responses
     assistant_text1 = tokenizer.decode(input_ids1[loss_mask1 == 1])
@@ -164,8 +171,8 @@ def test_multiturn_sft_dataset():
             # The content should NOT appear in the non-masked text
             non_assistant_text = tokenizer.decode(input_ids0[loss_mask0 == 0])
             assert (
-                msg["content"] not in non_assistant_text
-            ), f"Assistant message '{msg['content']}' found in non-assistant text"
+                msg["content"] not in non_assistant_text), f"Assistant message '{
+                msg['content']}' found in non-assistant text"
 
     # Test 9: Verify non-assistant parts have loss_mask=0
     # Get non-assistant text
@@ -176,13 +183,15 @@ def test_multiturn_sft_dataset():
     for msg in test_data["messages"][0]:  # First conversation
         if msg["role"] in ["system", "user"]:
             assert (
-                msg["content"] in non_assistant_text
-            ), f"{msg['role'].title()} message '{msg['content']}' not found in non-assistant text"
+                msg["content"] in non_assistant_text), f"{
+                msg['role'].title()} message '{
+                msg['content']}' not found in non-assistant text"
 
             # And verify they're NOT in the assistant text
             assert (
-                msg["content"] not in assistant_text
-            ), f"{msg['role'].title()} message '{msg['content']}' found in assistant text"
+                msg["content"] not in assistant_text), f"{
+                msg['role'].title()} message '{
+                msg['content']}' found in assistant text"
 
     # Test 10: Verify padding behavior
     padding_config = {

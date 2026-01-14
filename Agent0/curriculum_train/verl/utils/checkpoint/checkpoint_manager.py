@@ -163,7 +163,7 @@ def remove_obsolete_ckpt(
                 ckpt_folders.append((step, folder))
 
     ckpt_folders.sort(reverse=True)
-    for _, folder in ckpt_folders[save_limit - 1 :]:
+    for _, folder in ckpt_folders[save_limit - 1:]:
         folder_path = os.path.join(path, folder)
         shutil.rmtree(folder_path, ignore_errors=True)
         print(f"Removed obsolete checkpoint: {folder_path}")

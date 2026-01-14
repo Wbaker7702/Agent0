@@ -60,8 +60,12 @@ def main():
 
         return process_fn
 
-    train_dataset = train_dataset.map(function=make_map_fn("train"), with_indices=True)
-    test_dataset = test_dataset.map(function=make_map_fn("test"), with_indices=True)
+    train_dataset = train_dataset.map(
+        function=make_map_fn("train"),
+        with_indices=True)
+    test_dataset = test_dataset.map(
+        function=make_map_fn("test"),
+        with_indices=True)
 
     # Create output directory
     local_dir = os.path.expanduser(args.local_dir)

@@ -110,20 +110,23 @@ class IPythonSession:
         # Set up input simulation if needed
         if stdin:
             # Replace input() calls with predefined responses
-            # This is a simple approach - you might want to make it more sophisticated
+            # This is a simple approach - you might want to make it more
+            # sophisticated
             stdin_lines = stdin.strip().split("\n")
             stdin_iterator = iter(stdin_lines)
 
             def mock_input(prompt=""):
                 try:
                     value = next(stdin_iterator)
-                    print(f"{prompt}{value}")  # Echo the input like real input()
+                    # Echo the input like real input()
+                    print(f"{prompt}{value}")
                     return value
                 except StopIteration:
                     return ""
 
             # Temporarily replace input function
-            original_input = self.shell.user_ns.get("input", __builtins__["input"])
+            original_input = self.shell.user_ns.get(
+                "input", __builtins__["input"])
             self.shell.user_ns["input"] = mock_input
 
         # Capture stdout and stderr
@@ -192,7 +195,7 @@ class IPythonSession:
                         "value": base64.b64encode(pickled).decode("utf-8"),
                         "type": str(type(value).__name__),
                     }
-                except:
+                except BaseException:
                     # If we can't pickle it, store a string representation
                     user_vars[name] = {
                         "value": str(value),
@@ -225,7 +228,8 @@ class IPythonSession:
                     continue
 
                 # Restore pickled value
-                pickled_data = base64.b64decode(var_info["value"].encode("utf-8"))
+                pickled_data = base64.b64decode(
+                    var_info["value"].encode("utf-8"))
                 value = pickle.loads(pickled_data)
                 self.shell.user_ns[name] = value
             except Exception as e:
@@ -340,7 +344,8 @@ class IPythonTool(BaseTool):
             }
 
         # Restore IPython session if state exists
-        if env.get("ipython_state") and trajectory_id not in self.ipython_sessions:
+        if env.get(
+                "ipython_state") and trajectory_id not in self.ipython_sessions:
             try:
                 session = IPythonSession(trajectory_id, self.pre_import_lib)
                 session.restore_state(env["ipython_state"])
@@ -365,8 +370,14 @@ class IPythonTool(BaseTool):
         self.env_cache[trajectory_id] = env
 
     def update_env(
-        self, trajectory_id, env, action, is_valid, extra_field, observation, **kwargs
-    ):
+            self,
+            trajectory_id,
+            env,
+            action,
+            is_valid,
+            extra_field,
+            observation,
+            **kwargs):
         """
         Update the environment for the given trajectory_id
         """
@@ -403,7 +414,8 @@ class IPythonTool(BaseTool):
             Tuple containing the extracted code and a validity flag
         """
         # Try to find Python code in various formats
-        all_valid_python_code = re.findall(r"<python>(.*?)</python>", action, re.DOTALL)
+        all_valid_python_code = re.findall(
+            r"<python>(.*?)</python>", action, re.DOTALL)
 
         if not all_valid_python_code:
             all_valid_python_code = re.findall(
@@ -414,7 +426,8 @@ class IPythonTool(BaseTool):
             return "", False
 
         # Use all the code blocks
-        parsed_code = "\n".join([code.strip() for code in all_valid_python_code])
+        parsed_code = "\n".join([code.strip()
+                                for code in all_valid_python_code])
 
         return parsed_code, True
 
@@ -449,8 +462,7 @@ class IPythonTool(BaseTool):
             # Determine what code to execute
             if self.enable_history_code_execution:
                 previous_parsed_code = [
-                    obs["action"] for obs in env["previous_obs"] if obs["is_valid"]
-                ]
+                    obs["action"] for obs in env["previous_obs"] if obs["is_valid"]]
                 code_to_execute = previous_parsed_code + [parsed_action]
             else:
                 code_to_execute = parsed_action
@@ -503,8 +515,12 @@ class IPythonTool(BaseTool):
             valid = True
 
         self.update_env(
-            trajectory_id, env, parsed_action, is_valid, extra_field, execution_result
-        )
+            trajectory_id,
+            env,
+            parsed_action,
+            is_valid,
+            extra_field,
+            execution_result)
         self.save_env(trajectory_id, env)
 
         return observation, done, valid

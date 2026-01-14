@@ -41,7 +41,8 @@ except ImportError:
 try:
     import torch_npu
 
-    NPU_CROSS_ENTROPY_LOSS_AVAILABLE = hasattr(torch_npu, "npu_cross_entropy_loss")
+    NPU_CROSS_ENTROPY_LOSS_AVAILABLE = hasattr(
+        torch_npu, "npu_cross_entropy_loss")
 except ImportError:
     NPU_CROSS_ENTROPY_LOSS_AVAILABLE = False
 
@@ -95,7 +96,8 @@ def logprobs_from_logits(logits, labels, inplace_backward=True):
 
 
 def logprobs_from_logits_flash_attn(logits, labels, inplace_backward=True):
-    output = cross_entropy_loss(logits, labels, inplace_backward=inplace_backward)
+    output = cross_entropy_loss(
+        logits, labels, inplace_backward=inplace_backward)
     assert isinstance(
         output, tuple
     ), "please make sure flash-attn>=2.4.3 where cross_entropy_loss returns Tuple[losses, z_losses]."
@@ -133,7 +135,8 @@ def logprobs_from_logits_v2(logits: torch.FloatTensor, labels):
             logits_labels - logsumexp_values
         )  # log_softmax(x_i) = x_i - logsumexp(x)
     else:
-        # logsumexp approach is unstable with bfloat16, fall back to slightly less efficent approach
+        # logsumexp approach is unstable with bfloat16, fall back to slightly
+        # less efficent approach
         logprobs_labels = []
         for row_logits, row_labels in zip(
             logits, labels, strict=True
@@ -163,16 +166,18 @@ def entropy_from_logits(logits: torch.Tensor):
     return entropy
 
 
-def entropy_from_logits_with_chunking(logits: torch.Tensor, chunk_size: int = 2048):
+def entropy_from_logits_with_chunking(
+        logits: torch.Tensor,
+        chunk_size: int = 2048):
     """Memory-efficient entropy calculation with chunking."""
     entropy = torch.zeros(logits.shape[0], device=logits.device)
     for i in range(0, logits.shape[0], chunk_size):
-        logits_chunk = logits[i : i + chunk_size].float()
+        logits_chunk = logits[i: i + chunk_size].float()
         pd_chunk = torch.nn.functional.softmax(logits_chunk, dim=-1)
         entropy_chunk = torch.logsumexp(logits_chunk, dim=-1) - torch.sum(
             pd_chunk * logits_chunk, dim=-1
         )
-        entropy[i : i + chunk_size] = entropy_chunk
+        entropy[i: i + chunk_size] = entropy_chunk
     return entropy
 
 
@@ -242,8 +247,9 @@ def masked_whiten(values, mask, shift_mean=True):
 
 
 def get_response_mask(
-    response_id: torch.Tensor, eos_token: int | list[int] = 2, dtype=torch.int64
-):
+        response_id: torch.Tensor,
+        eos_token: int | list[int] = 2,
+        dtype=torch.int64):
     """
     end of sentence token can be int or list: 1 or [1, 2]
     e.g.
@@ -272,17 +278,20 @@ def compute_grad_norm(model: nn.Module):
     total_grad_square = 0
     for param in model.parameters():
         if param.grad is not None:
-            total_grad_square += torch.sum(torch.square(param.grad.detach())).item()
+            total_grad_square += torch.sum(
+                torch.square(param.grad.detach())).item()
     return total_grad_square
 
 
-def broadcast_dict_tensor(tensors: dict[str, torch.Tensor] | TensorDict, src, group):
+def broadcast_dict_tensor(
+        tensors: dict[str, torch.Tensor] | TensorDict, src, group):
     """
     TODO: optimize this. Technically, we only need one broadcast
     """
 
     for key in tensors.sorted_keys:
-        torch.distributed.broadcast(tensors[key], src=src, group=group, async_op=False)
+        torch.distributed.broadcast(
+            tensors[key], src=src, group=group, async_op=False)
 
 
 def allgather_dict_tensors(
@@ -312,19 +321,24 @@ def allgather_dict_tensors(
     for key in sorted_keys:
         val = tensors_as_dict[key]
         output[key] = [torch.empty_like(val) for _ in range(size)]
-        torch.distributed.all_gather(output[key], val, group=group, async_op=False)
+        torch.distributed.all_gather(
+            output[key], val, group=group, async_op=False)
         output[key] = torch.cat(output[key], dim=dim)
 
     if is_tensor_dict:
-        output = TensorDict(source=output, batch_size=tensors.batch_size[0] * size)
+        output = TensorDict(source=output,
+                            batch_size=tensors.batch_size[0] * size)
 
     return output
 
 
-def split_dict_tensor_into_batches(tensors: TensorDict, batch_size) -> list[TensorDict]:
+def split_dict_tensor_into_batches(
+        tensors: TensorDict,
+        batch_size) -> list[TensorDict]:
     assert (
-        tensors.batch_size[0] % batch_size == 0
-    ), f"input data batch size: {tensors.batch_size[0]}, split batch size: {batch_size}"
+        tensors.batch_size[0] %
+        batch_size == 0), f"input data batch size: {
+        tensors.batch_size[0]}, split batch size: {batch_size}"
     return tensors.split(batch_size)
 
 
@@ -396,8 +410,10 @@ def postprocess_data(
             left_pad=left_pad,
         )
         attention_mask = pad_sequence_to_length(
-            attention_mask, max_seq_len=max_length, pad_token_id=0, left_pad=left_pad
-        )
+            attention_mask,
+            max_seq_len=max_length,
+            pad_token_id=0,
+            left_pad=left_pad)
     elif sequence_length > max_length:
         if truncation == "left":
             # actually, left truncation may not be reasonable
@@ -420,7 +436,8 @@ def postprocess_data(
                 f"{sequence_length=} is larger than {max_length=}"
             )
         else:
-            raise NotImplementedError(f"Unknown truncation method {truncation}")
+            raise NotImplementedError(
+                f"Unknown truncation method {truncation}")
 
     return input_ids, attention_mask
 
@@ -446,13 +463,20 @@ def tokenize_and_postprocess_data(
     Returns:
         Tuple of (input_ids, attention_mask) from postprocess_data
     """
-    input_data = tokenizer(prompt, return_tensors="pt", add_special_tokens=False)
+    input_data = tokenizer(
+        prompt,
+        return_tensors="pt",
+        add_special_tokens=False)
     input_ids = input_data["input_ids"]
     attention_mask = input_data["attention_mask"]
 
     return postprocess_data(
-        input_ids, attention_mask, max_length, pad_token_id, left_pad, truncation
-    )
+        input_ids,
+        attention_mask,
+        max_length,
+        pad_token_id,
+        left_pad,
+        truncation)
 
 
 def remove_pad_token(input_ids: torch.Tensor, attention_mask: torch.Tensor):
@@ -466,7 +490,8 @@ def remove_pad_token(input_ids: torch.Tensor, attention_mask: torch.Tensor):
     """
     no_padding_batch = []
     for ids, mask in zip(input_ids, attention_mask, strict=True):
-        no_padding_batch.append((ids[len(ids) - mask.sum() :]).cpu().numpy().tolist())
+        no_padding_batch.append(
+            (ids[len(ids) - mask.sum():]).cpu().numpy().tolist())
     return no_padding_batch
 
 
@@ -480,9 +505,10 @@ def log_probs_from_logits_response(input_ids, logits, response_length):
     Returns:
         response_log_prob:
     """
-    response_logits = logits[:, -response_length - 1 : -1]
+    response_logits = logits[:, -response_length - 1: -1]
     response = input_ids[:, -response_length:]
-    response_log_prob = logprobs_from_logits(logits=response_logits, labels=response)
+    response_log_prob = logprobs_from_logits(
+        logits=response_logits, labels=response)
     return response_log_prob
 
 
@@ -519,7 +545,7 @@ def log_probs_from_logits_response_rmpad(
         seqlen=seqlen,
     )
     output = full_output.squeeze(-1)[
-        :, -response_length - 1 : -1
+        :, -response_length - 1: -1
     ]  # [batch_size, response_length]
     return output
 
@@ -558,7 +584,7 @@ def log_probs_from_logits_all_rmpad(
         seqlen=seqlen,
     )
     output = full_output.squeeze(-1)[
-        :, -response_length - 1 : -1
+        :, -response_length - 1: -1
     ]  # [batch_size, response_length]
     return output
 
@@ -685,7 +711,11 @@ def _make_causal_mask(
     Make causal mask used for bi-directional self-attention.
     """
     bsz, tgt_len = input_ids_shape
-    mask = torch.full((tgt_len, tgt_len), torch.finfo(dtype).min, device=device)
+    mask = torch.full(
+        (tgt_len,
+         tgt_len),
+        torch.finfo(dtype).min,
+        device=device)
     mask_cond = torch.arange(mask.size(-1), device=device)
     mask.masked_fill_(mask_cond < (mask_cond + 1).view(mask.size(-1), 1), 0)
     mask = mask.to(dtype)
@@ -693,14 +723,18 @@ def _make_causal_mask(
 
 
 # Copied from transformers.models.bart.modeling_bart._expand_mask
-def _expand_mask(mask: torch.Tensor, dtype: torch.dtype, tgt_len: Optional[int] = None):
+def _expand_mask(
+        mask: torch.Tensor,
+        dtype: torch.dtype,
+        tgt_len: Optional[int] = None):
     """
     Expands attention_mask from `[bsz, seq_len]` to `[bsz, 1, tgt_seq_len, src_seq_len]`.
     """
     bsz, src_len = mask.size()
     tgt_len = tgt_len if tgt_len is not None else src_len
 
-    expanded_mask = mask[:, None, None, :].expand(bsz, 1, tgt_len, src_len).to(dtype)
+    expanded_mask = mask[:, None, None, :].expand(
+        bsz, 1, tgt_len, src_len).to(dtype)
 
     inverted_mask = 1.0 - expanded_mask
 
@@ -713,7 +747,13 @@ def get_unpad_data(attention_mask):
     seqlens_in_batch = attention_mask.sum(dim=-1, dtype=torch.int32)
     indices = torch.nonzero(attention_mask.flatten(), as_tuple=False).flatten()
     max_seqlen_in_batch = seqlens_in_batch.max().item()
-    cu_seqlens = F.pad(torch.cumsum(seqlens_in_batch, dim=0, dtype=torch.int32), (1, 0))
+    cu_seqlens = F.pad(
+        torch.cumsum(
+            seqlens_in_batch,
+            dim=0,
+            dtype=torch.int32),
+        (1,
+         0))
     return (
         indices,
         cu_seqlens,
@@ -791,9 +831,7 @@ def check_device_is_available():
     if not get_torch_device().is_available():
         raise RuntimeError(
             "Device {} must be initialized before importing this module.".format(
-                get_device_name()
-            )
-        )
+                get_device_name()))
 
     yield
 
@@ -814,7 +852,9 @@ def distributed_mean_max_min_std(
     """
     # Sum the local tensor across all processes
     local_sum = torch.sum(local_tensor)
-    local_num = torch.tensor(torch.numel(local_tensor), device=get_device_name())
+    local_num = torch.tensor(
+        torch.numel(local_tensor),
+        device=get_device_name())
 
     torch.distributed.all_reduce(local_sum, op=torch.distributed.ReduceOp.SUM)
     torch.distributed.all_reduce(local_num, op=torch.distributed.ReduceOp.SUM)
@@ -823,19 +863,22 @@ def distributed_mean_max_min_std(
 
     if compute_max:
         local_max = torch.max(local_tensor)
-        torch.distributed.all_reduce(local_max, op=torch.distributed.ReduceOp.MAX)
+        torch.distributed.all_reduce(
+            local_max, op=torch.distributed.ReduceOp.MAX)
     else:
         local_max = None
 
     if compute_min:
         local_min = torch.min(local_tensor)
-        torch.distributed.all_reduce(local_min, op=torch.distributed.ReduceOp.MIN)
+        torch.distributed.all_reduce(
+            local_min, op=torch.distributed.ReduceOp.MIN)
     else:
         local_min = None
 
     if compute_std:
         square_diff = torch.sum(torch.pow(local_tensor - global_mean, 2))
-        torch.distributed.all_reduce(square_diff, op=torch.distributed.ReduceOp.SUM)
+        torch.distributed.all_reduce(
+            square_diff, op=torch.distributed.ReduceOp.SUM)
         global_std = torch.sqrt(square_diff / (local_num - 1))
     else:
         global_std = None

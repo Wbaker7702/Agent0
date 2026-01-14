@@ -79,7 +79,8 @@ def test_browser(
     """
 
     # Generate two unique trajectory IDs to simulate two parallel agents
-    traj_ids = [f"{trajectory_id}-{uuid.uuid4()}", f"{trajectory_id}-{uuid.uuid4()}"]
+    traj_ids = [f"{trajectory_id}-{uuid.uuid4()}",
+                f"{trajectory_id}-{uuid.uuid4()}"]
 
     # Action: simple “type” into the search box with element id 16
     action_str = (

@@ -114,7 +114,8 @@ def process_multi_modal_inputs_for_minicpmo(
 
     multi_modal_inputs["pixel_values"] = [pixel_values]
     multi_modal_inputs["image_bound"] = [torch.vstack(image_bounds)]
-    multi_modal_inputs["tgt_sizes"] = [torch.vstack(multi_modal_inputs["tgt_sizes"])]
+    multi_modal_inputs["tgt_sizes"] = [
+        torch.vstack(multi_modal_inputs["tgt_sizes"])]
     multi_modal_inputs["input_ids"] = input_ids
     multi_modal_inputs["attention_mask"] = attention_mask
     multi_modal_inputs["position_ids"] = position_ids

@@ -137,7 +137,8 @@ def compute_gae_advantage_return(
     return advantages, returns
 
 
-# NOTE(sgm): this implementation only consider outcome supervision, where the reward is a scalar.
+# NOTE(sgm): this implementation only consider outcome supervision, where
+# the reward is a scalar.
 @torch.no_grad()
 def compute_grpo_outcome_advantage(
     token_level_rewards: torch.Tensor,
@@ -353,7 +354,8 @@ def compute_policy_loss(
     pg_loss2 = -advantages * clipped_ratio
     pg_loss3 = -advantages * clip_ratio_dual
 
-    clipped_pg_loss_higher = torch.max(pg_loss, pg_loss2)  # clip if pg_loss < pg_loss2
+    clipped_pg_loss_higher = torch.max(
+        pg_loss, pg_loss2)  # clip if pg_loss < pg_loss2
     pg_clipfrac_higher = (pg_loss < pg_loss2).float()
     clipped_pg_loss_lower = torch.min(
         clipped_pg_loss_higher, pg_loss3
@@ -415,8 +417,9 @@ def compute_value_loss(
 
 
 def compute_kl(
-    log_probs: torch.FloatTensor, ref_log_probs: torch.FloatTensor, kl_penalty: str
-) -> torch.Tensor:
+        log_probs: torch.FloatTensor,
+        ref_log_probs: torch.FloatTensor,
+        kl_penalty: str) -> torch.Tensor:
     """Compute KL divergence given log_probs and ref_log_probs.
 
     Adapted from https://github.com/huggingface/trl/blob/v0.11.0/trl/trainer/ppo_trainer.py#L1150

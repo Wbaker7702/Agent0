@@ -73,20 +73,20 @@ class SupportedModel(Enum):
 
 
 # Registry for model configuration converters
-MODEL_CONFIG_CONVERTER_REGISTRY: dict[
-    SupportedModel, Callable[[PretrainedConfig, torch.dtype], TransformerConfig]
-] = {
-    SupportedModel.LLAMA: hf_to_mcore_config_dense,
-    SupportedModel.QWEN2: hf_to_mcore_config_dense,
-    SupportedModel.QWEN2_MOE: hf_to_mcore_config_qwen2moe,
-    SupportedModel.DEEPSEEK_V3: hf_to_mcore_config_dpskv3,
-    SupportedModel.MIXTRAL: hf_to_mcore_config_mixtral,
-    SupportedModel.QWEN2_5_VL: hf_to_mcore_config_qwen2_5_vl,
-    SupportedModel.LLAMA4: hf_to_mcore_config_llama4,
-    SupportedModel.QWEN3: hf_to_mcore_config_dense,
-    SupportedModel.QWEN3_MOE: hf_to_mcore_config_qwen3moe,
-    SupportedModel.QWEN2_5_VL: hf_to_mcore_config_qwen2_5_vl,
-}
+MODEL_CONFIG_CONVERTER_REGISTRY: dict[SupportedModel,
+                                      Callable[[PretrainedConfig,
+                                                torch.dtype],
+                                               TransformerConfig]] = {SupportedModel.LLAMA: hf_to_mcore_config_dense,
+                                                                      SupportedModel.QWEN2: hf_to_mcore_config_dense,
+                                                                      SupportedModel.QWEN2_MOE: hf_to_mcore_config_qwen2moe,
+                                                                      SupportedModel.DEEPSEEK_V3: hf_to_mcore_config_dpskv3,
+                                                                      SupportedModel.MIXTRAL: hf_to_mcore_config_mixtral,
+                                                                      SupportedModel.QWEN2_5_VL: hf_to_mcore_config_qwen2_5_vl,
+                                                                      SupportedModel.LLAMA4: hf_to_mcore_config_llama4,
+                                                                      SupportedModel.QWEN3: hf_to_mcore_config_dense,
+                                                                      SupportedModel.QWEN3_MOE: hf_to_mcore_config_qwen3moe,
+                                                                      SupportedModel.QWEN2_5_VL: hf_to_mcore_config_qwen2_5_vl,
+                                                                      }
 
 # Registry for model initializers
 MODEL_INITIALIZER_REGISTRY: dict[SupportedModel, type[BaseModelInitializer]] = {

@@ -11,6 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from .acecoder import AceCoderRewardManager
+from .torl import ToRLRewardManager
 import os
 import time
 import json
@@ -36,17 +38,17 @@ def hash_string(s):
     return hashlib.sha256(s.encode()).hexdigest()
 
 
-from .torl import ToRLRewardManager
-from .acecoder import AceCoderRewardManager
-
-
 @register("mathcoder")
 class MathCoderRewardManager:
     def __init__(
-        self, tokenizer, num_examine, compute_score=None, reward_fn_key="data_source"
-    ) -> None:
+            self,
+            tokenizer,
+            num_examine,
+            compute_score=None,
+            reward_fn_key="data_source") -> None:
         self.tokenizer = tokenizer
-        self.num_examine = num_examine  # the number of batches of decoded responses to print to the console
+        # the number of batches of decoded responses to print to the console
+        self.num_examine = num_examine
         self.compute_score = compute_score if compute_score else _default_compute_score
         self.reward_fn_key = reward_fn_key
 
@@ -96,25 +98,25 @@ class MathCoderRewardManager:
             self.step = data.meta_info["global_step"]
 
         to_save_records = []
-        reward_tensor = torch.zeros_like(data.batch["responses"], dtype=torch.float32)
-        # reward extra info every key of it is a default len(data) list filled with None
+        reward_tensor = torch.zeros_like(
+            data.batch["responses"], dtype=torch.float32)
+        # reward extra info every key of it is a default len(data) list filled
+        # with None
         reward_extra_info = defaultdict(lambda: [None] * len(data))
         prompt_ids = data.batch["prompts"]
         prompt_length = prompt_ids.shape[-1]
         response_ids = data.batch["responses"]
         valid_prompt_length = data.batch["attention_mask"][:, :prompt_length].sum(
-            dim=-1
-        )
+            dim=-1)
         valid_response_length = data.batch["attention_mask"][:, prompt_length:].sum(
-            dim=-1
-        )
+            dim=-1)
 
         code_data_idxs = [
-            i for i in range(len(data)) if data[i].non_tensor_batch["ability"] == "code"
-        ]
+            i for i in range(
+                len(data)) if data[i].non_tensor_batch["ability"] == "code"]
         math_data_idxs = [
-            i for i in range(len(data)) if data[i].non_tensor_batch["ability"] == "math"
-        ]
+            i for i in range(
+                len(data)) if data[i].non_tensor_batch["ability"] == "math"]
         code_data = data[code_data_idxs]
         math_data = data[math_data_idxs]
         code_data.meta_info["save_record"] = False
@@ -172,7 +174,7 @@ class MathCoderRewardManager:
                     ),
                     "data_source": data_source[i],
                     "prompt": self.tokenizer.decode(
-                        prompt_ids[i][-valid_prompt_length[i].item() :],
+                        prompt_ids[i][-valid_prompt_length[i].item():],
                         skip_special_tokens=False,
                     ),
                     "response": self.tokenizer.decode(
@@ -193,15 +195,18 @@ class MathCoderRewardManager:
 
             # Save the records to a file
             if self.num_examine == 1:
-                temp_file = self.record_dir / f"mathcoder-step-val-{self.step}.json"
+                temp_file = self.record_dir / \
+                    f"mathcoder-step-val-{self.step}.json"
             else:
-                temp_file = self.record_dir / f"mathcoder-step-{self.step}.json"
+                temp_file = self.record_dir / \
+                    f"mathcoder-step-{self.step}.json"
             self.step += 1
             with open(temp_file, "w") as f:
                 json.dump(to_save_records, f, indent=4)
 
         if self.num_examine == 1:
-            # for validation, empty the reward_extra_info, becuase there are None items and cannot be mean
+            # for validation, empty the reward_extra_info, becuase there are
+            # None items and cannot be mean
             reward_extra_info = defaultdict(list)
         if return_dict:
             return {

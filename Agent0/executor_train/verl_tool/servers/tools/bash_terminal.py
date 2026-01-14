@@ -53,8 +53,14 @@ class BashTerminalTool(BaseTool):
         self.env_cache[trajectory_id] = env
 
     def update_env(
-        self, trajectory_id, env, action, is_valid, extra_field, observation, **kwargs
-    ):
+            self,
+            trajectory_id,
+            env,
+            action,
+            is_valid,
+            extra_field,
+            observation,
+            **kwargs):
         """Update the environment for the given trajectory_id"""
         env["metadata"]["turns"] += 1
         env["previous_obs"].append(
@@ -89,7 +95,8 @@ class BashTerminalTool(BaseTool):
         if trajectory_id not in self.sessions:
             # Create temp directory if it doesn't exist
             if not env.get("temp_dir"):
-                temp_dir = os.path.join(os.getcwd(), "tmp/bash", str(uuid.uuid4().hex))
+                temp_dir = os.path.join(
+                    os.getcwd(), "tmp/bash", str(uuid.uuid4().hex))
                 os.makedirs(temp_dir, exist_ok=True)
                 env["temp_dir"] = temp_dir
 
@@ -115,7 +122,8 @@ class BashTerminalTool(BaseTool):
             Tuple containing the extracted commands and a validity flag
         """
         # Try to find bash commands in various formats
-        all_valid_bash_code = re.findall(r"<bash>(.*?)</bash>", action, re.DOTALL)
+        all_valid_bash_code = re.findall(
+            r"<bash>(.*?)</bash>", action, re.DOTALL)
 
         if not all_valid_bash_code:
             all_valid_bash_code = re.findall(
@@ -131,7 +139,8 @@ class BashTerminalTool(BaseTool):
             return "", False
 
         # Combine all command blocks
-        parsed_commands = "\n".join([cmd.strip() for cmd in all_valid_bash_code])
+        parsed_commands = "\n".join([cmd.strip()
+                                    for cmd in all_valid_bash_code])
 
         return parsed_commands, True
 
@@ -156,9 +165,11 @@ class BashTerminalTool(BaseTool):
             valid = False
         else:
             # Check for forbidden commands first
-            detected_forbidden_commands = check_forbidden_commands(parsed_action)
+            detected_forbidden_commands = check_forbidden_commands(
+                parsed_action)
             if detected_forbidden_commands:
-                execution_result = f"Execution blocked: Command contains potentially dangerous operations. Forbidden commands detected: {', '.join(detected_forbidden_commands)}"
+                execution_result = f"Execution blocked: Command contains potentially dangerous operations. Forbidden commands detected: {
+                    ', '.join(detected_forbidden_commands)}"
                 observation = execution_result
                 valid = True
             else:
@@ -207,8 +218,12 @@ class BashTerminalTool(BaseTool):
             done = False
 
         self.update_env(
-            trajectory_id, env, parsed_action, is_valid, extra_field, execution_result
-        )
+            trajectory_id,
+            env,
+            parsed_action,
+            is_valid,
+            extra_field,
+            execution_result)
         self.save_env(trajectory_id, env)
 
         return observation, done, valid

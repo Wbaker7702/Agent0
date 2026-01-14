@@ -102,7 +102,8 @@ if __name__ == "__main__":
 
     full_output = []
     for _ in range(total_number):
-        output = create_prompt_response(min_length=min_length, max_length=max_length)
+        output = create_prompt_response(
+            min_length=min_length, max_length=max_length)
         full_output.append(output)
 
     # random reorder

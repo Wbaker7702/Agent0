@@ -5,8 +5,8 @@ import fire
 import logging
 
 logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 
@@ -65,7 +65,7 @@ def test_connection(
         logger.info("Test passed! ✅")
         logger.info(f"Received {len(observations)} observations:")
         for i, obs in enumerate(observations):
-            logger.info(f"  Observation {i+1}: {obs}")
+            logger.info(f"  Observation {i + 1}: {obs}")
 
         return True
 

@@ -23,7 +23,8 @@ from verl.utils.py_functional import timeout_limit as timeout
 
 # --- Test Task Functions ---
 TEST_TIMEOUT_SECONDS = 1.5  # Timeout duration for tests
-LONG_TASK_DURATION = TEST_TIMEOUT_SECONDS + 0.5  # Duration slightly longer than timeout
+LONG_TASK_DURATION = TEST_TIMEOUT_SECONDS + \
+    0.5  # Duration slightly longer than timeout
 
 
 @timeout(seconds=TEST_TIMEOUT_SECONDS)  # Keep global decorator for mp tests
@@ -85,12 +86,14 @@ def set_macos_start_method():
         # Force fork method on macOS to avoid pickling issues with globally decorated functions
         # when running tests via pytest discovery.
         current_method = multiprocessing.get_start_method(allow_none=True)
-        # Only set if not already set or if set to something else (less likely in test run)
+        # Only set if not already set or if set to something else (less likely
+        # in test run)
         if current_method is None or current_method != "fork":
             try:
                 multiprocessing.set_start_method("fork", force=True)
             except RuntimeError:
-                # Might fail if context is already started, ignore in that case.
+                # Might fail if context is already started, ignore in that
+                # case.
                 pass
 
 
@@ -114,13 +117,15 @@ def test_slow_task_timeout():  # Renamed from test_multiprocessing_slow_task_tim
 
 def test_internal_exception():  # Renamed from test_multiprocessing_internal_exception
     """Tests timeout correctly propagates internal exceptions."""
-    # Apply the default timeout decorator dynamically to the undecorated function
+    # Apply the default timeout decorator dynamically to the undecorated
+    # function
     decorated_task = timeout(seconds=TEST_TIMEOUT_SECONDS)(
         task_raises_value_error
     )  # Apply decorator dynamically
     with pytest.raises(ValueError) as excinfo:  # Use pytest.raises
         decorated_task()  # Call the dynamically decorated function
-    assert str(excinfo.value) == "Specific value error from task"  # Use pytest assert
+    # Use pytest assert
+    assert str(excinfo.value) == "Specific value error from task"
 
 
 # --- Test the signal implementation (use_signals=True) ---

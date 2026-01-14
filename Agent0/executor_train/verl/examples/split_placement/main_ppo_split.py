@@ -37,16 +37,19 @@ def _select_rm_score_fn(data_source):
 class RewardManager:
     def __init__(self, tokenizer, num_examine) -> None:
         self.tokenizer = tokenizer
-        self.num_examine = num_examine  # the number of batches of decoded responses to print to the console
+        # the number of batches of decoded responses to print to the console
+        self.num_examine = num_examine
 
     def __call__(self, data: DataProto, return_dict: bool = False):
         """We will expand this function gradually based on the available datasets"""
 
-        # If there is rm score, we directly return rm score. Otherwise, we compute via rm_score_fn
+        # If there is rm score, we directly return rm score. Otherwise, we
+        # compute via rm_score_fn
         if "rm_scores" in data.batch.keys():
             return data.batch["rm_scores"]
 
-        reward_tensor = torch.zeros_like(data.batch["responses"], dtype=torch.float32)
+        reward_tensor = torch.zeros_like(
+            data.batch["responses"], dtype=torch.float32)
 
         already_print_data_sources = {}
 
@@ -96,14 +99,17 @@ class RewardManager:
             return reward_tensor
 
 
-@hydra.main(config_path="config", config_name="ppo_trainer_split", version_base=None)
+@hydra.main(config_path="config",
+            config_name="ppo_trainer_split",
+            version_base=None)
 def main(config):
     if not ray.is_initialized():
         # this is for local ray cluster
         ray.init(
             runtime_env={
-                "env_vars": {"TOKENIZERS_PARALLELISM": "true", "NCCL_DEBUG": "WARN"}
-            },
+                "env_vars": {
+                    "TOKENIZERS_PARALLELISM": "true",
+                    "NCCL_DEBUG": "WARN"}},
             num_cpus=config.ray_init.num_cpus,
         )
 

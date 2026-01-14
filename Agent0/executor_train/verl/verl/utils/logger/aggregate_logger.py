@@ -100,7 +100,10 @@ def print_rank_0(message):
         print(message, flush=True)
 
 
-def print_with_rank(message: str, rank: int = 0, log_only_rank_0: bool = False):
+def print_with_rank(
+        message: str,
+        rank: int = 0,
+        log_only_rank_0: bool = False):
     """_summary_
     Print a message with rank information.
     This function prints the message only if `log_only_rank_0` is False or if the rank is 0.

@@ -95,8 +95,8 @@ class Gsm8kTool(BaseTool):
         reward = await self.calc_reward(instance_id)
         # penalty for non improved answer submission
         tool_reward = (
-            0.0 if reward > self._instance_dict[instance_id]["reward"] else -0.05
-        )
+            0.0 if reward > self._instance_dict[instance_id]["reward"] else -
+            0.05)
         # update the reward
         self._instance_dict[instance_id]["reward"] = reward
 

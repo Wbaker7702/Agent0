@@ -124,7 +124,8 @@ class FSDPSGLangShardingManager(BaseShardingManager):
         loop.run_until_complete(self.sleep())
 
     async def update_weights(self, params):
-        # Most naive implementation, can optimize a lot if it is bottleneck from sglang Engine weight update
+        # Most naive implementation, can optimize a lot if it is bottleneck
+        # from sglang Engine weight update
         named_tensors = [(k, v) for k, v in params.items()]
         load_format = None
         for tensor_index, (name, tensor) in enumerate(named_tensors):
@@ -133,9 +134,8 @@ class FSDPSGLangShardingManager(BaseShardingManager):
             )
 
             if self.device_mesh["infer_tp"].get_local_rank() == 0:
-                gathered_serialized_tensors = [
-                    None for _ in range(self.device_mesh["infer_tp"].mesh.size()[0])
-                ]
+                gathered_serialized_tensors = [None for _ in range(
+                    self.device_mesh["infer_tp"].mesh.size()[0])]
             else:
                 gathered_serialized_tensors = None
             dist.gather_object(
@@ -175,8 +175,8 @@ class FSDPSGLangShardingManager(BaseShardingManager):
             if self.multi_stage_wake_up:
                 await self.inference_engine.resume_memory_occupation(tags=["weights"])
                 log_gpu_memory_usage(
-                    "Before resume SGLang weights in sharding manager", logger=logger
-                )
+                    "Before resume SGLang weights in sharding manager",
+                    logger=logger)
             else:
                 await self.inference_engine.resume_memory_occupation()
                 log_gpu_memory_usage(
@@ -195,9 +195,11 @@ class FSDPSGLangShardingManager(BaseShardingManager):
         )
         device = get_device_id()  # used when fsdp2 set cpu_offload_policy
         params = {
-            k: v.to(device, non_blocking=True) if fsdp_version(self.module) == 2 else v
-            for k, v in params.items()
-        }
+            k: v.to(
+                device,
+                non_blocking=True) if fsdp_version(
+                self.module) == 2 else v for k,
+            v in params.items()}
 
         # convert weight keys to match the model config
         params = convert_weight_keys(
@@ -215,8 +217,8 @@ class FSDPSGLangShardingManager(BaseShardingManager):
             offload_fsdp_model_to_cpu(self.module)
         get_torch_device().empty_cache()
         log_gpu_memory_usage(
-            "After del state_dict and empty_cache in sharding manager", logger=logger
-        )
+            "After del state_dict and empty_cache in sharding manager",
+            logger=logger)
 
         if (
             self.multi_stage_wake_up
@@ -225,10 +227,11 @@ class FSDPSGLangShardingManager(BaseShardingManager):
         ):
             await self.inference_engine.resume_memory_occupation(tags=["kv_cache"])
             log_gpu_memory_usage(
-                "After resume SGLang kv_cache in sharding manager", logger=logger
-            )
+                "After resume SGLang kv_cache in sharding manager",
+                logger=logger)
 
-        # important: need to manually set the random states of each tp to be identical.
+        # important: need to manually set the random states of each tp to be
+        # identical.
         if self.device_mesh is not None:
             self.torch_random_states = get_torch_device().get_rng_state()
             get_torch_device().set_rng_state(self.gen_random_states)

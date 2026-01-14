@@ -68,7 +68,8 @@ class FSDPVLLMShardingManager(BaseShardingManager):
         actor_weights: Dict[str, Union[torch.Tensor, DTensor]],
         model: PreTrainedModel,
     ):
-        # convert state dict keys: https://github.com/huggingface/transformers/pull/38385
+        # convert state dict keys:
+        # https://github.com/huggingface/transformers/pull/38385
         if not hasattr(model, "_checkpoint_conversion_mapping"):
             return actor_weights
 
@@ -104,7 +105,8 @@ class FSDPVLLMShardingManager(BaseShardingManager):
         # to speed up memory allocations.
         #
         # pytorch: https://pytorch.org/docs/stable/notes/cuda.html#memory-management
-        # vllm: https://github.com/vllm-project/vllm/blob/v0.7.3/vllm/device_allocator/cumem.py#L103
+        # vllm:
+        # https://github.com/vllm-project/vllm/blob/v0.7.3/vllm/device_allocator/cumem.py#L103
         torch.cuda.empty_cache()
         print_gpu_memory_usage("Before state_dict() in sharding manager")
         actor_weights = get_model_state_dict(self.module)
@@ -113,7 +115,8 @@ class FSDPVLLMShardingManager(BaseShardingManager):
         )
         print_gpu_memory_usage("After state_dict() in sharding manager")
 
-        if "tags" in inspect.signature(self.inference_engine.wake_up).parameters:
+        if "tags" in inspect.signature(
+                self.inference_engine.wake_up).parameters:
             self.inference_engine.wake_up(tags=["weights"])
         else:
             self.inference_engine.wake_up()
@@ -127,13 +130,15 @@ class FSDPVLLMShardingManager(BaseShardingManager):
         del actor_weights
         torch.cuda.empty_cache()
 
-        if "tags" in inspect.signature(self.inference_engine.wake_up).parameters:
+        if "tags" in inspect.signature(
+                self.inference_engine.wake_up).parameters:
             self.inference_engine.wake_up(tags=["kv_cache"])
 
         print_gpu_memory_usage(
             "After del state_dict and empty_cache in sharding manager"
         )
-        # important: need to manually set the random states of each tp to be identical.
+        # important: need to manually set the random states of each tp to be
+        # identical.
         if self.device_mesh is not None:
             self.torch_random_states = torch.cuda.get_rng_state()
             torch.cuda.set_rng_state(self.gen_random_states)

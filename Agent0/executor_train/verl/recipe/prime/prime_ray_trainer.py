@@ -66,8 +66,10 @@ def compute_data_metrics(batch, use_critic=True):
 
     max_response_length = batch.batch["responses"].shape[-1]
 
-    prompt_mask = batch.batch["attention_mask"][:, :-max_response_length].bool()
-    response_mask = batch.batch["attention_mask"][:, -max_response_length:].bool()
+    prompt_mask = batch.batch["attention_mask"][:,
+                                                :-max_response_length].bool()
+    response_mask = batch.batch["attention_mask"][:, -
+                                                  max_response_length:].bool()
 
     max_prompt_length = prompt_mask.size(-1)
 
@@ -142,13 +144,13 @@ def compute_timing_metrics(batch, timing_raw):
     num_response_tokens = torch.sum(response_info["response_length"]).item()
     num_overall_tokens = num_prompt_tokens + num_response_tokens
 
-    num_tokens_of_section = {
-        "gen": num_response_tokens,
-        **{
-            name: num_overall_tokens
-            for name in ["ref", "values", "adv", "update_critic", "update_actor"]
-        },
-    }
+    num_tokens_of_section = {"gen": num_response_tokens,
+                             **{name: num_overall_tokens for name in ["ref",
+                                                                      "values",
+                                                                      "adv",
+                                                                      "update_critic",
+                                                                      "update_actor"]},
+                             }
 
     return {
         **{f"timing_s/{name}": value for name, value in timing_raw.items()},
@@ -210,18 +212,19 @@ class RayPRIMETrainer(RayPPOTrainer):
         # use sampler for better ckpt resume
         if self.config.data.shuffle:
             train_dataloader_generator = torch.Generator()
-            train_dataloader_generator.manual_seed(self.config.data.get("seed", 1))
+            train_dataloader_generator.manual_seed(
+                self.config.data.get("seed", 1))
             sampler = RandomSampler(
-                data_source=self.train_dataset, generator=train_dataloader_generator
-            )
+                data_source=self.train_dataset,
+                generator=train_dataloader_generator)
         else:
             sampler = SequentialSampler(data_source=self.train_dataset)
 
         self.train_dataloader = DataLoader(
             dataset=self.train_dataset,
             batch_size=int(
-                self.config.data.train_batch_size * self.config.data.oversample_factor
-            ),
+                self.config.data.train_batch_size *
+                self.config.data.oversample_factor),
             drop_last=True,
             collate_fn=collate_fn,
             sampler=sampler,
@@ -246,7 +249,8 @@ class RayPRIMETrainer(RayPPOTrainer):
         print(f"Size of train dataloader: {len(self.train_dataloader)}")
         print(f"Size of val dataloader: {len(self.val_dataloader)}")
 
-        # inject total_training_steps to actor/critic optim_config. This is hacky.
+        # inject total_training_steps to actor/critic optim_config. This is
+        # hacky.
         total_training_steps = (
             len(self.train_dataloader) * self.config.trainer.total_epochs
         )
@@ -267,8 +271,9 @@ class RayPRIMETrainer(RayPPOTrainer):
     def _save_checkpoint(self):
         # path: given_path + `/global_step_{global_steps}` + `/actor`
         local_global_step_folder = os.path.join(
-            self.config.trainer.default_local_dir, f"global_step_{self.global_steps}"
-        )
+            self.config.trainer.default_local_dir,
+            f"global_step_{
+                self.global_steps}")
         print(f"local_global_step_folder: {local_global_step_folder}")
         actor_local_path = os.path.join(local_global_step_folder, "actor")
 
@@ -288,7 +293,8 @@ class RayPRIMETrainer(RayPPOTrainer):
         )
 
         if self.use_rm:
-            reward_local_path = os.path.join(local_global_step_folder, "reward")
+            reward_local_path = os.path.join(
+                local_global_step_folder, "reward")
             reward_remote_path = (
                 None
                 if self.config.trainer.default_hdfs_dir is None
@@ -305,15 +311,19 @@ class RayPRIMETrainer(RayPPOTrainer):
             )
 
         # save dataloader
-        dataloader_local_path = os.path.join(local_global_step_folder, "data.pt")
+        dataloader_local_path = os.path.join(
+            local_global_step_folder, "data.pt")
         import dill
 
-        torch.save(self.train_dataloader, dataloader_local_path, pickle_module=dill)
+        torch.save(
+            self.train_dataloader,
+            dataloader_local_path,
+            pickle_module=dill)
 
         # latest checkpointed iteration tracker (for atomic usage)
         local_latest_checkpointed_iteration = os.path.join(
-            self.config.trainer.default_local_dir, "latest_checkpointed_iteration.txt"
-        )
+            self.config.trainer.default_local_dir,
+            "latest_checkpointed_iteration.txt")
         with open(local_latest_checkpointed_iteration, "w") as f:
             f.write(str(self.global_steps))
 
@@ -330,7 +340,8 @@ class RayPRIMETrainer(RayPPOTrainer):
             )  # TODO: check path
             if not os.path.isabs(checkpoint_folder):
                 working_dir = os.getcwd()
-                checkpoint_folder = os.path.join(working_dir, checkpoint_folder)
+                checkpoint_folder = os.path.join(
+                    working_dir, checkpoint_folder)
             global_step_folder = find_latest_ckpt_path(
                 checkpoint_folder
             )  # None if no latest
@@ -351,7 +362,8 @@ class RayPRIMETrainer(RayPPOTrainer):
                 global_step_folder = self.config.trainer.resume_from_path
                 if not os.path.isabs(global_step_folder):
                     working_dir = os.getcwd()
-                    global_step_folder = os.path.join(working_dir, global_step_folder)
+                    global_step_folder = os.path.join(
+                        working_dir, global_step_folder)
         print(f"Load from checkpoint folder: {global_step_folder}")
         # set global step
         self.global_steps = int(global_step_folder.split("global_step_")[-1])
@@ -437,8 +449,7 @@ class RayPRIMETrainer(RayPPOTrainer):
                     # generate a batch
                     with simple_timer("gen", timing_raw):
                         gen_batch_output = self.actor_rollout_wg.generate_sequences(
-                            gen_batch
-                        )
+                            gen_batch)
                         timing_raw.update(gen_batch_output.meta_info["timing"])
                         gen_batch_output.meta_info.pop("timing", None)
 
@@ -454,9 +465,12 @@ class RayPRIMETrainer(RayPPOTrainer):
 
                             batch = batch.union(gen_baseline_output)
                             reward_baseline_tensor = self.reward_fn(batch)
-                            reward_baseline_tensor = reward_baseline_tensor.sum(dim=-1)
+                            reward_baseline_tensor = reward_baseline_tensor.sum(
+                                dim=-1)
 
-                            batch.pop(batch_keys=list(gen_baseline_output.batch.keys()))
+                            batch.pop(
+                                batch_keys=list(
+                                    gen_baseline_output.batch.keys()))
 
                             batch.batch["reward_baselines"] = reward_baseline_tensor
 
@@ -492,7 +506,8 @@ class RayPRIMETrainer(RayPPOTrainer):
                         metrics["acc"] = statistics.mean(scores)
 
                     # filter the batch. 1/oversample_factor samples will be kept.
-                    # If there is a filter, prompts passing it will be prioritized.
+                    # If there is a filter, prompts passing it will be
+                    # prioritized.
 
                     batch = self.filter_and_downsample(scores, batch)
                     batch.meta_info["n"] = self.config.actor_rollout_ref.rollout.n
@@ -500,7 +515,8 @@ class RayPRIMETrainer(RayPPOTrainer):
 
                     # recompute old_log_probs
                     with simple_timer("old_log_prob", timing_raw):
-                        old_log_prob = self.actor_rollout_wg.compute_log_prob(batch)
+                        old_log_prob = self.actor_rollout_wg.compute_log_prob(
+                            batch)
                         entropys = old_log_prob.batch["entropys"]
                         response_masks = compute_response_mask(batch)
                         loss_agg_mode = (
@@ -522,8 +538,7 @@ class RayPRIMETrainer(RayPPOTrainer):
                         # compute reference log_prob
                         with simple_timer("ref", timing_raw):
                             ref_log_prob = self.ref_policy_wg.compute_ref_log_prob(
-                                batch
-                            )
+                                batch)
                             batch = batch.union(ref_log_prob)
 
                     with simple_timer("adv", timing_raw):
@@ -532,7 +547,8 @@ class RayPRIMETrainer(RayPPOTrainer):
                                 "update", "none"
                             )
                             if update_style == "none":  # only run forward
-                                reward_output = self.rm_wg.compute_rm_score(batch)
+                                reward_output = self.rm_wg.compute_rm_score(
+                                    batch)
                             elif (
                                 update_style == "after"
                             ):  # update and directly return the reward
@@ -547,11 +563,13 @@ class RayPRIMETrainer(RayPPOTrainer):
                                     )
                                     metrics.update(reward_output_metrics)
 
-                                reward_output = self.rm_wg.compute_rm_score(batch)
+                                reward_output = self.rm_wg.compute_rm_score(
+                                    batch)
                             elif (
                                 update_style == "reverse"
                             ):  # run forward to calculate statistics, then update reward model
-                                reward_output = self.rm_wg.compute_rm_score(batch)
+                                reward_output = self.rm_wg.compute_rm_score(
+                                    batch)
                                 # broadcast q and acc tensor to each result
                                 bc_td = DataProto.from_dict(
                                     tensors={
@@ -588,7 +606,8 @@ class RayPRIMETrainer(RayPPOTrainer):
 
                     # update actor
                     with simple_timer("update_actor", timing_raw):
-                        actor_output = self.actor_rollout_wg.update_actor(batch)
+                        actor_output = self.actor_rollout_wg.update_actor(
+                            batch)
                     actor_output_metrics = reduce_metrics(
                         actor_output.meta_info["metrics"]
                     )
@@ -604,17 +623,16 @@ class RayPRIMETrainer(RayPPOTrainer):
                             val_metrics: dict = self._validate()
                         metrics.update(val_metrics)
 
-                    if (
-                        self.config.trainer.save_freq > 0
-                        and self.global_steps % self.config.trainer.save_freq == 0
-                    ):
+                    if (self.config.trainer.save_freq > 0 and self.global_steps %
+                            self.config.trainer.save_freq == 0):
                         with simple_timer("save_checkpoint", timing_raw):
                             self._save_checkpoint()
 
                 # collect metrics
                 metrics.update(
-                    compute_data_metrics(batch=batch, use_critic=self.use_critic)
-                )
+                    compute_data_metrics(
+                        batch=batch,
+                        use_critic=self.use_critic))
                 metrics.update(
                     compute_timing_metrics(batch=batch, timing_raw=timing_raw)
                 )
@@ -630,10 +648,8 @@ class RayPRIMETrainer(RayPPOTrainer):
                         val_metrics = self._validate()
                         pprint(f"Final validation metrics: {val_metrics}")
                         logger.log(data=val_metrics, step=self.global_steps)
-                    if (
-                        self.config.trainer.save_freq > 0
-                        and (self.global_steps - 1) % self.config.trainer.save_freq != 0
-                    ):
+                    if (self.config.trainer.save_freq > 0 and (
+                            self.global_steps - 1) % self.config.trainer.save_freq != 0):
                         with simple_timer("save_checkpoint", timing_raw):
                             self._save_checkpoint()
                     return
@@ -657,14 +673,13 @@ class RayPRIMETrainer(RayPPOTrainer):
 
         if self.config.data.filter_truncate:
             length_matrix = (
-                batch.batch["attention_mask"][:, -batch.batch["responses"].shape[-1] :]
+                batch.batch["attention_mask"][:, -batch.batch["responses"].shape[-1]:]
                 .sum(dim=-1)
                 .reshape(-1, n_samples)
             )
             length_tensor = torch.max(length_matrix, dim=-1)[0]
-            filter_mask[length_tensor >= self.config.data.max_response_length - 1] = (
-                False
-            )
+            filter_mask[length_tensor >=
+                        self.config.data.max_response_length - 1] = (False)
 
         reorder_index = torch.argsort(filter_mask, descending=True)
         reorder_index = (

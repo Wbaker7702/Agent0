@@ -77,7 +77,8 @@ class TestAsyncSglangServer:
                 if key == "name":
                     return name  # Use 'name' here
                 # For other keys, return a new MagicMock to mimic default behavior or raise KeyError
-                # Returning a MagicMock is consistent with the original error's cause for unmocked keys
+                # Returning a MagicMock is consistent with the original error's
+                # cause for unmocked keys
                 return MagicMock(name=f"mock.__getitem__('{key}')")
 
             actor_mock.__getitem__.side_effect = getitem_mock
@@ -90,7 +91,8 @@ class TestAsyncSglangServer:
             side_effect=mock_get_actor_side_effect,
         ):
             # Instance 1
-            instance = ActualClassToInstantiate(server_config, 4, 0, "test_prefix")
+            instance = ActualClassToInstantiate(
+                server_config, 4, 0, "test_prefix")
             await instance.init_engine()
 
             assert len(instance.workers) == 2
@@ -99,7 +101,8 @@ class TestAsyncSglangServer:
             assert instance.workers[1].name == "test_prefixWorkerDict_0:1"
 
             # Instance 2
-            instance = ActualClassToInstantiate(server_config, 4, 1, "test_prefix")
+            instance = ActualClassToInstantiate(
+                server_config, 4, 1, "test_prefix")
             await instance.init_engine()
 
             assert len(instance.workers) == 2
@@ -108,7 +111,8 @@ class TestAsyncSglangServer:
             assert instance.workers[1].name == "test_prefixWorkerDict_0:3"
 
             # Instance 3
-            instance = ActualClassToInstantiate(server_config, 4, 3, "test_prefix")
+            instance = ActualClassToInstantiate(
+                server_config, 4, 3, "test_prefix")
             await instance.init_engine()
 
             assert len(instance.workers) == 2

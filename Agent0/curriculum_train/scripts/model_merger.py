@@ -48,14 +48,19 @@ def upload_model_to_huggingface(local_path: str, remote_path: str):
 
     api = HfApi()
     api.create_repo(repo_id=remote_path, private=False, exist_ok=True)
-    api.upload_folder(repo_id=remote_path, folder_path=local_path, repo_type="model")
+    api.upload_folder(
+        repo_id=remote_path,
+        folder_path=local_path,
+        repo_type="model")
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--local_dir", required=True, type=str, help="The path for your saved model"
-    )
+        "--local_dir",
+        required=True,
+        type=str,
+        help="The path for your saved model")
     parser.add_argument(
         "--hf_upload_path",
         default=False,
@@ -83,7 +88,10 @@ if __name__ == "__main__":
     rank0_weight_path = os.path.join(
         local_dir, f"model_world_size_{world_size}_rank_{rank}.pt"
     )
-    state_dict = torch.load(rank0_weight_path, map_location="cpu", weights_only=False)
+    state_dict = torch.load(
+        rank0_weight_path,
+        map_location="cpu",
+        weights_only=False)
     pivot_key = sorted(state_dict.keys())[0]
     weight = state_dict[pivot_key]
     if isinstance(weight, DTensor):
@@ -121,7 +129,10 @@ if __name__ == "__main__":
         model_path = os.path.join(
             local_dir, f"model_world_size_{world_size}_rank_{rank}.pt"
         )
-        state_dict = torch.load(model_path, map_location="cpu", weights_only=False)
+        state_dict = torch.load(
+            model_path,
+            map_location="cpu",
+            weights_only=False)
         model_state_dict_lst[rank] = state_dict
         return state_dict
 

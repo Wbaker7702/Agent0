@@ -70,7 +70,7 @@ def mathd_normalize_answer(answer: Optional[str]) -> Optional[str]:
     answer = answer.strip()
     try:
         # Remove enclosing `\text{}`.
-        m = re.search("^\\\\text\{(?P<text>.+?)\}$", answer)
+        m = re.search("^\\\\text\\{(?P<text>.+?)\\}$", answer)
         if m is not None:
             answer = m.group("text").strip()
         return _strip_string(answer)
@@ -328,8 +328,14 @@ def _strip_string(string):
     for _ in range(2):
         for unit_text in unit_texts:
             # use regex, the prefix should be either the start of the string or a non-alphanumeric character
-            # the suffix should be either the end of the string or a non-alphanumeric character
-            _string = re.sub(r"(^|\W)" + unit_text + r"($|\W)", r"\1\2", string)
+            # the suffix should be either the end of the string or a
+            # non-alphanumeric character
+            _string = re.sub(
+                r"(^|\W)" +
+                unit_text +
+                r"($|\W)",
+                r"\1\2",
+                string)
             if _string != "":
                 string = _string
 
@@ -345,7 +351,7 @@ def _strip_string(string):
 
     # remove percentage
     string = string.replace("\\%", "")
-    string = string.replace("\%", "")
+    string = string.replace("\\%", "")
 
     # " 0." equivalent to " ." and "{0." equivalent to "{." Alternatively, add "0" if "." is the start of the string
     string = string.replace(" .", " 0.")
@@ -375,7 +381,8 @@ def _strip_string(string):
     if string == "0.5":
         string = "\\frac{1}{2}"
 
-    # NOTE: X/Y changed to \frac{X}{Y} in dataset, but in simple cases fix in case the model output is X/Y
+    # NOTE: X/Y changed to \frac{X}{Y} in dataset, but in simple cases fix in
+    # case the model output is X/Y
     string = _fix_a_slash_b(string)
 
     return string
@@ -487,7 +494,16 @@ def repeatness(s: str):
         line = ranks(s)
         n, k, ans, sa = len(s), 1, line, [0] * len(s)
         while k < n - 1:
-            line = ranks(list(zip_longest(line, islice(line, k, None), fillvalue=-1)))
+            line = ranks(
+                list(
+                    zip_longest(
+                        line,
+                        islice(
+                            line,
+                            k,
+                            None),
+                        fillvalue=-
+                        1)))
             ans, k = line, k << 1
         for i, k in enumerate(ans):
             sa[k] = i
@@ -620,7 +636,8 @@ def _is_latex_equal(str1, str2):
             raise ValueError
     except Exception:  # noqa
         try:
-            norm1, norm2 = normalize_final_answer(str1), normalize_final_answer(str2)
+            norm1, norm2 = normalize_final_answer(
+                str1), normalize_final_answer(str2)
             sym1, val1 = latex_eval(norm1)
             sym2, val2 = latex_eval(norm2)
             if sym1 == sym2 or val1 == val2:
@@ -700,7 +717,7 @@ def is_value_equal(given_answer: str, ground_truth: str) -> bool:
 
 # sympy might hang -- we don't care about trying to be lenient in these cases
 BAD_SUBSTRINGS = ["^{", "^("]
-BAD_REGEXES = ["\^[0-9]+\^", "\^[0-9][0-9]+"]
+BAD_REGEXES = ["\\^[0-9]+\\^", "\\^[0-9][0-9]+"]
 TUPLE_CHARS = "()[]"
 
 
@@ -774,13 +791,13 @@ def _inject_implicit_mixed_number(step: str):
     e.g. 7 3/4 => 7+3/4
     """
     p1 = re.compile("([0-9]) +([0-9])")
-    step = p1.sub("\\1+\\2", step)  ## implicit mults
+    step = p1.sub("\\1+\\2", step)  # implicit mults
     return step
 
 
 def _strip_properly_formatted_commas(expr: str):
     # We want to be careful because we don't want to strip tuple commas
-    p1 = re.compile("(\d)(,)(\d\d\d)($|\D)")
+    p1 = re.compile("(\\d)(,)(\\d\\d\\d)($|\\D)")
     while True:
         next_expr = p1.sub("\\1\\3\\4", expr)
         if next_expr == expr:
@@ -795,7 +812,7 @@ def _normalize(expr: str) -> str:
         return None
 
     # Remove enclosing `\text{}`.
-    m = re.search("^\\\\text\{(?P<text>.+?)\}$", expr)
+    m = re.search("^\\\\text\\{(?P<text>.+?)\\}$", expr)
     if m is not None:
         expr = m.group("text")
 
@@ -828,8 +845,8 @@ def _normalize(expr: str) -> str:
         "inch",
         "yard",
     ]:
-        expr = re.sub(f"{unit}(es)?(s)? *(\^[0-9]+)?", "", expr)
-    expr = re.sub("\^ *\\\\circ", "", expr)
+        expr = re.sub(f"{unit}(es)?(s)? *(\\^[0-9]+)?", "", expr)
+    expr = re.sub("\\^ *\\\\circ", "", expr)
 
     if len(expr) > 0 and expr[0] == "{" and expr[-1] == "}":
         expr = expr[1:-1]
@@ -870,7 +887,8 @@ def count_unknown_letters_in_expr(expr: str):
 
 
 def should_allow_eval(expr: str):
-    # we don't want to try parsing unknown text or functions of more than two variables
+    # we don't want to try parsing unknown text or functions of more than two
+    # variables
     if count_unknown_letters_in_expr(expr) > 2:
         return False
 
@@ -941,7 +959,7 @@ def last_boxed_only_string(string):
     if right_brace_idx is None:
         retval = None
     else:
-        retval = string[idx : right_brace_idx + 1]
+        retval = string[idx: right_brace_idx + 1]
 
     return retval
 
@@ -951,7 +969,7 @@ def remove_boxed(s):
     try:
         assert s[: len(left)] == left
         assert s[-1] == "}"
-        return s[len(left) : -1]
+        return s[len(left): -1]
     except Exception:
         return None
 
@@ -999,7 +1017,8 @@ def grade_answer_sympy(given_answer: str, ground_truth: str) -> bool:
                 # (no sympy.simplify)
                 is_correct = False
             else:
-                is_correct = are_equal_under_sympy(ground_truth_elem, given_elem)
+                is_correct = are_equal_under_sympy(
+                    ground_truth_elem, given_elem)
             if not is_correct:
                 break
 
@@ -1025,9 +1044,9 @@ def extract_answer(passage: str) -> str:
 def grade(model_answer: str, gt_answer: str, fast: bool = True):
     if "\\boxed" in gt_answer:
         gt_answer = extract_answer(gt_answer)
-    correct = grade_answer_mathd(model_answer, gt_answer) or grade_answer_sympy(
-        model_answer, gt_answer
-    )
+    correct = grade_answer_mathd(
+        model_answer, gt_answer) or grade_answer_sympy(
+        model_answer, gt_answer)
     if not fast:
         # This mode further uses math_verify to recall originally false positives.
         # Will be a bit slower, and sensitive to bad inputs.

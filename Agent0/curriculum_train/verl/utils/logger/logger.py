@@ -110,7 +110,10 @@ class TensorBoardLogger(Logger):
             else:
                 config_dict[key] = str(value)
 
-        self.writer.add_hparams(hparam_dict=config_dict, metric_dict={"placeholder": 0})
+        self.writer.add_hparams(
+            hparam_dict=config_dict,
+            metric_dict={
+                "placeholder": 0})
 
     def log(self, data: Dict[str, Any], step: int) -> None:
         for key, value in data.items():

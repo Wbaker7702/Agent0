@@ -1,3 +1,4 @@
+import concurrent.futures
 from .base import BaseTool, register_tool
 import regex as re
 import subprocess
@@ -12,8 +13,6 @@ from .utils.sql_executor import sql_observation
 
 # Timeout for code execution in seconds
 TIMEOUT = 5
-
-import concurrent.futures
 
 
 def run_with_timeout(func, args=(), kwargs=None, timeout=None):
@@ -46,7 +45,8 @@ class SqlTool(BaseTool):
     def get_usage_inst(self):
         return "You can execute SQL queries using <sql>...</sql> tags for intermediate verification or <solution>...</solution> tags for final answers."
 
-    def parse_action(self, action: str, tag_type: str = "sql") -> Tuple[str, bool]:
+    def parse_action(self, action: str,
+                     tag_type: str = "sql") -> Tuple[str, bool]:
         """
         Parse the raw action string to extract SQL code from either <sql></sql> or <solution></solution> tags.
 
@@ -69,13 +69,14 @@ class SqlTool(BaseTool):
             return "", False
 
         # Find the corresponding end tag after the start tag
-        sql_code_end_idx = action.find(end_tag, sql_code_start_idx + len(start_tag))
+        sql_code_end_idx = action.find(
+            end_tag, sql_code_start_idx + len(start_tag))
         if sql_code_end_idx == -1:
             return "", False
 
         # Extract the content between the tags
         sql_code = action[
-            sql_code_start_idx + len(start_tag) : sql_code_end_idx
+            sql_code_start_idx + len(start_tag): sql_code_end_idx
         ].strip()
         return sql_code, True
 
@@ -92,7 +93,8 @@ class SqlTool(BaseTool):
             Tuple containing observation, done flag, and validity flag
         """
 
-        # first try to parse the code as if from <sql></sql> tags (intermediate interaction)
+        # first try to parse the code as if from <sql></sql> tags (intermediate
+        # interaction)
         parsed_action, is_valid = self.parse_action(action, "sql")
         env = self.load_env(trajectory_id)
 
@@ -110,10 +112,12 @@ class SqlTool(BaseTool):
         # print("="*100)
 
         if not is_valid:
-            # if not valid, try to parse the code as if from <solution></solution> tags (final answer)
+            # if not valid, try to parse the code as if from
+            # <solution></solution> tags (final answer)
             parsed_action, is_valid = self.parse_action(action, "solution")
 
-            # case: it IS the final answer, mark the trajectory as done and leave it to to the reward manager
+            # case: it IS the final answer, mark the trajectory as done and
+            # leave it to to the reward manager
             if is_valid:
                 observation = ""
                 execution_result = ""
@@ -130,10 +134,13 @@ class SqlTool(BaseTool):
             try:
                 # Extract database information from extra_field
                 db_id = extra_field.get("db_id", None) if extra_field else None
-                db_path = extra_field.get("db_path", None) if extra_field else None
-                gold_sql = extra_field.get("gt_sql", None) if extra_field else None
+                db_path = extra_field.get(
+                    "db_path", None) if extra_field else None
+                gold_sql = extra_field.get(
+                    "gt_sql", None) if extra_field else None
 
-                # assemble the meta information to call the sql executor (score function)
+                # assemble the meta information to call the sql executor (score
+                # function)
                 meta = {
                     "db_id": db_id,
                     "gold_sql": gold_sql,
@@ -153,7 +160,8 @@ class SqlTool(BaseTool):
                 # else:
                 #     observation = f"Execution Result:\n{execution_result}"
 
-                # Only mark as done if this is a final solution submission and it's correct
+                # Only mark as done if this is a final solution submission and
+                # it's correct
                 done = False  # we use <sql></sql> here so this must be intermediate
                 valid = True
             except Exception as e:
@@ -173,8 +181,12 @@ class SqlTool(BaseTool):
         obs = f"\n\n<observation>{observation}\n{reminder_text}</observation>\n\n"
 
         self.update_env(
-            trajectory_id, env, parsed_action, is_valid, extra_field, observation
-        )
+            trajectory_id,
+            env,
+            parsed_action,
+            is_valid,
+            extra_field,
+            observation)
         self.save_env(trajectory_id, env)
 
         obs = {

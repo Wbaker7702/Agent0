@@ -80,26 +80,29 @@ class DynamicGenDataset(RLHFDataset):
     ):
         super().__init__(data_files, tokenizer, config, processor)
         self.datagen: AbstractDataGenerator = config.datagen
-        assert (
-            "datagen" in config and config.datagen.get("path", None) is not None
-        ), f"datagen path is not set in config: {config}"
+        assert ("datagen" in config and config.datagen.get("path", None)
+                is not None), f"datagen path is not set in config: {config}"
         # Dynamically load the custom datagen class
-        datagen_cls = load_extern_type(config.datagen.path, config.datagen.name)
+        datagen_cls = load_extern_type(
+            config.datagen.path, config.datagen.name)
 
-        # Verify that the custom datagen class inherits from AbstractDataGenerator
+        # Verify that the custom datagen class inherits from
+        # AbstractDataGenerator
         abs_cls = AbstractDataGenerator
         if not issubclass(datagen_cls, abs_cls):
             raise TypeError(
-                f"The custom datagen class '{config.datagen.name}' from '{config.datagen.path}'"
-                + " must inherit from {abs_cls}"
-            )
+                f"The custom datagen class '{
+                    config.datagen.name}' from '{
+                    config.datagen.path}'" +
+                " must inherit from {abs_cls}")
 
         self.data_generator = datagen_cls(config.datagen)
         self.on_batch_end()
 
     def append_dataframe(self, new_dataframe: datasets.Dataset):
         new_dataframe = self.maybe_filter_out_long_prompts(new_dataframe)
-        self.dataframe = datasets.concatenate_datasets([self.dataframe, new_dataframe])
+        self.dataframe = datasets.concatenate_datasets(
+            [self.dataframe, new_dataframe])
 
         logger.info(f"new dataset len: {len(self.dataframe)}")
 

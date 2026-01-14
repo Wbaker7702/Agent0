@@ -47,7 +47,7 @@ def normalize_answer(answer: Optional[str]) -> Optional[str]:
     answer = answer.strip()
     try:
         # Remove enclosing `\text{}`.
-        m = re.search("^\\\\text\{(?P<text>.+?)\}$", answer)
+        m = re.search("^\\\\text\\{(?P<text>.+?)\\}$", answer)
         if m is not None:
             answer = m.group("text").strip()
         return _strip_string(answer)
@@ -157,7 +157,7 @@ def _strip_string(string):
 
     # remove percentage
     string = string.replace("\\%", "")
-    string = string.replace("\%", "")
+    string = string.replace("\\%", "")
 
     # " 0." equivalent to " ." and "{0." equivalent to "{." Alternatively, add "0" if "." is the start of the string
     string = string.replace(" .", " 0.")
@@ -186,7 +186,8 @@ def _strip_string(string):
     if string == "0.5":
         string = "\\frac{1}{2}"
 
-    # NOTE: X/Y changed to \frac{X}{Y} in dataset, but in simple cases fix in case the model output is X/Y
+    # NOTE: X/Y changed to \frac{X}{Y} in dataset, but in simple cases fix in
+    # case the model output is X/Y
     string = _fix_a_slash_b(string)
 
     return string

@@ -47,7 +47,8 @@ def apply_rotary_pos_emb_flashatt_npu(
 
 # This api can improve performance on ASCEND NPU
 def rms_norm_forward(self, x):
-    return torch_npu.npu_rms_norm(x, self.weight, epsilon=self.variance_epsilon)[0]
+    return torch_npu.npu_rms_norm(
+        x, self.weight, epsilon=self.variance_epsilon)[0]
 
 
 Qwen2RMSNorm.forward = rms_norm_forward

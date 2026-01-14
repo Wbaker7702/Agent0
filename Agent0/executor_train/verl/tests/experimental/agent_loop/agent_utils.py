@@ -22,8 +22,9 @@ from verl.trainer.ppo.ray_trainer import ResourcePoolManager, Role
 from verl.workers.fsdp_workers import ActorRolloutRefWorker, AsyncActorRolloutRefWorker
 
 
-def init_agent_loop_manager(config: DictConfig) -> AgentLoopManager | RayWorkerGroup:
-    # =========================== 1. Create hybrid ActorRollout workers ===========================
+def init_agent_loop_manager(
+        config: DictConfig) -> AgentLoopManager | RayWorkerGroup:
+    # =========================== 1. Create hybrid ActorRollout workers ======
     actor_rollout_cls = (
         AsyncActorRolloutRefWorker
         if config.actor_rollout_ref.rollout.mode == "async"
@@ -34,7 +35,9 @@ def init_agent_loop_manager(config: DictConfig) -> AgentLoopManager | RayWorkerG
     }
     global_pool_id = "global_pool"
     resource_pool_spec = {
-        global_pool_id: [config.trainer.n_gpus_per_node] * config.trainer.nnodes,
+        global_pool_id: [
+            config.trainer.n_gpus_per_node] *
+        config.trainer.nnodes,
     }
     mapping = {
         Role.ActorRollout: global_pool_id,
@@ -70,7 +73,7 @@ def init_agent_loop_manager(config: DictConfig) -> AgentLoopManager | RayWorkerG
     if config.actor_rollout_ref.rollout.mode == "sync":
         return actor_rollout_wg
 
-    # =========================== 2. Create AgentLoopManager ===========================
+    # =========================== 2. Create AgentLoopManager =================
     agent_loop_manager = AgentLoopManager(
         config=config,
         worker_group=actor_rollout_wg,

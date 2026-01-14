@@ -50,7 +50,7 @@ logger.setLevel(os.getenv("VERL_LOGGING_LEVEL", "WARN"))
 """
 Megatron Hybrid Engine:
 - During training, only the current pp stage holds the parameters
-- Before inference, broadcast the parameters of the current pp rank 
+- Before inference, broadcast the parameters of the current pp rank
    to all other pp ranks (all pp ranks holds all the parameters)
 - Bind the parameters to the inference engine
 - Do inference in tp. pp is treated as additional dp
@@ -101,7 +101,8 @@ class MegatronVLLMShardingManager(BaseShardingManager):
         self.inference_engine = inference_engine
         self.offload_param = offload_param
 
-        # For AsyncLLM, inference_engine and model_runner are defer initialized in vLLMAsyncRollout.load_model
+        # For AsyncLLM, inference_engine and model_runner are defer initialized
+        # in vLLMAsyncRollout.load_model
         self.model_runner = (
             self.inference_engine.llm_engine.model_executor.driver_worker.worker.model_runner
             if self.inference_engine
@@ -158,15 +159,14 @@ class MegatronVLLMShardingManager(BaseShardingManager):
                 load_megatron_model_to_gpu(self.actor_module)
 
             if self.rollout_config.free_cache_engine:
-                if (
-                    "tags"
-                    in inspect.signature(self.inference_engine.wake_up).parameters
-                ):
+                if ("tags" in inspect.signature(
+                        self.inference_engine.wake_up).parameters):
                     self.inference_engine.wake_up(tags=["weights"])
                 else:
                     self.inference_engine.wake_up()
             if self.bridge is not None:
-                per_tensor_param = self.bridge.export_weights(self.actor_module)
+                per_tensor_param = self.bridge.export_weights(
+                    self.actor_module)
             else:
                 per_tensor_param = per_tensor_generator(
                     self.actor_module,
@@ -192,7 +192,8 @@ class MegatronVLLMShardingManager(BaseShardingManager):
             ):
                 self.inference_engine.wake_up(tags=["kv_cache"])
 
-            # important: need to manually set the random states of each tp to be identical.
+            # important: need to manually set the random states of each tp to
+            # be identical.
             if self.device_mesh is not None:
                 self.torch_random_states = get_torch_device().get_rng_state()
                 get_torch_device().set_rng_state(self.gen_random_states)

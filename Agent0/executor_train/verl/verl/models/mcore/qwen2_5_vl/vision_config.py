@@ -24,7 +24,8 @@ def get_vision_model_config(config: TransformerConfig) -> TransformerConfig:
     # diff: out_hidden_size & intermediate_size
 
     # mlp: hidden_size -> intermediate_size -> embed_dim, silu
-    # NOTE: here we provide a workaround to solve the wrong layer amount when VPP of decoder is on
+    # NOTE: here we provide a workaround to solve the wrong layer amount when
+    # VPP of decoder is on
     if config.num_layers in [28, 36]:
         config.ffn_hidden_size = 3420
     else:

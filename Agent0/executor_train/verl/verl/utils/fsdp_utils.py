@@ -65,10 +65,12 @@ def init_fn(x: torch.nn.Module):
     return x
 
 
-def get_init_weight_context_manager(use_meta_tensor=True, mesh: DeviceMesh = None):
+def get_init_weight_context_manager(
+        use_meta_tensor=True,
+        mesh: DeviceMesh = None):
     from accelerate import init_empty_weights
 
-    cpu_init_weights = lambda: torch.device("cpu")
+    def cpu_init_weights(): return torch.device("cpu")
     if use_meta_tensor:
         if mesh is None:
             init_context = (
@@ -88,7 +90,8 @@ def get_init_weight_context_manager(use_meta_tensor=True, mesh: DeviceMesh = Non
 
 
 # Copyright 2020-present the HuggingFace Inc. team.
-# Adapted from https://github.com/huggingface/transformers/src/transformers/trainer.py
+# Adapted from
+# https://github.com/huggingface/transformers/src/transformers/trainer.py
 def get_fsdp_wrap_policy(module, config=None, is_lora=False):
     """Get FSDP wrap policy for the module.
 
@@ -111,7 +114,8 @@ def get_fsdp_wrap_policy(module, config=None, is_lora=False):
     if _get_attr("disable", False):
         return None
 
-    default_transformer_cls_names_to_wrap = getattr(module, "_no_split_modules", None)
+    default_transformer_cls_names_to_wrap = getattr(
+        module, "_no_split_modules", None)
     fsdp_transformer_layer_cls_to_wrap = _get_attr(
         "transformer_layer_cls_to_wrap", default_transformer_cls_names_to_wrap
     )
@@ -318,16 +322,16 @@ def parallel_load_safetensors(filepath):
         assert os.path.exists(param_file), f"Cannot find {param_file}"
         states = load_file(param_file)
         for param_name in states:
-            safetensors2param.setdefault("model.safetensors", []).append(param_name)
+            safetensors2param.setdefault(
+                "model.safetensors", []).append(param_name)
         del states
 
     total_files = len(safetensors2param)
     ckpt_chunks = sorted(safetensors2param.keys())
     world_size = dist.get_world_size()
     size = int(math.ceil(total_files / world_size))
-    ckpt_chunks = [
-        ckpt_chunks[rank * size : rank * size + size] for rank in range(world_size)
-    ]
+    ckpt_chunks = [ckpt_chunks[rank * size: rank * size + size]
+                   for rank in range(world_size)]
 
     shard_states = {}
     device = get_device_id()
@@ -394,16 +398,16 @@ def parallel_init_module_fn(
         return param
 
     def init_fn(sub_mod: torch.nn.Module, recurse: bool = True):
-        param_and_buffers = tuple(sub_mod.named_parameters(recurse=False)) + tuple(
-            sub_mod.named_buffers(recurse=False)
-        )
+        param_and_buffers = tuple(sub_mod.named_parameters(
+            recurse=False)) + tuple(sub_mod.named_buffers(recurse=False))
         # param_and_buffers = sorted(sub_mod.named_parameters(recurse=False), key=lambda x: x[0])
         for name, state in param_and_buffers:
             if not state.is_meta:
                 continue
             is_param = name in sub_mod._parameters
             fqn = state2fqn[state].pop(0)
-            # non-persistent buffers will not be saved in state dict, we can safely skip it
+            # non-persistent buffers will not be saved in state dict, we can
+            # safely skip it
             if (not is_param) and fqn not in shard_states:
                 if state.is_meta:
                     raise RuntimeError(
@@ -456,8 +460,9 @@ def get_fsdp_state_ctx(model, state_type, state_cfg, optim_cfg):
 
 
 def get_fsdp_full_state_dict(
-    model: torch.nn.Module, offload_to_cpu: bool = True, rank0_only: bool = True
-):
+        model: torch.nn.Module,
+        offload_to_cpu: bool = True,
+        rank0_only: bool = True):
     """
     Get the full state dict from an FSDP model.
 
@@ -504,8 +509,10 @@ def get_fsdp_full_state_dict(
 
 
 def fsdp2_load_full_state_dict(
-    model: torch.nn.Module, full_state: dict, device_mesh=None, cpu_offload=None
-):
+        model: torch.nn.Module,
+        full_state: dict,
+        device_mesh=None,
+        cpu_offload=None):
     """
     Loads the full state dict (could be only on rank 0) into the sharded model. This is done by broadcasting the
     parameters from rank 0 to all other ranks. This function modifies the model in-place.
@@ -527,8 +534,9 @@ def fsdp2_load_full_state_dict(
 
     cpu_offload = cpu_offload is not None
     options = StateDictOptions(
-        full_state_dict=True, cpu_offload=cpu_offload, broadcast_from_rank0=True
-    )
+        full_state_dict=True,
+        cpu_offload=cpu_offload,
+        broadcast_from_rank0=True)
     set_model_state_dict(model, full_state, options=options)
 
     # rotary_emb is not in state_dict, so we need to broadcast it manually
@@ -547,13 +555,15 @@ def apply_fsdp2(model, fsdp_kwargs, config):
         CPUOffloadPolicy is not None
     ), "PyTorch version >= 2.4 is required for using fully_shard API (FSDP2)"
 
-    default_transformer_cls_names_to_wrap = getattr(model, "_no_split_modules", None)
+    default_transformer_cls_names_to_wrap = getattr(
+        model, "_no_split_modules", None)
     fsdp_transformer_layer_cls_to_wrap = config.get("wrap_policy", {}).get(
         "transformer_layer_cls_to_wrap", default_transformer_cls_names_to_wrap
     )
 
     if isinstance(fsdp_transformer_layer_cls_to_wrap, str):
-        fsdp_transformer_layer_cls_to_wrap = [fsdp_transformer_layer_cls_to_wrap]
+        fsdp_transformer_layer_cls_to_wrap = [
+            fsdp_transformer_layer_cls_to_wrap]
 
     assert (
         len(fsdp_transformer_layer_cls_to_wrap) > 0
@@ -597,7 +607,7 @@ def layered_summon_lora_params(fsdp_module) -> OrderedDict:
 
     def __prefix_submodules(module, prefix):
         for name, submodule in module.named_modules():
-            if name.startswith(prefix) and "." not in name[len(prefix) :]:
+            if name.startswith(prefix) and "." not in name[len(prefix):]:
                 yield name, submodule
 
     lora_params = OrderedDict()

@@ -11,7 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# Adapted from https://github.com/vllm-project/vllm/blob/main/vllm/model_executor/layers/linear.py
+# Adapted from
+# https://github.com/vllm-project/vllm/blob/main/vllm/model_executor/layers/linear.py
 
 
 from megatron.core import tensor_parallel

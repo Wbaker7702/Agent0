@@ -35,8 +35,7 @@ def get_init_fn(
         param_occurrence[param] += 1
 
     duplicated_params = {
-        param for param in param_occurrence.keys() if param_occurrence[param] > 1
-    }
+        param for param in param_occurrence.keys() if param_occurrence[param] > 1}
     materialized_params = {}
 
     def init_fn(module: nn.Module):
@@ -72,9 +71,8 @@ def get_fsdp_wrap_policy(model: PreTrainedModel):
         else:
             transformer_cls_to_wrap.add(transformer_cls)
 
-    return partial(
-        transformer_auto_wrap_policy, transformer_layer_cls=transformer_cls_to_wrap
-    )
+    return partial(transformer_auto_wrap_policy,
+                   transformer_layer_cls=transformer_cls_to_wrap)
 
 
 @torch.no_grad()

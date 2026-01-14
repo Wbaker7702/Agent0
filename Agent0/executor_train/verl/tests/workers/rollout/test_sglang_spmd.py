@@ -35,9 +35,9 @@ from utils_sglang import (
 
 
 def _pre_process_inputs(pad_token_id, prompt_token_ids: torch.Tensor):
-    non_pad_index = torch.nonzero(prompt_token_ids != pad_token_id, as_tuple=False)[0][
-        0
-    ]
+    non_pad_index = torch.nonzero(
+        prompt_token_ids != pad_token_id,
+        as_tuple=False)[0][0]
     token_ids = prompt_token_ids[non_pad_index:].tolist()
     return token_ids
 
@@ -110,8 +110,9 @@ def test_sglang_spmd():
 
         loop = asyncio.get_event_loop()
         outputs = loop.run_until_complete(
-            llm.async_generate(input_ids=idx_list, sampling_params=sampling_params)
-        )
+            llm.async_generate(
+                input_ids=idx_list,
+                sampling_params=sampling_params))
     else:
         outputs = None
 

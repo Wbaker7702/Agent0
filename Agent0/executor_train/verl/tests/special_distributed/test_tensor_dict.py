@@ -12,16 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from verl.utils.distributed import initialize_global_process_group
+from verl.protocol import DataProto, all_gather_data_proto
+import torch.distributed
+import torch
+import numpy as np
 import os
 
 os.environ["NCCL_DEBUG"] = "WARN"
-
-import numpy as np
-import torch
-import torch.distributed
-
-from verl.protocol import DataProto, all_gather_data_proto
-from verl.utils.distributed import initialize_global_process_group
 
 
 def test_all_gather_data_proto():
@@ -31,9 +29,8 @@ def test_all_gather_data_proto():
 
     global_rank = torch.distributed.get_rank()
 
-    obs = torch.tensor(
-        [[1 * global_rank, 2 * global_rank + 1], [3 * global_rank, 4 * global_rank + 1]]
-    )
+    obs = torch.tensor([[1 * global_rank, 2 * global_rank + 1],
+                        [3 * global_rank, 4 * global_rank + 1]])
 
     labels = ["a", "b"] if global_rank % 2 == 0 else ["b", "a"]
     labels = np.array(labels, dtype=object)
@@ -46,16 +43,20 @@ def test_all_gather_data_proto():
     all_gather_data_proto(data=data, process_group=device_mesh.get_group("dp"))
 
     if global_rank == 0:
-        expected_obs = torch.tensor([[0, 1], [0, 1], [2, 5], [6, 9]], device="cuda")
+        expected_obs = torch.tensor(
+            [[0, 1], [0, 1], [2, 5], [6, 9]], device="cuda")
         expected_labels = ["a", "b", "a", "b"]
     elif global_rank == 1:
-        expected_obs = torch.tensor([[1, 3], [3, 5], [3, 7], [9, 13]], device="cuda")
+        expected_obs = torch.tensor(
+            [[1, 3], [3, 5], [3, 7], [9, 13]], device="cuda")
         expected_labels = ["b", "a", "b", "a"]
     elif global_rank == 2:
-        expected_obs = torch.tensor([[0, 1], [0, 1], [2, 5], [6, 9]], device="cuda")
+        expected_obs = torch.tensor(
+            [[0, 1], [0, 1], [2, 5], [6, 9]], device="cuda")
         expected_labels = ["a", "b", "a", "b"]
     elif global_rank == 3:
-        expected_obs = torch.tensor([[1, 3], [3, 5], [3, 7], [9, 13]], device="cuda")
+        expected_obs = torch.tensor(
+            [[1, 3], [3, 5], [3, 7], [9, 13]], device="cuda")
         expected_labels = ["b", "a", "b", "a"]
 
     torch.testing.assert_close(data.batch["obs"], expected_obs, atol=0, rtol=0)
@@ -108,10 +109,13 @@ def test_vocab_parallel_entropy():
 
     # get the local logits of each tp
     vocab_parallel_logits = (
-        logits.clone()
-        .detach()[:, tp_rank * vocab_size_per_tp : (tp_rank + 1) * vocab_size_per_tp]
-        .requires_grad_()
-    )
+        logits.clone() .detach()[
+            :,
+            tp_rank *
+            vocab_size_per_tp: (
+                tp_rank +
+                1) *
+            vocab_size_per_tp] .requires_grad_())
     logits.grad = None
     vocab_parallel_logits.grad = None
 
@@ -126,12 +130,12 @@ def test_vocab_parallel_entropy():
     torch.testing.assert_close(output_entropy, target_entropy)
     target_entropy.backward(grad_output)
     torch.testing.assert_close(
-        logits.grad[:, tp_rank * vocab_size_per_tp : (tp_rank + 1) * vocab_size_per_tp],
+        logits.grad[:, tp_rank * vocab_size_per_tp: (tp_rank + 1) * vocab_size_per_tp],
         vocab_parallel_logits.grad,
     )
     # make sure logits is not altered
     torch.testing.assert_close(
-        logits[:, tp_rank * vocab_size_per_tp : (tp_rank + 1) * vocab_size_per_tp],
+        logits[:, tp_rank * vocab_size_per_tp: (tp_rank + 1) * vocab_size_per_tp],
         vocab_parallel_logits,
     )
 

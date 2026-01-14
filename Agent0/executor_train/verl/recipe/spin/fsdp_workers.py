@@ -61,8 +61,8 @@ logger.setLevel(os.getenv("VERL_PPO_LOGGING_LEVEL", "WARN"))
 def create_device_mesh(world_size, fsdp_size):
     if fsdp_size < 0 or fsdp_size >= world_size:
         device_mesh = init_device_mesh(
-            get_device_name(), mesh_shape=(world_size,), mesh_dim_names=["fsdp"]
-        )
+            get_device_name(), mesh_shape=(
+                world_size,), mesh_dim_names=["fsdp"])
     else:
         device_mesh = init_device_mesh(
             get_device_name(),
@@ -126,10 +126,14 @@ class SPINRolloutRefWorker(ActorRolloutRefWorker):
                 use_remove_padding=use_remove_padding,
                 use_fused_kernels=use_fused_kernels,
                 enable_gradient_checkpointing=self.config.model.get(
-                    "enable_gradient_checkpointing", False
-                ),
-                trust_remote_code=self.config.model.get("trust_remote_code", False),
-                use_liger=self.config.model.get("use_liger", False),
+                    "enable_gradient_checkpointing",
+                    False),
+                trust_remote_code=self.config.model.get(
+                    "trust_remote_code",
+                    False),
+                use_liger=self.config.model.get(
+                    "use_liger",
+                    False),
                 role="actor",
             )
 
@@ -166,8 +170,12 @@ class SPINRolloutRefWorker(ActorRolloutRefWorker):
                 override_model_config=override_model_config,
                 use_remove_padding=use_remove_padding,
                 use_fused_kernels=use_fused_kernels,
-                trust_remote_code=self.config.model.get("trust_remote_code", False),
-                use_liger=self.config.model.get("use_liger", False),
+                trust_remote_code=self.config.model.get(
+                    "trust_remote_code",
+                    False),
+                use_liger=self.config.model.get(
+                    "use_liger",
+                    False),
                 role="ref",
             )[0]
             OmegaConf.set_struct(self.config.ref, True)
@@ -182,8 +190,7 @@ class SPINRolloutRefWorker(ActorRolloutRefWorker):
                 optimizer=self.actor.actor_optimizer,
                 lr_scheduler=self.actor_lr_scheduler,
                 processing_class=(
-                    self.processor if self.processor is not None else self.tokenizer
-                ),
+                    self.processor if self.processor is not None else self.tokenizer),
                 checkpoint_config=self.config.actor.checkpoint,
             )
 
@@ -194,8 +201,7 @@ class SPINRolloutRefWorker(ActorRolloutRefWorker):
                 optimizer=self.actor.actor_optimizer,
                 lr_scheduler=self.actor_lr_scheduler,
                 processing_class=(
-                    self.processor if self.processor is not None else self.tokenizer
-                ),
+                    self.processor if self.processor is not None else self.tokenizer),
                 checkpoint_config=self.config.actor.checkpoint,
             )
 
@@ -278,7 +284,8 @@ class SPINRolloutRefWorker(ActorRolloutRefWorker):
 
         assert self._is_actor  # Make sure this worker has the actor role
         if self.actor is None:
-            raise RuntimeError("Actor instance (self.actor) not initialized in worker.")
+            raise RuntimeError(
+                "Actor instance (self.actor) not initialized in worker.")
 
         # --- FSDP State Management ---
         if self._is_offload_param:
@@ -288,7 +295,9 @@ class SPINRolloutRefWorker(ActorRolloutRefWorker):
                 optimizer=self.actor_optimizer, device_id=get_device_id()
             )
 
-        log_gpu_memory_usage("Before update policy (DPO via PPO path)", logger=logger)
+        log_gpu_memory_usage(
+            "Before update policy (DPO via PPO path)",
+            logger=logger)
 
         # --- Ulysses Sharding (if used) ---
         with self.ulysses_sharding_manager:
@@ -320,8 +329,7 @@ class SPINRolloutRefWorker(ActorRolloutRefWorker):
             )
             global_num_tokens = data.meta_info["global_token_num"]
             estimated_flops, promised_flops = self.flops_counter.estimate_flops(
-                global_num_tokens, delta_time
-            )
+                global_num_tokens, delta_time)
             metrics["perf/mfu/actor"] = (
                 estimated_flops
                 * self.config.ppo_epochs
@@ -340,7 +348,8 @@ class SPINRolloutRefWorker(ActorRolloutRefWorker):
 
             # --- Prepare Output ---
             output = DataProto(meta_info={"metrics": metrics})
-            output = self.ulysses_sharding_manager.postprocess_data(data=output)
+            output = self.ulysses_sharding_manager.postprocess_data(
+                data=output)
             output = output.to("cpu")
 
         # --- FSDP State Management (Offload) ---
@@ -391,7 +400,8 @@ class RewardModelWorker(Worker):
             self.ulysses_device_mesh
         )
 
-        self.use_remove_padding = self.config.model.get("use_remove_padding", False)
+        self.use_remove_padding = self.config.model.get(
+            "use_remove_padding", False)
 
         # normalize config
         if self.config.micro_batch_size is not None:
@@ -411,7 +421,8 @@ class RewardModelWorker(Worker):
             self._do_switch_chat_template = False
         else:
             self._do_switch_chat_template = True
-            input_tokenizer_local_path = copy_to_local(config.model.input_tokenizer)
+            input_tokenizer_local_path = copy_to_local(
+                config.model.input_tokenizer)
             self.input_tokenizer = hf_tokenizer(
                 input_tokenizer_local_path,
                 trust_remote_code=config.model.get("trust_remote_code", False),
@@ -427,10 +438,10 @@ class RewardModelWorker(Worker):
         )
         model_config.num_labels = 1
 
-        # note that we have to create model in fp32. Otherwise, the optimizer is in bf16, which is incorrect
+        # note that we have to create model in fp32. Otherwise, the optimizer
+        # is in bf16, which is incorrect
         init_context = get_init_weight_context_manager(
-            use_meta_tensor=not model_config.tie_word_embeddings, mesh=self.device_mesh
-        )
+            use_meta_tensor=not model_config.tie_word_embeddings, mesh=self.device_mesh)
 
         with init_context(), warnings.catch_warnings():
             warnings.simplefilter("ignore")
@@ -509,7 +520,8 @@ class RewardModelWorker(Worker):
                 input_ids_rmpad, indices, *_ = unpad_input(
                     input_ids.unsqueeze(-1), attention_mask
                 )  # input_ids_rmpad (total_nnz, ...)
-                input_ids_rmpad = input_ids_rmpad.transpose(0, 1)  # (1, total_nnz)
+                input_ids_rmpad = input_ids_rmpad.transpose(
+                    0, 1)  # (1, total_nnz)
 
                 # unpad the position_ids to align the rotary
                 position_ids_rmpad = index_first_axis(
@@ -527,7 +539,8 @@ class RewardModelWorker(Worker):
                         )
                     )
 
-                # only pass input_ids and position_ids to enable flash_attn_varlen
+                # only pass input_ids and position_ids to enable
+                # flash_attn_varlen
                 output = self.reward_module(
                     input_ids=input_ids_rmpad,
                     attention_mask=None,
@@ -540,13 +553,13 @@ class RewardModelWorker(Worker):
                 # gather output if sp > 1
                 if self.ulysses_sequence_parallel_size > 1:
                     reward_rmpad = gather_outpus_and_unpad(
-                        reward_rmpad, gather_dim=0, unpad_dim=0, padding_size=pad_size
-                    )
+                        reward_rmpad, gather_dim=0, unpad_dim=0, padding_size=pad_size)
 
                 # pad it back
-                rm_score = pad_input(
-                    reward_rmpad, indices=indices, batch=batch_size, seqlen=seqlen
-                ).squeeze(-1)
+                rm_score = pad_input(reward_rmpad,
+                                     indices=indices,
+                                     batch=batch_size,
+                                     seqlen=seqlen).squeeze(-1)
             else:
                 output = self.reward_module(
                     input_ids=input_ids,
@@ -558,7 +571,8 @@ class RewardModelWorker(Worker):
                 rm_score = rm_score.squeeze(-1)
 
             # extract the result of the last valid token
-            eos_mask_idx = torch.argmax(position_ids * attention_mask, dim=-1)  # (bsz,)
+            eos_mask_idx = torch.argmax(
+                position_ids * attention_mask, dim=-1)  # (bsz,)
             rm_score = rm_score[torch.arange(batch_size), eos_mask_idx]
             return rm_score
 
@@ -568,7 +582,9 @@ class RewardModelWorker(Worker):
         attention_mask = data.batch["attention_mask"]
         position_ids = data.batch["position_ids"]
         response_length = data.batch["responses"].shape[-1]
-        eos_mask_idx = torch.argmax(position_ids * attention_mask, dim=-1)  # (bsz,)
+        eos_mask_idx = torch.argmax(
+            position_ids * attention_mask,
+            dim=-1)  # (bsz,)
         token_level_scores = torch.zeros_like(
             attention_mask, dtype=scores.dtype
         )  # (bsz, seqlen)
@@ -617,14 +633,16 @@ class RewardModelWorker(Worker):
                 # for debugging purpose
                 print(f"Switch template. chat: {prompt_with_chat_template}")
 
-            # the maximum length is actually determined by the reward model itself
+            # the maximum length is actually determined by the reward model
+            # itself
             max_length = self.config.get("max_length", src_max_length)
             if max_length is None:
                 max_length = src_max_length
 
             model_inputs = target_tokenizer(
-                prompt_with_chat_template, return_tensors="pt", add_special_tokens=False
-            )
+                prompt_with_chat_template,
+                return_tensors="pt",
+                add_special_tokens=False)
             input_ids, attention_mask = verl_F.postprocess_data(
                 input_ids=model_inputs["input_ids"],
                 attention_mask=model_inputs["attention_mask"],
@@ -676,7 +694,8 @@ class RewardModelWorker(Worker):
 
         # perform forward computation
         with self.ulysses_sharding_manager:
-            rm_data = self.ulysses_sharding_manager.preprocess_data(data=rm_data)
+            rm_data = self.ulysses_sharding_manager.preprocess_data(
+                data=rm_data)
             data = self.ulysses_sharding_manager.preprocess_data(data=data)
 
             use_dynamic_bsz = self.config.use_dynamic_bsz
@@ -709,9 +728,12 @@ class RewardModelWorker(Worker):
                 scores = scores[revert_indices]
 
             token_level_scores = self._expand_to_token_level(data, scores)
-            # Note that this is only the scores, may not be the final rewards used to train RL
-            output = DataProto.from_dict(tensors={"rm_scores": token_level_scores})
-            output = self.ulysses_sharding_manager.postprocess_data(data=output)
+            # Note that this is only the scores, may not be the final rewards
+            # used to train RL
+            output = DataProto.from_dict(
+                tensors={"rm_scores": token_level_scores})
+            output = self.ulysses_sharding_manager.postprocess_data(
+                data=output)
 
         # https://pytorch.org/docs/stable/notes/fsdp.html#fsdp-notes
         # unshard the root FSDP module

@@ -72,7 +72,8 @@ class Tracking:
 
             settings = None
             if config and config["trainer"].get("wandb_proxy", None):
-                settings = wandb.Settings(https_proxy=config["trainer"]["wandb_proxy"])
+                settings = wandb.Settings(
+                    https_proxy=config["trainer"]["wandb_proxy"])
             wandb.init(
                 project=project_name,
                 name=experiment_name,
@@ -94,8 +95,8 @@ class Tracking:
             # If experiment does not exist, will create a new experiment
             experiment = mlflow.set_experiment(project_name)
             mlflow.start_run(
-                experiment_id=experiment.experiment_id, run_name=experiment_name
-            )
+                experiment_id=experiment.experiment_id,
+                run_name=experiment_name)
             mlflow.log_params(_compute_mlflow_params_from_objects(config))
             self.logger["mlflow"] = _MlflowLoggingAdapter()
 
@@ -114,8 +115,7 @@ class Tracking:
 
             if config is None:
                 config = (
-                    {}
-                )  # make sure config is not None, otherwise **config will raise error
+                    {})  # make sure config is not None, otherwise **config will raise error
             swanlab.init(
                 project=project_name,
                 experiment_name=experiment_name,
@@ -239,8 +239,8 @@ class _TensorboardAdapter:
         from torch.utils.tensorboard import SummaryWriter
 
         tensorboard_dir = os.environ.get(
-            "TENSORBOARD_DIR", f"tensorboard_log/{project_name}/{experiment_name}"
-        )
+            "TENSORBOARD_DIR",
+            f"tensorboard_log/{project_name}/{experiment_name}")
         os.makedirs(tensorboard_dir, exist_ok=True)
         print(f"Saving tensorboard log to {tensorboard_dir}.")
         self.writer = SummaryWriter(tensorboard_dir)
@@ -266,9 +266,8 @@ def _compute_mlflow_params_from_objects(params) -> dict[str, Any]:
         return {}
 
     return _flatten_dict(
-        _transform_params_to_json_serializable(params, convert_list_to_dict=True),
-        sep="/",
-    )
+        _transform_params_to_json_serializable(
+            params, convert_list_to_dict=True), sep="/", )
 
 
 def _transform_params_to_json_serializable(x, convert_list_to_dict: bool):
@@ -349,8 +348,11 @@ class ValidationGenerationsLogger:
             self.validation_table = wandb.Table(columns=columns)
 
         # Create a new table with same columns and existing data
-        # Workaround for https://github.com/wandb/wandb/issues/2981#issuecomment-1997445737
-        new_table = wandb.Table(columns=columns, data=self.validation_table.data)
+        # Workaround for
+        # https://github.com/wandb/wandb/issues/2981#issuecomment-1997445737
+        new_table = wandb.Table(
+            columns=columns,
+            data=self.validation_table.data)
 
         # Add new row with all data
         row_data = []
@@ -390,18 +392,21 @@ class ValidationGenerationsLogger:
 
         try:
             with tempfile.TemporaryDirectory() as tmp_dir:
-                validation_gen_step_file = Path(tmp_dir, f"val_step{step}.json")
+                validation_gen_step_file = Path(
+                    tmp_dir, f"val_step{step}.json")
                 row_data = []
                 for sample in samples:
-                    data = {"input": sample[0], "output": sample[1], "score": sample[2]}
+                    data = {
+                        "input": sample[0],
+                        "output": sample[1],
+                        "score": sample[2]}
                     row_data.append(data)
                 with open(validation_gen_step_file, "w") as file:
                     json.dump(row_data, file)
                 mlflow.log_artifact(validation_gen_step_file)
         except Exception as e:
             print(
-                f"WARNING: save validation generation file to mlflow failed with error {e}"
-            )
+                f"WARNING: save validation generation file to mlflow failed with error {e}")
 
     def log_generations_to_clearml(self, samples, step):
         """Log validation generation to clearml as table"""
@@ -437,7 +442,8 @@ class ValidationGenerationsLogger:
         if not hasattr(self, "writer"):
             from torch.utils.tensorboard import SummaryWriter
 
-            tensorboard_dir = os.environ.get("TENSORBOARD_DIR", "tensorboard_log")
+            tensorboard_dir = os.environ.get(
+                "TENSORBOARD_DIR", "tensorboard_log")
             os.makedirs(tensorboard_dir, exist_ok=True)
             self.writer = SummaryWriter(log_dir=tensorboard_dir)
 

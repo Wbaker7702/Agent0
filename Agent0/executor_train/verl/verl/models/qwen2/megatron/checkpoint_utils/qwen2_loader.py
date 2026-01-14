@@ -34,14 +34,16 @@ def _megatron_calc_layer_map(config):
 
     layer_map = dict()
     num_layers_per_model = config.num_hidden_layers // pp_size // virtual_pp_size
-    assert num_layers_per_model * pp_size * virtual_pp_size == config.num_hidden_layers
+    assert num_layers_per_model * pp_size * \
+        virtual_pp_size == config.num_hidden_layers
 
     for pp_rank_idx in range(pp_size):
         for virtual_pp_rank_idx in range(virtual_pp_size):
-            layer_offset = (
-                virtual_pp_rank_idx * (config.num_hidden_layers // virtual_pp_size)
-                + pp_rank_idx * num_layers_per_model
-            )
+            layer_offset = (virtual_pp_rank_idx *
+                            (config.num_hidden_layers //
+                             virtual_pp_size) +
+                            pp_rank_idx *
+                            num_layers_per_model)
             for layer_idx in range(num_layers_per_model):
                 layer_map[layer_offset + layer_idx] = (
                     pp_rank_idx,
@@ -88,7 +90,8 @@ def load_state_dict_to_megatron_qwen2(
     mp_group = mpu.get_model_parallel_group()
 
     if torch.distributed.get_rank() == 0:
-        assert mp_group.rank() == 0, f"mp_rank:[{mp_group.rank}] != 0 on rank #0"
+        assert mp_group.rank() == 0, f"mp_rank:[{
+            mp_group.rank}] != 0 on rank #0"
         assert pp_rank == 0, f"pp_rank:[{pp_rank}] != 0 on rank #0"
         assert dp_rank == 0, f"dp_rank:[{dp_rank}] != 0 on rank #0"
 
@@ -107,7 +110,8 @@ def load_state_dict_to_megatron_qwen2(
     models = [None] * len(wrapped_models)
 
     for i, wrapped_model in enumerate(wrapped_models):
-        models[i] = unwrap_model(wrapped_model, (torchDDP, LocalDDP, Float16Module))
+        models[i] = unwrap_model(
+            wrapped_model, (torchDDP, LocalDDP, Float16Module))
         gpt_model_module = _get_gpt_model(models[i])
         assert len(gpt_model_module.model.layers) == num_layers_per_model
 
@@ -131,7 +135,8 @@ def load_state_dict_to_megatron_qwen2(
                 full_weight = mutate_func(full_weight)
             tensor_chunk = torch.chunk(full_weight, tp_size, dim=chunk_dim)
             if tensor is not None:
-                tensor = tensor.data.copy_(tensor_chunk[tp_rank], non_blocking=True)
+                tensor = tensor.data.copy_(
+                    tensor_chunk[tp_rank], non_blocking=True)
         else:
             print(f"tp_shard tensor:[{name}] not in state_dict, skip loading")
 
@@ -149,11 +154,13 @@ def load_state_dict_to_megatron_qwen2(
                 full_weight = mutate_func(full_weight)
             tensor_chunk = torch.chunk(full_weight, tp_size, dim=chunk_dim)
             if tensor is not None:
-                tensor = tensor.data.copy_(tensor_chunk[tp_rank], non_blocking=True)
+                tensor = tensor.data.copy_(
+                    tensor_chunk[tp_rank], non_blocking=True)
         else:
             print(f"tp_shard tensor:[{name}] not in state_dict, skip loading")
 
-    def _fetch_tp_shard_tensor_gate_up(tensor, gate_name, up_name) -> torch.Tensor:
+    def _fetch_tp_shard_tensor_gate_up(
+            tensor, gate_name, up_name) -> torch.Tensor:
         """fetch gate_up tensor in tp shards"""
         nonlocal state_dict
         nonlocal mp_group
@@ -171,22 +178,22 @@ def load_state_dict_to_megatron_qwen2(
             for i in range(tp_size):
                 intermediate_size_tp = config.intermediate_size // tp_size
                 gate_weight_tp = gate_weight[
-                    i * intermediate_size_tp : (i + 1) * intermediate_size_tp
+                    i * intermediate_size_tp: (i + 1) * intermediate_size_tp
                 ]
                 up_weight_tp = up_weight[
-                    i * intermediate_size_tp : (i + 1) * intermediate_size_tp
+                    i * intermediate_size_tp: (i + 1) * intermediate_size_tp
                 ]
                 new_gate_up_weight[
-                    intermediate_size_tp * 2 * i : intermediate_size_tp * 2 * (i + 1)
+                    intermediate_size_tp * 2 * i: intermediate_size_tp * 2 * (i + 1)
                 ].copy_(torch.cat([gate_weight_tp, up_weight_tp], dim=0))
 
             tensor_chunk = torch.chunk(new_gate_up_weight, tp_size, dim=0)
             if tensor is not None:
-                tensor = tensor.data.copy_(tensor_chunk[tp_rank], non_blocking=True)
+                tensor = tensor.data.copy_(
+                    tensor_chunk[tp_rank], non_blocking=True)
         else:
             print(
-                f"tp_shard tensor:[{gate_name}, {up_name}] not in state_dict, skip loading"
-            )
+                f"tp_shard tensor:[{gate_name}, {up_name}] not in state_dict, skip loading")
 
     def _fetch_tp_shard_tensor_qkv(
         tensor, q_name, k_name, v_name, bias=False
@@ -216,13 +223,14 @@ def load_state_dict_to_megatron_qwen2(
                 )
             else:
                 new_weight_qkv = torch.empty(
-                    total_size * tp_size, dtype=params_dtype, device=get_device_id()
-                )
+                    total_size * tp_size,
+                    dtype=params_dtype,
+                    device=get_device_id())
             for i in range(tp_size):
-                q_part = full_weight_q[i * q_size_tp : (i + 1) * q_size_tp]
-                k_part = full_weight_k[i * kv_size_tp : (i + 1) * kv_size_tp]
-                v_part = full_weight_v[i * kv_size_tp : (i + 1) * kv_size_tp]
-                new_weight_qkv[i * total_size : (i + 1) * total_size].copy_(
+                q_part = full_weight_q[i * q_size_tp: (i + 1) * q_size_tp]
+                k_part = full_weight_k[i * kv_size_tp: (i + 1) * kv_size_tp]
+                v_part = full_weight_v[i * kv_size_tp: (i + 1) * kv_size_tp]
+                new_weight_qkv[i * total_size: (i + 1) * total_size].copy_(
                     torch.cat([q_part, k_part, v_part], dim=0)
                 )
 
@@ -239,25 +247,26 @@ def load_state_dict_to_megatron_qwen2(
                 )
             else:
                 new_weight_qkv = torch.empty(
-                    total_size * tp_size, dtype=params_dtype, device=get_device_id()
-                )
+                    total_size * tp_size,
+                    dtype=params_dtype,
+                    device=get_device_id())
             for i in range(tp_size):
-                q_part = full_weight_q[i * q_size_tp : (i + 1) * q_size_tp]
-                start_idx = (
-                    i * config.num_key_value_heads // tp_size * hidden_size_per_head
-                )
+                q_part = full_weight_q[i * q_size_tp: (i + 1) * q_size_tp]
+                start_idx = (i * config.num_key_value_heads //
+                             tp_size * hidden_size_per_head)
                 end_idx = (
                     i * config.num_key_value_heads // tp_size + 1
                 ) * hidden_size_per_head
                 k_part = full_weight_k[start_idx:end_idx]
                 v_part = full_weight_v[start_idx:end_idx]
-                new_weight_qkv[i * total_size : (i + 1) * total_size].copy_(
+                new_weight_qkv[i * total_size: (i + 1) * total_size].copy_(
                     torch.cat([q_part, k_part, v_part], dim=0)
                 )
 
         tensor_chunk = torch.chunk(new_weight_qkv, tp_size, dim=0)
         if tensor is not None:
-            tensor = tensor.data.copy_(tensor_chunk[tp_rank], non_blocking=True)
+            tensor = tensor.data.copy_(
+                tensor_chunk[tp_rank], non_blocking=True)
 
     # Embeddings
     # -------------------
@@ -265,7 +274,9 @@ def load_state_dict_to_megatron_qwen2(
     gpt_model_module = _get_gpt_model(models[0])
     if pp_rank == 0:
         embed_tokens_weight = gpt_model_module.model.embed_tokens.weight
-        _fetch_tp_shard_tensor_vocab(embed_tokens_weight, "model.embed_tokens.weight")
+        _fetch_tp_shard_tensor_vocab(
+            embed_tokens_weight,
+            "model.embed_tokens.weight")
 
     # Transformer layers
     # -------------------
@@ -285,7 +296,12 @@ def load_state_dict_to_megatron_qwen2(
                 config.num_hidden_layers
                 // mpu.get_virtual_pipeline_model_parallel_world_size()
             ) + (mpu.get_pipeline_model_parallel_rank() * num_layer_vpp_chunk)
-            layer_list.extend(list(range(offset, offset + num_layer_this_model)))
+            layer_list.extend(
+                list(
+                    range(
+                        offset,
+                        offset +
+                        num_layer_this_model)))
     else:
         num_layer_this_model = num_layer_per_pp
         offset = pp_rank * num_layer_per_pp

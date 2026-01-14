@@ -14,7 +14,11 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def _send_test_request(url: str, trajectory_id: str, action: str, test_name: str):
+def _send_test_request(
+        url: str,
+        trajectory_id: str,
+        action: str,
+        test_name: str):
     """
     辅助函数，用于发送测试请求、处理响应并打印结果。
     """
@@ -97,34 +101,40 @@ def test_all_tools(
 
     # 2.1 测试简单执行
     code = "print('Hello from the sandboxed environment!')"
-    action = f'<tool_call>{{"name": "python_code", "arguments": {{"code": {json.dumps(code)}}}}}</tool_call>'
+    action = f'<tool_call>{{"name": "python_code", "arguments": {{"code": {
+        json.dumps(code)}}}}}</tool_call>'
     _send_test_request(url, trajectory_id, action, "Python (简单执行)")
 
     # 2.2 测试多行代码和计算
     code = (
         "x = 15\ny = 30\nresult = x + y\nprint(f'The sum of {x} and {y} is {result}')"
     )
-    action = f'<tool_call>{{"name": "python_code", "arguments": {{"code": {json.dumps(code)}}}}}</tool_call>'
+    action = f'<tool_call>{{"name": "python_code", "arguments": {{"code": {
+        json.dumps(code)}}}}}</tool_call>'
     _send_test_request(url, trajectory_id, action, "Python (多行与计算)")
 
     # 2.3 测试语法错误
     code = "print('This code has an unclosed parenthesis'"
-    action = f'<tool_call>{{"name": "python_code", "arguments": {{"code": {json.dumps(code)}}}}}</tool_call>'
+    action = f'<tool_call>{{"name": "python_code", "arguments": {{"code": {
+        json.dumps(code)}}}}}</tool_call>'
     _send_test_request(url, trajectory_id, action, "Python (语法错误)")
 
     # 2.4 测试运行时错误
     code = "result = 100 / 0\nprint(result)"
-    action = f'<tool_call>{{"name": "python_code", "arguments": {{"code": {json.dumps(code)}}}}}</tool_call>'
+    action = f'<tool_call>{{"name": "python_code", "arguments": {{"code": {
+        json.dumps(code)}}}}}</tool_call>'
     _send_test_request(url, trajectory_id, action, "Python (运行时错误)")
 
     # 2.5 测试安全限制：禁止的导入
     code = "import subprocess\nsubprocess.run(['ls', '-l'])"
-    action = f'<tool_call>{{"name": "python_code", "arguments": {{"code": {json.dumps(code)}}}}}</tool_call>'
+    action = f'<tool_call>{{"name": "python_code", "arguments": {{"code": {
+        json.dumps(code)}}}}}</tool_call>'
     _send_test_request(url, trajectory_id, action, "Python (安全限制-禁止的导入)")
 
     # 2.6 测试超时
     code = "import time\nprint('Testing timeout mechanism...')\ntime.sleep(30)\nprint('This line should never be executed!')"
-    action = f'<tool_call>{{"name": "python_code", "arguments": {{"code": {json.dumps(code)}}}}}</tool_call>'
+    action = f'<tool_call>{{"name": "python_code", "arguments": {{"code": {
+        json.dumps(code)}}}}}</tool_call>'
     _send_test_request(url, trajectory_id, action, "Python (超时)")
 
     # 2.7 测试无效参数

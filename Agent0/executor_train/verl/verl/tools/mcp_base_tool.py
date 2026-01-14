@@ -36,7 +36,8 @@ class MCPBaseTool(BaseTool):
         self._instance_dict = {}
         self.timeout = config.get("timeout", 30)
 
-        # TODO(hechanghao): create a global client manager to manage the rate limit, client and pool
+        # TODO(hechanghao): create a global client manager to manage the rate
+        # limit, client and pool
         logger.info(f"Initialized MCPBaseTool with config: {config}")
 
     def get_openai_tool_schema(self) -> OpenAIFunctionToolSchema:
@@ -74,8 +75,9 @@ class MCPBaseTool(BaseTool):
             err_msg = f"\n An unexpected error occurred: {e}"
 
         logger.debug(
-            f"Tool result for instance {instance_id} with tool {self.name}: {call_tool_result.content}"
-        )
+            f"Tool result for instance {instance_id} with tool {
+                self.name}: {
+                call_tool_result.content}")
         result, metadata = self._parse_tool_result(call_tool_result.content)
         metadata["api_request_error"] += err_msg
         return result, metadata
@@ -87,15 +89,16 @@ class MCPBaseTool(BaseTool):
         if self.name == "" or self.name is None or parameters is None:
             error_msg = "Error: 'parameters' is missing or empty."
             logger.error(
-                f"[MCPTool] {error_msg} Received tool name: {self.name}, parameters: {parameters}"
-            )
+                f"[MCPTool] {error_msg} Received tool name: {
+                    self.name}, parameters: {parameters}")
             return json.dumps({"result": error_msg}), 0.0, {}
 
         try:
             result_text, metadata = await self._call_tool(instance_id, parameters)
 
             # Store results in instance dictionary
-            self._instance_dict[instance_id]["reward"].append(result_text.strip())
+            self._instance_dict[instance_id]["reward"].append(
+                result_text.strip())
 
             # Convert metadata to metrics
             metrics = {
@@ -108,7 +111,8 @@ class MCPBaseTool(BaseTool):
             return result_text, 0.0, metrics
 
         except Exception as e:
-            error_result = json.dumps({"result": f"Tool execution failed: {e}"})
+            error_result = json.dumps(
+                {"result": f"Tool execution failed: {e}"})
             logger.error(f"[MCPBaseTool] Execution failed: {e}")
             return error_result, 0.0, {"error": str(e)}
 

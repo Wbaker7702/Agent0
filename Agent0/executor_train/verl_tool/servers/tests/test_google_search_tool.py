@@ -45,7 +45,8 @@ def test_google_search(
             print(f"Results:\n{observation}\n")
 
             # Check if search was successful
-            obs = observation["obs"] if isinstance(observation, dict) else observation
+            obs = observation["obs"] if isinstance(
+                observation, dict) else observation
             if "Search results for" in obs or "results" in obs.lower():
                 logger.info("✓ Google search executed successfully")
             else:
@@ -76,7 +77,7 @@ def test_multiple_searches(url: str = "http://localhost:5000/get_observation"):
 
     results = []
     for i, query in enumerate(queries):
-        logger.info(f"Search {i+1}/{len(queries)}: {query}")
+        logger.info(f"Search {i + 1}/{len(queries)}: {query}")
         result = test_google_search(url, query)
         results.append(result)
 

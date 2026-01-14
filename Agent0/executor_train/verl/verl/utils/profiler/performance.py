@@ -34,7 +34,8 @@ def _get_current_mem_info(unit: str = "GB", precision: int = 2) -> tuple[str]:
     mem_reserved = get_torch_device().memory_reserved()
     # use get_torch_device().mem_get_info to profile device memory
     # since vllm's sleep mode works below pytorch
-    # see https://github.com/vllm-project/vllm/pull/11743#issuecomment-2754338119
+    # see
+    # https://github.com/vllm-project/vllm/pull/11743#issuecomment-2754338119
     mem_free, mem_total = get_torch_device().mem_get_info()
     mem_used = mem_total - mem_free
     mem_allocated = f"{mem_allocated / divisor:.{precision}f}"
@@ -45,8 +46,10 @@ def _get_current_mem_info(unit: str = "GB", precision: int = 2) -> tuple[str]:
 
 
 def log_gpu_memory_usage(
-    head: str, logger: logging.Logger = None, level=logging.DEBUG, rank: int = 0
-):
+        head: str,
+        logger: logging.Logger = None,
+        level=logging.DEBUG,
+        rank: int = 0):
     """Log GPU memory usage information.
 
     Args:
@@ -55,7 +58,8 @@ def log_gpu_memory_usage(
         level: Logging level to use. Defaults to logging.DEBUG.
         rank (int): The rank of the process to log memory for. Defaults to 0.
     """
-    if (not dist.is_initialized()) or (rank is None) or (dist.get_rank() == rank):
+    if (not dist.is_initialized()) or (
+            rank is None) or (dist.get_rank() == rank):
         mem_allocated, mem_reserved, mem_used, mem_total = _get_current_mem_info()
         message = (
             f"{head}, memory allocated (GB): {mem_allocated}, memory reserved (GB): {mem_reserved}, "
@@ -206,8 +210,13 @@ def reduce_timing(timing_raw: dict[str, float]) -> dict[str, float]:
     for key in sorted(timing_raw.keys()):
         key_list.append(key)
         timing_list.append(timing_raw[key])
-    timing_list = torch.tensor(timing_list, dtype=torch.float32, device=get_device_id())
-    torch.distributed.all_reduce(timing_list, op=torch.distributed.ReduceOp.AVG)
+    timing_list = torch.tensor(
+        timing_list,
+        dtype=torch.float32,
+        device=get_device_id())
+    torch.distributed.all_reduce(
+        timing_list, op=torch.distributed.ReduceOp.AVG)
     timing_list = [tensor.item() for tensor in timing_list.to("cpu")]
-    timing_generate = {key_list[i]: timing_list[i] for i in range(len(key_list))}
+    timing_generate = {key_list[i]: timing_list[i]
+                       for i in range(len(key_list))}
     return timing_generate

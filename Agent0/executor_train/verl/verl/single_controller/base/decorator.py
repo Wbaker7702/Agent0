@@ -19,7 +19,8 @@ from types import FunctionType
 from verl.protocol import DataProtoFuture, _padding_size_key
 from verl.utils.py_functional import DynamicEnum
 
-# here we add a magic number of avoid user-defined function already have this attribute
+# here we add a magic number of avoid user-defined function already have
+# this attribute
 MAGIC_ATTR = "attrs_3141562937"
 
 
@@ -172,7 +173,8 @@ def dispatch_megatron_compute(worker_group, *args, **kwargs):
 
     all_args = []
     for arg in args:
-        assert isinstance(arg, tuple | list) and len(arg) == worker_group.dp_size
+        assert isinstance(arg, tuple | list) and len(
+            arg) == worker_group.dp_size
         transformed_args = []
         for i in range(worker_group.world_size):
             local_dp_rank = worker_group.get_megatron_rank_info(rank=i).dp_rank
@@ -222,7 +224,8 @@ def dispatch_megatron_compute_data_proto(worker_group, *args, **kwargs):
     splitted_args, splitted_kwargs = _split_args_kwargs_data_proto(
         worker_group.dp_size, *args, **kwargs
     )
-    return dispatch_megatron_compute(worker_group, *splitted_args, **splitted_kwargs)
+    return dispatch_megatron_compute(
+        worker_group, *splitted_args, **splitted_kwargs)
 
 
 def _concat_data_proto_or_future(output: list):
@@ -309,7 +312,8 @@ def dispatch_megatron_pp_as_dp(worker_group, *args, **kwargs):
             local_dp_rank = worker_group.get_megatron_rank_info(rank=i).dp_rank
             local_pp_rank = worker_group.get_megatron_rank_info(rank=i).pp_rank
             local_cp_rank = worker_group.get_megatron_rank_info(rank=i).cp_rank
-            # compute the rank in arg. Note that the order is dp then cp then pp
+            # compute the rank in arg. Note that the order is dp then cp then
+            # pp
             dp_cp_rank = local_cp_rank * dp_size + local_dp_rank
             arg_rank = dp_cp_rank * pp_size + local_pp_rank
             transformed_v.append(v[arg_rank])
@@ -352,11 +356,13 @@ def dispatch_megatron_pp_as_dp_data_proto(worker_group, *args, **kwargs):
 
     assert isinstance(worker_group, MegatronWorkerGroup)
 
-    pp_dp_cp_size = worker_group.dp_size * worker_group.pp_size * worker_group.cp_size
+    pp_dp_cp_size = worker_group.dp_size * \
+        worker_group.pp_size * worker_group.cp_size
     splitted_args, splitted_kwargs = _split_args_kwargs_data_proto(
         pp_dp_cp_size, *args, **kwargs
     )
-    ret = dispatch_megatron_pp_as_dp(worker_group, *splitted_args, **splitted_kwargs)
+    ret = dispatch_megatron_pp_as_dp(
+        worker_group, *splitted_args, **splitted_kwargs)
     return ret
 
 
@@ -374,9 +380,11 @@ def dispatch_dp_compute(worker_group, *args, **kwargs):
 
     assert isinstance(worker_group, WorkerGroup)
     for arg in args:
-        assert isinstance(arg, tuple | list) and len(arg) == worker_group.world_size
+        assert isinstance(arg, tuple | list) and len(
+            arg) == worker_group.world_size
     for k, v in kwargs.items():
-        assert isinstance(v, tuple | list) and len(v) == worker_group.world_size
+        assert isinstance(v, tuple | list) and len(
+            v) == worker_group.world_size
     return args, kwargs
 
 
@@ -394,10 +402,7 @@ def dispatch_dp_compute_data_proto(worker_group, *args, **kwargs):
     assert isinstance(worker_group, WorkerGroup)
     # Note: enable auto padding for dp compute DatapProto
     splitted_args, splitted_kwargs = _split_args_kwargs_data_proto_with_auto_padding(
-        worker_group.world_size,
-        *args,
-        **kwargs,
-    )
+        worker_group.world_size, *args, **kwargs, )
     return splitted_args, splitted_kwargs
 
 
@@ -405,12 +410,14 @@ def dispatch_dp_compute_data_proto_with_func(worker_group, *args, **kwargs):
     from verl.single_controller.base.worker_group import WorkerGroup
 
     assert isinstance(worker_group, WorkerGroup)
-    assert isinstance(args[0], FunctionType)  # NOTE: The first one args is a function!
+    # NOTE: The first one args is a function!
+    assert isinstance(args[0], FunctionType)
 
     splitted_args, splitted_kwargs = _split_args_kwargs_data_proto(
         worker_group.world_size, *args[1:], **kwargs
     )
-    splitted_args_with_func = [[args[0]] * worker_group.world_size] + splitted_args
+    splitted_args_with_func = [[args[0]] *
+                               worker_group.world_size] + splitted_args
     return splitted_args_with_func, splitted_kwargs
 
 

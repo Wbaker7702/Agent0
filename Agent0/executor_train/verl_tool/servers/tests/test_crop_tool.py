@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from tools.piston import PistonTool
 import json
 import requests
 import fire
@@ -11,7 +12,6 @@ from PIL import Image
 
 # Add parent directory to path to import PistonTool
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from tools.piston import PistonTool
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -47,7 +47,10 @@ def test_crop(
     )
 
     action = """<tool_call>{"tool_name": "crop_image", "arguments": {"target_image": 1, "bbox_2d": [0, 0, 100, 100]}}</tool_call>"""
-    print(_send_test_request(url, trajectory_id, action, {"image1": image1}, "crop"))
+    print(
+        _send_test_request(
+            url, trajectory_id, action, {
+                "image1": image1}, "crop"))
 
     # print("--- Testing 2 ---")
     # action = """<python>import sys\n\nprint('Hello from Python!')\nprint(f'Arguments: {sys.argv[1:]}')\nfor i in range(5):\n    print(f'Number {i}')</python> ..."""

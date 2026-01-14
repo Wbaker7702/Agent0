@@ -86,9 +86,8 @@ def test_vllm_rollout_with_yarn_position_embeddings():
         print("VLLM Rollout Outputs:")
         print(
             tokenizer.batch_decode(
-                rollout_response.batch["responses"][:], skip_special_tokens=False
-            )
-        )
+                rollout_response.batch["responses"][:],
+                skip_special_tokens=False))
         for response in rollout_response.batch["responses"]:
             assert "<|im_end|>" in tokenizer.decode(
                 response, skip_special_tokens=False
@@ -132,7 +131,8 @@ def prepare_input_dataproto(tokenizer, config, validate, do_sample=False):
         {
             "input_ids": prompts["input_ids"],
             "attention_mask": prompts["attention_mask"],
-            "position_ids": compute_position_id_with_mask(prompts["attention_mask"]),
+            "position_ids": compute_position_id_with_mask(
+                prompts["attention_mask"]),
         },
         meta_info={
             "bos_token_id": tokenizer.bos_token_id,

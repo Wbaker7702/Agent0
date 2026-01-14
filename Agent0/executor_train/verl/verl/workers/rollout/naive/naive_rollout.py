@@ -51,7 +51,8 @@ class NaiveRollout(BaseRollout):
     def generate_sequences(self, prompts: DataProto) -> DataProto:
         """Generate sequences"""
         idx = prompts.batch["input_ids"]  # (bs, prompt_length)
-        attention_mask = prompts.batch["attention_mask"]  # left-padded attention_mask
+        # left-padded attention_mask
+        attention_mask = prompts.batch["attention_mask"]
         position_ids = prompts.batch["position_ids"]
 
         # used to construct attention_mask
@@ -81,11 +82,14 @@ class NaiveRollout(BaseRollout):
                 position_ids=position_ids,
             )
             logits = output.logits
-            # pluck the logits at the final step and scale by desired temperature
-            logits = logits[:, -1, :] / self.config.temperature  # (bs, vocab_size)
+            # pluck the logits at the final step and scale by desired
+            # temperature
+            logits = logits[:, -1, :] / \
+                self.config.temperature  # (bs, vocab_size)
             # optionally crop the logits to only the top k options
             if self.config.top_k is not None:
-                v, _ = torch.topk(logits, min(self.config.top_k, logits.size(-1)))
+                v, _ = torch.topk(logits, min(
+                    self.config.top_k, logits.size(-1)))
                 logits[logits < v[:, [-1]]] = -float("Inf")
             # apply softmax to convert logits to (normalized) probabilities
             probs = F.softmax(logits, dim=-1)
@@ -95,7 +99,8 @@ class NaiveRollout(BaseRollout):
             else:
                 idx_next = torch.argmax(probs, dim=-1, keepdim=True)
 
-            attention_mask = torch.cat((attention_mask, prev_attention_mask), dim=-1)
+            attention_mask = torch.cat(
+                (attention_mask, prev_attention_mask), dim=-1)
 
             for token_id in eos_token_id:
                 prev_attention_mask = torch.logical_and(
@@ -103,13 +108,15 @@ class NaiveRollout(BaseRollout):
                 )
             prev_attention_mask.to(attention_mask.dtype)
 
-            position_ids = torch.cat((position_ids, position_ids[:, -1:] + 1), dim=-1)
+            position_ids = torch.cat(
+                (position_ids, position_ids[:, -1:] + 1), dim=-1)
 
             # append sampled index to the running sequence and continue
             idx = torch.cat((idx, idx_next), dim=1)
             logits_lst.append(logits)
 
-        logits = torch.stack(logits_lst, dim=1)  # (bs, response_length, vocab_size)
+        # (bs, response_length, vocab_size)
+        logits = torch.stack(logits_lst, dim=1)
         prompts = idx[:, :prompt_length]  # (bs, prompt_length)
         response = idx[:, prompt_length:]  # (bs, response_length)
         log_probs = logprobs_from_logits(logits=logits, labels=response)

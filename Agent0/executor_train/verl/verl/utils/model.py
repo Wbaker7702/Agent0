@@ -70,8 +70,8 @@ def get_huggingface_actor_config(
     if override_config_kwargs is None:
         override_config_kwargs = {}
     assert isinstance(
-        override_config_kwargs, dict
-    ), f"override_config_kwargs must be a dict, got {type(override_config_kwargs)}"
+        override_config_kwargs, dict), f"override_config_kwargs must be a dict, got {
+        type(override_config_kwargs)}"
     module_config = AutoConfig.from_pretrained(
         model_name, trust_remote_code=trust_remote_code
     )
@@ -114,8 +114,8 @@ def create_huggingface_actor(
     if automodel_kwargs is None:
         automodel_kwargs = {}
     assert isinstance(
-        override_config_kwargs, dict
-    ), f"override_config_kwargs must be a dict, got {type(override_config_kwargs)}"
+        override_config_kwargs, dict), f"override_config_kwargs must be a dict, got {
+        type(override_config_kwargs)}"
     module_config = get_huggingface_actor_config(
         model_name,
         override_config_kwargs,
@@ -213,7 +213,8 @@ def create_random_mask(
 
     batch_size, sequence_length = input_ids.shape
     max_num_valid_tokens = int(sequence_length * max_ratio_of_valid_token)
-    min_num_valid_tokens = max(1, int(sequence_length * min_ratio_of_valid_token))
+    min_num_valid_tokens = max(
+        1, int(sequence_length * min_ratio_of_valid_token))
     max_left_padding = int(sequence_length * max_ratio_of_left_padding)
     assert max_num_valid_tokens + max_left_padding <= sequence_length
     assert max_num_valid_tokens > 0 and max_ratio_of_valid_token <= sequence_length
@@ -224,8 +225,9 @@ def create_random_mask(
             low=0, high=max_left_padding + 1, dtype=np.int64
         )
         num_valid = np.random.randint(
-            low=min_num_valid_tokens, high=max_num_valid_tokens + 1, dtype=np.int64
-        )
+            low=min_num_valid_tokens,
+            high=max_num_valid_tokens + 1,
+            dtype=np.int64)
 
         for index in range(num_left_padding):
             masks[i, index] = 0
@@ -239,8 +241,10 @@ def compute_position_id_with_mask(mask):
     return torch.clip(torch.cumsum(mask, dim=-1) - 1, min=0, max=None)
 
 
-def convert_weight_keys(state_dict: dict[str, torch.Tensor], model: PreTrainedModel):
-    # convert state dict keys: https://github.com/huggingface/transformers/pull/38385
+def convert_weight_keys(
+        state_dict: dict[str, torch.Tensor], model: PreTrainedModel):
+    # convert state dict keys:
+    # https://github.com/huggingface/transformers/pull/38385
     if not hasattr(model, "_checkpoint_conversion_mapping"):
         return state_dict
 
@@ -308,8 +312,8 @@ def check_target_modules(config, key: str) -> bool:
         target_module_found = True
     else:
         target_module_found = any(
-            key.endswith(f".{target_key}") for target_key in config.target_modules
-        )
+            key.endswith(
+                f".{target_key}") for target_key in config.target_modules)
 
         layer_indexes = getattr(config, "layers_to_transform", None)
         layers_pattern = getattr(config, "layers_pattern", None)
@@ -354,7 +358,8 @@ def normalize_model_name(
     """
     from verl.utils.megatron_utils import get_transformer_layer_offset
 
-    layer_offset = get_transformer_layer_offset(pp_rank, vpp_rank, transformer_config)
+    layer_offset = get_transformer_layer_offset(
+        pp_rank, vpp_rank, transformer_config)
 
     if layer_name in name:  # belong to an intermediate layer
         split_name = name.split(".")
@@ -364,10 +369,13 @@ def normalize_model_name(
                 break
         layer_num_idx = i + 1
         # check the name
-        assert len(split_name) >= layer_num_idx + 1, f"split_name = {split_name}"
-        assert split_name[layer_num_idx].isdigit(), f"split_name = {split_name}"
+        assert len(split_name) >= layer_num_idx + \
+            1, f"split_name = {split_name}"
+        assert split_name[layer_num_idx].isdigit(
+        ), f"split_name = {split_name}"
         # increment layer_num_idx by layer_offset
-        split_name[layer_num_idx] = str(int(split_name[layer_num_idx]) + layer_offset)
+        split_name[layer_num_idx] = str(
+            int(split_name[layer_num_idx]) + layer_offset)
         name = ".".join(split_name)  # weight name in inference_tp_model
     return name
 
@@ -465,9 +473,12 @@ def _load_hf_model(config, model_config, is_value_model, local_cache_path):
         print(f"load from local dir {local_model_path}")
 
     src_rank = _megatron_calc_global_rank(
-        tp_rank=0, dp_rank=0, pp_rank=0, cp_rank=mpu.get_context_parallel_rank()
-    )
-    cpu_init_weights = lambda: torch.device("cpu")
+        tp_rank=0,
+        dp_rank=0,
+        pp_rank=0,
+        cp_rank=mpu.get_context_parallel_rank())
+
+    def cpu_init_weights(): return torch.device("cpu")
     init_context = (
         init_empty_weights
         if torch.distributed.get_rank() != src_rank
@@ -535,7 +546,9 @@ def load_megatron_model_weights(
 
     print(f"before weight loader: architectures = {architectures}...")
     for arch in architectures:
-        print(f"call weight loader arch = {arch}, model config = {model.config}")
+        print(
+            f"call weight loader arch = {arch}, model config = {
+                model.config}")
         weight_loader = get_weight_loader(arch)
         weight_loader(
             state_dict=state_dict,
@@ -611,7 +624,10 @@ def pad_packed_inputs(
     return unpad_tokens, cu_seqlens, max_seqlen_in_batch
 
 
-def load_mcore_dist_weights(parallel_model, dist_weight_path, is_value_model=False):
+def load_mcore_dist_weights(
+        parallel_model,
+        dist_weight_path,
+        is_value_model=False):
     from megatron.core import dist_checkpointing
     from megatron.core.dist_checkpointing.serialization import StrictHandling
 
@@ -703,17 +719,22 @@ def patch_valuehead_model(model) -> None:
         return False
 
     ignore_modules = [
-        name for name, _ in model.named_parameters() if "pretrained_model" in name
-    ]
+        name for name,
+        _ in model.named_parameters() if "pretrained_model" in name]
     model._keys_to_ignore_on_save = ignore_modules
     model.tie_weights = MethodType(tie_weights, model)
     model.get_input_embeddings = MethodType(get_input_embeddings, model)
     model.get_output_embeddings = MethodType(get_output_embeddings, model)
     model.can_generate = MethodType(can_generate, model)
-    model._no_split_modules = getattr(model.pretrained_model, "_no_split_modules", [])
+    model._no_split_modules = getattr(
+        model.pretrained_model, "_no_split_modules", [])
 
 
-def load_valuehead_model(local_path, torch_dtype, model_config, trust_remote_code):
+def load_valuehead_model(
+        local_path,
+        torch_dtype,
+        model_config,
+        trust_remote_code):
     from transformers import (
         AutoModelForCausalLM,
         AutoModelForTokenClassification,

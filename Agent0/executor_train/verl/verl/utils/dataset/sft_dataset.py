@@ -59,11 +59,13 @@ class SFTDataset(Dataset):
         self.tokenizer: PreTrainedTokenizer = tokenizer
 
         self.prompt_key = (
-            prompt_key if isinstance(prompt_key, tuple | list) else [prompt_key]
-        )
+            prompt_key if isinstance(
+                prompt_key,
+                tuple | list) else [prompt_key])
         self.response_key = (
-            response_key if isinstance(response_key, tuple | list) else [response_key]
-        )
+            response_key if isinstance(
+                response_key,
+                tuple | list) else [response_key])
         self.prompt_dict_keys = prompt_dict_keys if prompt_dict_keys else []
         self.response_dict_keys = response_dict_keys if response_dict_keys else []
 
@@ -168,21 +170,26 @@ class SFTDataset(Dataset):
         if sequence_length < self.max_length:
             padded_input_ids = (
                 torch.ones(
-                    size=(self.max_length - sequence_length,), dtype=input_ids.dtype
-                )
-                * self.tokenizer.pad_token_id
-            )
+                    size=(
+                        self.max_length -
+                        sequence_length,
+                    ),
+                    dtype=input_ids.dtype) *
+                self.tokenizer.pad_token_id)
             padded_attention_mask = torch.zeros(
-                size=(self.max_length - sequence_length,), dtype=attention_mask.dtype
-            )
+                size=(
+                    self.max_length -
+                    sequence_length,
+                ),
+                dtype=attention_mask.dtype)
 
             input_ids = torch.cat((input_ids, padded_input_ids))
             attention_mask = torch.cat((attention_mask, padded_attention_mask))
         elif sequence_length > self.max_length:
             if self.truncation == "left":
                 # actually, left truncation may not be reasonable
-                input_ids = input_ids[-self.max_length :]
-                attention_mask = attention_mask[-self.max_length :]
+                input_ids = input_ids[-self.max_length:]
+                attention_mask = attention_mask[-self.max_length:]
             elif self.truncation == "right":
                 input_ids = input_ids[: self.max_length]
                 attention_mask = attention_mask[: self.max_length]
@@ -202,7 +209,8 @@ class SFTDataset(Dataset):
             # mask out prompt for SFT.
             loss_mask[: min(prompt_length, loss_mask.size(0)) - 1] = 0
         # mask out the last token in response
-        loss_mask[min(prompt_length + response_length, loss_mask.size(0)) - 1] = 0
+        loss_mask[min(prompt_length + response_length,
+                      loss_mask.size(0)) - 1] = 0
 
         return {
             "input_ids": input_ids,

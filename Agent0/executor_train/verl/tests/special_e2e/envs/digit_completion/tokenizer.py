@@ -28,8 +28,11 @@ from transformers.tokenization_utils import AddedToken, PreTrainedTokenizer
 
 class CharTokenizer(PreTrainedTokenizer):
     def __init__(
-        self, characters: Sequence[str], model_max_length: int, chat_template, **kwargs
-    ):
+            self,
+            characters: Sequence[str],
+            model_max_length: int,
+            chat_template,
+            **kwargs):
         """Character tokenizer for Hugging Face transformers.
 
         Args:
@@ -67,7 +70,8 @@ class CharTokenizer(PreTrainedTokenizer):
             unk_token_str: 3,
             **{ch: i + 4 for i, ch in enumerate(characters)},
         }
-        self._vocab_int_to_str = {v: k for k, v in self._vocab_str_to_int.items()}
+        self._vocab_int_to_str = {
+            v: k for k, v in self._vocab_str_to_int.items()}
 
         super().__init__(
             eos_token=eos_token,

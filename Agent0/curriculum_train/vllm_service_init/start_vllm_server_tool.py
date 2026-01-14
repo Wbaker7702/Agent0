@@ -69,7 +69,8 @@ def execute_code_in_sandbox(code: str) -> str:
                 return stdout if stdout else "[No output]"
             else:
                 stderr = run_info.get("stderr", "")
-                return f"Execution failed with status: {run_info.get('status')}\nStderr: {stderr}"
+                return f"Execution failed with status: {
+                    run_info.get('status')}\nStderr: {stderr}"
         else:
             return f"API Error: {result}"
     except Exception as e:
@@ -115,8 +116,7 @@ SYSTEM_PROMPT = (
     "Code Format:\n"
     "Each code snippet is wrapped between ```. You need to use print() to output intermediate results.\n"
     "Answer Format:\n"
-    "The last part of your response should be: \\boxed{...}"
-)
+    "The last part of your response should be: \\boxed{...}")
 
 # ---------------------------- GPU Idle Worker ------------------- #
 stop_event = threading.Event()
@@ -158,7 +158,10 @@ def grade_answer_with_timeout(res1, res2):
 sandbox_executor = ThreadPoolExecutor(max_workers=64)
 
 
-def generate_with_tool_use(question: str, num_candidates: int = 10, max_turns: int = 4):
+def generate_with_tool_use(
+        question: str,
+        num_candidates: int = 10,
+        max_turns: int = 4):
     """
     Generates answers using a multi-turn conversation loop (up to max_turns).
     Handles code execution and history updates dynamically.
@@ -187,7 +190,10 @@ def generate_with_tool_use(question: str, num_candidates: int = 10, max_turns: i
         ]
 
         # Batch generate
-        responses = model.generate(prompts, sampling_params_single_turn, use_tqdm=False)
+        responses = model.generate(
+            prompts,
+            sampling_params_single_turn,
+            use_tqdm=False)
 
         tasks_to_run = []
         indices_with_code = set()
@@ -206,7 +212,8 @@ def generate_with_tool_use(question: str, num_candidates: int = 10, max_turns: i
                     code_block_end_tag, start_index + len(code_block_start_tag)
                 )
                 if end_index != -1:
-                    model_output = model_output[: end_index + len(code_block_end_tag)]
+                    model_output = model_output[: end_index +
+                                                len(code_block_end_tag)]
 
             # Update history
             conversations[original_index].append(
@@ -214,7 +221,10 @@ def generate_with_tool_use(question: str, num_candidates: int = 10, max_turns: i
             )
 
             # Check for Code
-            code_match = re.search(r"```python\n(.*?)\n```", model_output, re.DOTALL)
+            code_match = re.search(
+                r"```python\n(.*?)\n```",
+                model_output,
+                re.DOTALL)
 
             # Check for Boxed Answer
             has_boxed = r"\boxed" in model_output
@@ -236,7 +246,8 @@ def generate_with_tool_use(question: str, num_candidates: int = 10, max_turns: i
                 final_assistant_messages[original_index] = model_output
             else:
                 # Pure text reasoning -> Will continue to next turn if logic requires,
-                # or strictly speaking, we keep it active to allow further reasoning.
+                # or strictly speaking, we keep it active to allow further
+                # reasoning.
                 pass
 
         # Step 2: Collect Sandbox Results
@@ -258,7 +269,8 @@ def generate_with_tool_use(question: str, num_candidates: int = 10, max_turns: i
 
             # If it had code, append result and keep active
             if original_index in indices_with_code:
-                exec_result = results_map.get(original_index, "Result not found.")
+                exec_result = results_map.get(
+                    original_index, "Result not found.")
                 tool_feedback = f"Code execution result: {exec_result}"
                 conversations[original_index].append(
                     {"role": "user", "content": tool_feedback}
@@ -272,7 +284,8 @@ def generate_with_tool_use(question: str, num_candidates: int = 10, max_turns: i
 
         active_indices = next_active_indices
 
-    # Fill in any candidates that didn't finish with \boxed with their last output
+    # Fill in any candidates that didn't finish with \boxed with their last
+    # output
     for i in range(num_candidates):
         if not final_assistant_messages[i]:
             # Use the last assistant message as the best effort result
@@ -305,7 +318,8 @@ def consolidate_and_grade(question, golden_answer, assistant_messages):
 
             try:
                 is_match = False
-                match_result_1 = grade_answer_with_timeout(res, exist_ans, timeout=20)
+                match_result_1 = grade_answer_with_timeout(
+                    res, exist_ans, timeout=20)
                 if match_result_1 and match_result_1 != "TIMED_OUT":
                     is_match = True
 
@@ -339,8 +353,9 @@ def consolidate_and_grade(question, golden_answer, assistant_messages):
         "question": question,
         "answer": majority_ans,
         "score": (
-            score if grade_answer(majority_ans, golden_answer) and score > 0.1 else 0
-        ),
+            score if grade_answer(
+                majority_ans,
+                golden_answer) and score > 0.1 else 0),
         "all_outputs": assistant_messages,
         "extracted_results": results,
     }
@@ -377,7 +392,8 @@ def hello():
         try:
             if q and a:
                 # Multi-turn generation
-                final_assistant_messages = generate_with_tool_use(q, max_turns=4)
+                final_assistant_messages = generate_with_tool_use(
+                    q, max_turns=4)
 
                 # Consolidate and Grade
                 item = consolidate_and_grade(q, a, final_assistant_messages)
@@ -409,7 +425,8 @@ def hello():
         json.dump(results_all, f, indent=4)
 
     pause_event.clear()
-    return jsonify({"message": f"Processed {name}, results saved to {out_path}."})
+    return jsonify(
+        {"message": f"Processed {name}, results saved to {out_path}."})
 
 
 # ------------------------- Main Application Entrypoint --------------------------- #

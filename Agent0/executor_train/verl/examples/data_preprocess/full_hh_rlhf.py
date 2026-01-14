@@ -27,7 +27,9 @@ from tqdm.auto import tqdm
 from verl.utils.fs import copy, makedirs
 
 
-def generate_sft_dataset(target_hdfs_path_dir, local_dir="~/data/full_hh_rlh/sft"):
+def generate_sft_dataset(
+        target_hdfs_path_dir,
+        local_dir="~/data/full_hh_rlh/sft"):
     dataset = load_dataset("Dahoas/full-hh-rlhf")
     output = {"prompt": [], "response": []}
     for data in tqdm(dataset["train"]):
@@ -55,7 +57,9 @@ def generate_sft_dataset(target_hdfs_path_dir, local_dir="~/data/full_hh_rlh/sft
         copy(local_path, hdfs_dir)
 
 
-def generate_rm_dataset(target_hdfs_path_dir, local_dir="~/data/full_hh_rlh/rm"):
+def generate_rm_dataset(
+        target_hdfs_path_dir,
+        local_dir="~/data/full_hh_rlh/rm"):
     train_dataset = load_dataset("Dahoas/full-hh-rlhf", split="train[:75%]")
     test_dataset = load_dataset("Dahoas/full-hh-rlhf", split="train[-25%:]")
 
@@ -85,7 +89,9 @@ def generate_rm_dataset(target_hdfs_path_dir, local_dir="~/data/full_hh_rlh/rm")
             copy(local_path, hdfs_dir)
 
 
-def generate_rl_dataset(target_hdfs_path_dir, local_dir="~/data/full_hh_rlhf/rl"):
+def generate_rl_dataset(
+        target_hdfs_path_dir,
+        local_dir="~/data/full_hh_rlhf/rl"):
     dataset = load_dataset("Dahoas/full-hh-rlhf")
     train_dataset = dataset["train"]
 
@@ -111,7 +117,9 @@ def generate_rl_dataset(target_hdfs_path_dir, local_dir="~/data/full_hh_rlhf/rl"
 
         return process_fn
 
-    train_dataset = train_dataset.map(function=make_map_fn("train"), with_indices=True)
+    train_dataset = train_dataset.map(
+        function=make_map_fn("train"),
+        with_indices=True)
     local_dir = os.path.expanduser(local_dir)
     local_path = os.path.join(local_dir, "train.parquet")
     train_dataset.to_parquet(local_path)
@@ -125,17 +133,30 @@ def generate_rl_dataset(target_hdfs_path_dir, local_dir="~/data/full_hh_rlhf/rl"
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--split", type=str, choices=["sft", "rm", "rl"], required=True)
+    parser.add_argument(
+        "--split",
+        type=str,
+        choices=[
+            "sft",
+            "rm",
+            "rl"],
+        required=True)
     parser.add_argument("--local_dir", type=str, default="~/data/full_hh_rlhf")
     parser.add_argument("--hdfs_dir", type=str, required=False, default=None)
 
     args = parser.parse_args()
 
     if args.split == "sft":
-        generate_sft_dataset(args.hdfs_dir, os.path.join(args.local_dir, args.split))
+        generate_sft_dataset(
+            args.hdfs_dir, os.path.join(
+                args.local_dir, args.split))
     elif args.split == "rm":
-        generate_rm_dataset(args.hdfs_dir, os.path.join(args.local_dir, args.split))
+        generate_rm_dataset(
+            args.hdfs_dir, os.path.join(
+                args.local_dir, args.split))
     elif args.split == "rl":
-        generate_rl_dataset(args.hdfs_dir, os.path.join(args.local_dir, args.split))
+        generate_rl_dataset(
+            args.hdfs_dir, os.path.join(
+                args.local_dir, args.split))
     else:
         raise NotImplementedError

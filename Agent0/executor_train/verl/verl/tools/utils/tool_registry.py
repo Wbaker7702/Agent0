@@ -54,11 +54,12 @@ async def initialize_mcp_tool(tool_cls, tool_config) -> list:
             break
         if i < max_retries - 1:
             logger.debug(
-                f"Waiting for MCP client to be ready, attempt {i + 1}/{max_retries}"
-            )
+                f"Waiting for MCP client to be ready, attempt {
+                    i + 1}/{max_retries}")
             await asyncio.sleep(retry_interval)
     else:
-        raise RuntimeError("Failed to initialize MCP tools after maximum retries")
+        raise RuntimeError(
+            "Failed to initialize MCP tools after maximum retries")
     # mcp registry
     assert len(tool_schemas), "mcp tool is empty"
     for tool_schema_dict in tool_schemas:
@@ -106,7 +107,9 @@ def initialize_tools_from_config(tools_config_file):
                         tool_schema_dict
                     )
                 tool = tool_cls(
-                    config=OmegaConf.to_container(tool_config.config, resolve=True),
+                    config=OmegaConf.to_container(
+                        tool_config.config,
+                        resolve=True),
                     tool_schema=tool_schema,
                 )
                 tool_list.append(tool)

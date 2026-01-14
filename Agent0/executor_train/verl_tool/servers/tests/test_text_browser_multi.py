@@ -5,8 +5,8 @@ import fire
 import logging
 
 logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 
@@ -23,8 +23,7 @@ def _send_request(url, trajectory_id, action):
                 "question": "when is the next deadpool movie being released",
                 "gt": "gt",
                 "url": "http://localhost:22015/wikipedia_en_all_maxi_2022-05/A/User:The_other_Kiwix_guy/Landing",
-            }
-        ],
+            }],
     }
 
     logger.info(f"Sending request to {url}")

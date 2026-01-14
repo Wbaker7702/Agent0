@@ -20,26 +20,50 @@ def test_search_retrieval(
 
     print("--- Testing 1: Basic Search Query ---")
     action = """<search>What is machine learning?</search>"""
-    print(_send_test_request(url, trajectory_id + "-1", action, "Basic Search"))
+    print(
+        _send_test_request(
+            url,
+            trajectory_id +
+            "-1",
+            action,
+            "Basic Search"))
 
     print("--- Testing 2: Multi-line Search Query ---")
     action = """<search>
     How does neural network training work?
     What are the key concepts?
     </search>"""
-    print(_send_test_request(url, trajectory_id + "-2", action, "Multi-line Search"))
+    print(
+        _send_test_request(
+            url,
+            trajectory_id +
+            "-2",
+            action,
+            "Multi-line Search"))
 
     print("--- Testing 3: Search with Additional Text ---")
     action = """I need to find information about artificial intelligence.
     <search>artificial intelligence history and applications</search>
     This search should help me understand the topic better."""
-    print(_send_test_request(url, trajectory_id + "-3", action, "Search with Context"))
+    print(
+        _send_test_request(
+            url,
+            trajectory_id +
+            "-3",
+            action,
+            "Search with Context"))
 
     print("--- Testing 4: Multiple Search Tags (should use last one) ---")
     action = """<search>first query</search>
     Some text in between.
     <search>second query about deep learning</search>"""
-    print(_send_test_request(url, trajectory_id + "-4", action, "Multiple Search Tags"))
+    print(
+        _send_test_request(
+            url,
+            trajectory_id +
+            "-4",
+            action,
+            "Multiple Search Tags"))
 
     print("--- Testing 5: Answer Tag (should finish trajectory) ---")
     action = """<answer>Based on my research, machine learning is a subset of artificial intelligence that enables computers to learn and make decisions from data without being explicitly programmed.</answer>"""
@@ -47,33 +71,73 @@ def test_search_retrieval(
 
     print("--- Testing 6: Empty Search Query ---")
     action = """<search></search>"""
-    print(_send_test_request(url, trajectory_id + "-6", action, "Empty Search"))
+    print(
+        _send_test_request(
+            url,
+            trajectory_id +
+            "-6",
+            action,
+            "Empty Search"))
 
     print("--- Testing 7: Search with Special Characters ---")
     action = """<search>What is "reinforcement learning" & how does it work? (with examples)</search>"""
-    print(_send_test_request(url, trajectory_id + "-7", action, "Special Characters"))
+    print(
+        _send_test_request(
+            url,
+            trajectory_id +
+            "-7",
+            action,
+            "Special Characters"))
 
     print("--- Testing 8: No Valid Tags ---")
     action = """This is just plain text without any search or answer tags."""
-    print(_send_test_request(url, trajectory_id + "-8", action, "No Valid Tags"))
+    print(
+        _send_test_request(
+            url,
+            trajectory_id +
+            "-8",
+            action,
+            "No Valid Tags"))
 
     print("--- Testing 9: Malformed Tags ---")
     action = """<search>incomplete search tag without closing"""
-    print(_send_test_request(url, trajectory_id + "-9", action, "Malformed Tags"))
+    print(
+        _send_test_request(
+            url,
+            trajectory_id +
+            "-9",
+            action,
+            "Malformed Tags"))
 
     print("--- Testing 10: Long Search Query ---")
     action = """<search>I need comprehensive information about the latest developments in transformer architectures, attention mechanisms, and their applications in natural language processing, computer vision, and multimodal AI systems including GPT, BERT, Vision Transformers, and recent innovations in the field</search>"""
-    print(_send_test_request(url, trajectory_id + "-10", action, "Long Search Query"))
+    print(
+        _send_test_request(
+            url,
+            trajectory_id +
+            "-10",
+            action,
+            "Long Search Query"))
 
     print("--- Testing 11: Search Query with Code ---")
     action = """<search>Python machine learning libraries like scikit-learn, TensorFlow, and PyTorch for beginners</search>"""
     print(
-        _send_test_request(url, trajectory_id + "-11", action, "Search with Code Terms")
-    )
+        _send_test_request(
+            url,
+            trajectory_id +
+            "-11",
+            action,
+            "Search with Code Terms"))
 
     print("--- Testing 12: Mathematical/Scientific Query ---")
     action = """<search>gradient descent optimization algorithms in machine learning mathematics</search>"""
-    print(_send_test_request(url, trajectory_id + "-12", action, "Mathematical Query"))
+    print(
+        _send_test_request(
+            url,
+            trajectory_id +
+            "-12",
+            action,
+            "Mathematical Query"))
 
     return True
 
@@ -97,8 +161,12 @@ def test_search_retrieval_error_cases(
     long_query = "machine learning " * 1000  # Very long repeated query
     action = f"""<search>{long_query}</search>"""
     print(
-        _send_test_request(url, trajectory_id + "-error-2", action, "Very Long Query")
-    )
+        _send_test_request(
+            url,
+            trajectory_id +
+            "-error-2",
+            action,
+            "Very Long Query"))
 
     print("--- Error Testing 3: Unicode and Special Characters ---")
     action = (
@@ -124,17 +192,20 @@ def test_search_answer_workflow(
     # Step 1: Initial search
     print("Step 1: Initial search")
     action1 = """<search>What are the main types of machine learning?</search>"""
-    result1 = _send_test_request(url, trajectory_id, action1, "Workflow Step 1")
+    result1 = _send_test_request(
+        url, trajectory_id, action1, "Workflow Step 1")
 
     # Step 2: Follow-up search
     print("Step 2: Follow-up search")
     action2 = """<search>supervised learning examples and applications</search>"""
-    result2 = _send_test_request(url, trajectory_id, action2, "Workflow Step 2")
+    result2 = _send_test_request(
+        url, trajectory_id, action2, "Workflow Step 2")
 
     # Step 3: Another search
     print("Step 3: Third search")
     action3 = """<search>unsupervised learning clustering algorithms</search>"""
-    result3 = _send_test_request(url, trajectory_id, action3, "Workflow Step 3")
+    result3 = _send_test_request(
+        url, trajectory_id, action3, "Workflow Step 3")
 
     # Step 4: Final answer (should end trajectory)
     print("Step 4: Final answer")
@@ -143,7 +214,11 @@ def test_search_answer_workflow(
     2. Unsupervised Learning - finds patterns in unlabeled data (e.g., clustering, dimensionality reduction)
     3. Reinforcement Learning - learns through interaction with an environment using rewards and penalties
     Each type has different applications and use cases depending on the problem and available data.</answer>"""
-    result4 = _send_test_request(url, trajectory_id, action4, "Workflow Step 4 (Final)")
+    result4 = _send_test_request(
+        url,
+        trajectory_id,
+        action4,
+        "Workflow Step 4 (Final)")
 
     return True
 
@@ -192,8 +267,7 @@ def _send_test_request(url, trajectory_id, action, test_name):
         return {"error": "Request timeout"}
     except requests.exceptions.ConnectionError:
         logger.error(
-            f"Connection error for {test_name} - is the retrieval service running?"
-        )
+            f"Connection error for {test_name} - is the retrieval service running?")
         return {"error": "Connection error - check if retrieval service is running"}
     except requests.exceptions.RequestException as e:
         logger.error(f"Request error for {test_name}: {str(e)}")
@@ -203,11 +277,15 @@ def _send_test_request(url, trajectory_id, action, test_name):
         return {"error": str(e)}
 
 
-def check_retrieval_service(retriever_url: str = "http://127.0.0.1:8000/retrieve"):
+def check_retrieval_service(
+        retriever_url: str = "http://127.0.0.1:8000/retrieve"):
     """Check if the retrieval service is available"""
     logger.info("Checking retrieval service availability...")
 
-    test_payload = {"queries": ["test query"], "topk": 3, "return_scores": True}
+    test_payload = {
+        "queries": ["test query"],
+        "topk": 3,
+        "return_scores": True}
 
     try:
         response = requests.post(retriever_url, json=test_payload, timeout=10)
@@ -215,8 +293,10 @@ def check_retrieval_service(retriever_url: str = "http://127.0.0.1:8000/retrieve
         logger.info(f"✓ Retrieval service is available at {retriever_url}")
         return True
     except Exception as e:
-        logger.warning(f"✗ Retrieval service not available at {retriever_url}: {e}")
-        logger.warning("Some tests may fail if the retrieval service is not running")
+        logger.warning(
+            f"✗ Retrieval service not available at {retriever_url}: {e}")
+        logger.warning(
+            "Some tests may fail if the retrieval service is not running")
         return False
 
 

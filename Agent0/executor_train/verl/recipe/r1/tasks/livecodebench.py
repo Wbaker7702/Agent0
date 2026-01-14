@@ -23,7 +23,8 @@ from verl.utils.reward_score.prime_code.testing_util import run_test
 
 
 def _temp_run(in_outs, generation, debug, result, metadata_list, timeout):
-    res, metadata = run_test(in_outs, test=generation, debug=debug, timeout=timeout)
+    res, metadata = run_test(in_outs, test=generation,
+                             debug=debug, timeout=timeout)
     result.append(res)
     metadata_list.append(metadata)
 
@@ -61,8 +62,10 @@ def compute_score(completion, test_cases):
     except Exception as e:
         print(f"Error loading test cases: {e}")
         in_outs = json.loads(
-            pickle.loads(zlib.decompress(base64.b64decode(test_cases.encode("utf-8"))))
-        )
+            pickle.loads(
+                zlib.decompress(
+                    base64.b64decode(
+                        test_cases.encode("utf-8")))))
 
     success = False
     try:

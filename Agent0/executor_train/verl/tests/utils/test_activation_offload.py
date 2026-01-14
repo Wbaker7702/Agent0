@@ -88,24 +88,29 @@ def _fsdp_activation_offloading_test(
         apply_fsdp2(model, fsdp_kwargs, {})
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=1e-4)
-    lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=1, gamma=0.9)
+    lr_scheduler = torch.optim.lr_scheduler.StepLR(
+        optimizer, step_size=1, gamma=0.9)
 
     # Create checkpoint manager
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     checkpoint_manager = FSDPCheckpointManager(
-        model=model, optimizer=optimizer, lr_scheduler=lr_scheduler, tokenizer=tokenizer
-    )
+        model=model,
+        optimizer=optimizer,
+        lr_scheduler=lr_scheduler,
+        tokenizer=tokenizer)
 
     # Generate sample input
     batch_size = 2
     seq_len = 32
     vocab_size = 32000
     # First input for initial update
-    input_ids1 = torch.randint(0, vocab_size, (batch_size, seq_len), device="cuda")
+    input_ids1 = torch.randint(
+        0, vocab_size, (batch_size, seq_len), device="cuda")
     attention_mask1 = torch.ones_like(input_ids1)
 
     # Second input for verification
-    input_ids2 = torch.randint(0, vocab_size, (batch_size, seq_len), device="cuda")
+    input_ids2 = torch.randint(
+        0, vocab_size, (batch_size, seq_len), device="cuda")
     attention_mask2 = torch.ones_like(input_ids2)
 
     # Step 1: Initial update and save checkpoint
@@ -159,7 +164,8 @@ def _fsdp_activation_offloading_test(
     torch.testing.assert_close(
         logits_without_offloading, logits_with_offloading, atol=0.0, rtol=0.0
     )
-    print(f"Activaiton offloading for {strategy} test passed on {world_size} GPUs!")
+    print(
+        f"Activaiton offloading for {strategy} test passed on {world_size} GPUs!")
 
     # Cleanup
     shutil.rmtree(temp_dir)

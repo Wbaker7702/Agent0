@@ -43,9 +43,9 @@ class MCPClientManager:
             server = servers[server_name]
             if "auth_token" in server:
                 transport = SSETransport(
-                    url=server["url"],
-                    headers={"Authorization": f"Bearer {server['auth_token']}"},
-                )
+                    url=server["url"], headers={
+                        "Authorization": f"Bearer {
+                            server['auth_token']}"}, )
                 client = Client(transport)
                 self.clients.append(client)
             else:
@@ -67,7 +67,8 @@ class MCPClientManager:
         async with client:
             return await client.call_tool_mcp(tool_name, parameters)
 
-    async def fetch_tool_schemas(self, tool_selected_list: list[str]) -> list[dict]:
+    async def fetch_tool_schemas(
+            self, tool_selected_list: list[str]) -> list[dict]:
         tool_schemas = []
         for client in self.clients:
             async with client:

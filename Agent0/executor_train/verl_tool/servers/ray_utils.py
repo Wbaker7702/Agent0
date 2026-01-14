@@ -16,9 +16,8 @@ logger = logging.getLogger(__name__)
 
 # === RAY REMOTE FUNCTIONS ===
 @ray.remote(num_cpus=0.1)
-def ray_execute_action(
-    tool_serialized, trajectory_id: str, action: str, extra_field: Dict[str, Any]
-):
+def ray_execute_action(tool_serialized, trajectory_id: str,
+                       action: str, extra_field: Dict[str, Any]):
     """
     Execute a single tool action in a Ray worker.
 
@@ -32,7 +31,8 @@ def ray_execute_action(
         tuple: (observation, done, valid) result of the action
     """
     try:
-        return tool_serialized.conduct_action(trajectory_id, action, extra_field)
+        return tool_serialized.conduct_action(
+            trajectory_id, action, extra_field)
     except Exception as e:
         logger.error(f"Ray action execution failed: {e}")
         return {"obs": "", "error": str(e)}, True, False
@@ -66,8 +66,10 @@ def ray_batch_execute(
         else:
             # Fallback to individual processing
             observations, dones, valids = [], [], []
-            for tid, action, extra in zip(trajectory_ids, actions, extra_fields):
-                obs, done, valid = tool_serialized.conduct_action(tid, action, extra)
+            for tid, action, extra in zip(
+                    trajectory_ids, actions, extra_fields):
+                obs, done, valid = tool_serialized.conduct_action(
+                    tid, action, extra)
                 observations.append(obs)
                 dones.append(done)
                 valids.append(valid)
@@ -84,9 +86,11 @@ def ray_batch_execute(
 
 
 @ray.remote(num_cpus=0)
-def handle_invalid_action(
-    trajectory_id: str, action: str, extra_field: Dict[str, Any], done_if_invalid: bool
-):
+def handle_invalid_action(trajectory_id: str,
+                          action: str,
+                          extra_field: Dict[str,
+                                            Any],
+                          done_if_invalid: bool):
     """Handle actions that don't match any tool"""
     observation = {
         "obs": "",
@@ -131,7 +135,8 @@ class RayToolManager:
         # Initialize tools
         self._initialize_tools()
 
-        logger.info(f"Ray Tool Manager initialized with {len(self.tools)} tools")
+        logger.info(
+            f"Ray Tool Manager initialized with {len(self.tools)} tools")
 
     def _ensure_ray_initialized(self):
         """Ensure Ray is properly initialized"""
@@ -140,7 +145,7 @@ class RayToolManager:
                 # Try to connect to existing cluster first
                 ray.init(address="auto", ignore_reinit_error=True)
                 logger.info("Connected to existing Ray cluster")
-            except:
+            except BaseException:
                 # Fallback to local Ray
                 ray.init(ignore_reinit_error=True)
                 logger.info("Started local Ray cluster")
@@ -161,7 +166,8 @@ class RayToolManager:
             try:
                 tool_cls = get_tool_cls(tool_type)
 
-                tool_instance = tool_cls(num_workers=self.config.workers_per_tool)
+                tool_instance = tool_cls(
+                    num_workers=self.config.workers_per_tool)
 
                 self.tools[tool_type] = tool_instance
                 initialized_tools.append(tool_type)
@@ -169,7 +175,8 @@ class RayToolManager:
 
             except Exception as e:
                 failed_tools.append((tool_type, str(e)))
-                logger.error(f"✗ Failed to initialize Ray tool {tool_type}: {e}")
+                logger.error(
+                    f"✗ Failed to initialize Ray tool {tool_type}: {e}")
 
         if "finish" not in self.tools:
             tool_instance = get_tool_cls("finish")(
@@ -183,7 +190,8 @@ class RayToolManager:
         self._log_tool_status()
 
         if failed_tools:
-            logger.warning(f"Some Ray tools failed to initialize: {failed_tools}")
+            logger.warning(
+                f"Some Ray tools failed to initialize: {failed_tools}")
 
     def _log_tool_status(self):
         """Log comprehensive tool status"""
@@ -198,14 +206,15 @@ class RayToolManager:
         """Generate usage instructions for available tools"""
         instructions = []
         for tool_type, tool in self.tools.items():
-            if tool_type not in ["finish", "base"] and hasattr(tool, "get_usage_inst"):
+            if tool_type not in [
+                    "finish", "base"] and hasattr(
+                    tool, "get_usage_inst"):
                 try:
                     usage_inst = tool.get_usage_inst()
                     instructions.append(f"• {tool_type}: {usage_inst}")
                 except Exception as e:
                     logger.warning(
-                        f"Could not get usage instructions for {tool_type}: {e}"
-                    )
+                        f"Could not get usage instructions for {tool_type}: {e}")
 
         if not instructions:
             return "No tools available with usage instructions."
@@ -235,8 +244,8 @@ class RayToolManager:
 
         # Try each tool (except special ones) to parse action
         standard_tools = [
-            t for t in self.tools.keys() if t not in ["finish", "mcp_interface"]
-        ]
+            t for t in self.tools.keys() if t not in [
+                "finish", "mcp_interface"]]
 
         for tool_type in standard_tools:
             try:
@@ -285,9 +294,9 @@ class RayToolManager:
 
             # Process chunk synchronously (tool identification is fast)
             chunk_tool_types = [
-                self._identify_tool_for_action(action, extra_field)
-                for action, extra_field in zip(chunk_actions, chunk_extra_fields)
-            ]
+                self._identify_tool_for_action(
+                    action, extra_field) for action, extra_field in zip(
+                    chunk_actions, chunk_extra_fields)]
             tool_types.extend(chunk_tool_types)
 
             # Yield control for large batches
@@ -296,15 +305,18 @@ class RayToolManager:
 
         return tool_types
 
-    def _group_actions_by_tool(
-        self,
-        tool_types: List[Optional[str]],
-        trajectory_ids: List[str],
-        actions: List[str],
-        extra_fields: List[Dict[str, Any]],
-    ) -> Dict[
-        Optional[str], Tuple[List[int], List[str], List[str], List[Dict[str, Any]]]
-    ]:
+    def _group_actions_by_tool(self,
+                               tool_types: List[Optional[str]],
+                               trajectory_ids: List[str],
+                               actions: List[str],
+                               extra_fields: List[Dict[str,
+                                                       Any]],
+                               ) -> Dict[Optional[str],
+                                         Tuple[List[int],
+                                               List[str],
+                                               List[str],
+                                               List[Dict[str,
+                                                         Any]]]]:
         """
         Group actions by their assigned tool types for efficient batch processing.
 
@@ -360,7 +372,8 @@ class RayToolManager:
             results = await self._ray_get_async(futures)
 
             # Unpack results
-            observations, dones, valids = zip(*results) if results else ([], [], [])
+            observations, dones, valids = zip(
+                *results) if results else ([], [], [])
             return list(observations), list(dones), list(valids)
 
     async def _ray_get_async(self, ray_futures):
@@ -481,7 +494,9 @@ class RayToolManager:
             raise RuntimeError(f"Failed to process {none_count} actions")
 
         processing_time = (time.time() - start_time) * 1000
-        logger.debug(f"Ray processed {num_actions} actions in {processing_time:.1f}ms")
+        logger.debug(
+            f"Ray processed {num_actions} actions in {
+                processing_time:.1f}ms")
 
         return observations, dones, valids
 
@@ -509,8 +524,9 @@ class RayToolManager:
                 # Validate result lengths
                 if len(task_observations) != len(indices):
                     raise ValueError(
-                        f"Tool {tool_type} returned {len(task_observations)} results for {len(indices)} actions"
-                    )
+                        f"Tool {tool_type} returned {
+                            len(task_observations)} results for {
+                            len(indices)} actions")
 
                 # Assign results to correct positions
                 for idx_pos, result_idx in enumerate(indices):
@@ -519,8 +535,8 @@ class RayToolManager:
                     valids[result_idx] = task_valids[idx_pos]
 
                 logger.debug(
-                    f"✓ Tool {tool_type} processed {len(indices)} actions successfully"
-                )
+                    f"✓ Tool {tool_type} processed {
+                        len(indices)} actions successfully")
 
             except Exception as e:
                 logger.error(
@@ -534,7 +550,8 @@ class RayToolManager:
                     "tool_type": tool_type,
                 }
 
-                # Assign error to all actions that were supposed to be processed by this tool
+                # Assign error to all actions that were supposed to be
+                # processed by this tool
                 for result_idx in indices:
                     observations[result_idx] = error_response
                     dones[result_idx] = True
@@ -573,9 +590,11 @@ class RayToolManager:
 
 # === RAY REMOTE FUNCTIONS (UPDATED) ===
 @ray.remote(num_cpus=0)
-def handle_invalid_action(
-    trajectory_id: str, action: str, extra_field: Dict[str, Any], done_if_invalid: bool
-):
+def handle_invalid_action(trajectory_id: str,
+                          action: str,
+                          extra_field: Dict[str,
+                                            Any],
+                          done_if_invalid: bool):
     """Handle actions that don't match any tool with better error info"""
     observation = {
         "obs": "",
@@ -624,14 +643,18 @@ class RayPerformanceMonitor:
 
 
 # === INTEGRATION HELPERS ===
-def create_ray_tool_manager(tool_types: Tuple[str], config, **kwargs) -> RayToolManager:
+def create_ray_tool_manager(
+        tool_types: Tuple[str],
+        config,
+        **kwargs) -> RayToolManager:
     """Factory function to create Ray tool manager with proper validation"""
 
     # Validate Ray is available
     try:
         import ray
     except ImportError:
-        raise RuntimeError("Ray is not installed. Install with: pip install ray")
+        raise RuntimeError(
+            "Ray is not installed. Install with: pip install ray")
 
     # Create and return manager
     return RayToolManager(tool_types, config, **kwargs)
@@ -652,22 +675,26 @@ def test_ray_performance():
 
     # Test single action
     start = time.time()
-    result = asyncio.run(manager.process_actions(["test_1"], ["test action"], [{}]))
+    result = asyncio.run(
+        manager.process_actions(
+            ["test_1"], ["test action"], [
+                {}]))
     single_time = time.time() - start
 
     # Test batch
     start = time.time()
-    result = asyncio.run(
-        manager.process_actions(
-            [f"test_{i}" for i in range(100)], ["test action"] * 100, [{}] * 100
-        )
-    )
+    result = asyncio.run(manager.process_actions(
+        [f"test_{i}" for i in range(100)], ["test action"] * 100, [{}] * 100))
     batch_time = time.time() - start
 
-    print(f"Single action: {single_time*1000:.1f}ms")
+    print(f"Single action: {single_time * 1000:.1f}ms")
     print(
-        f"100 actions: {batch_time*1000:.1f}ms ({batch_time/100*1000:.1f}ms per action)"
-    )
+        f"100 actions: {
+            batch_time *
+            1000:.1f}ms ({
+            batch_time /
+            100 *
+            1000:.1f}ms per action)")
 
     manager.cleanup()
 

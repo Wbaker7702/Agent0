@@ -82,8 +82,7 @@ def test_create_custom_curriculum_samper():
                 "class_path": "pkg://tests.utils.dataset.test_create_rl_sampler_on_cpu",
                 "class_name": "RandomCurriculumSampler",
             },
-        }
-    )
+        })
 
     dataset = MockChatDataset()
 
@@ -97,12 +96,11 @@ def test_create_custom_curriculum_samper_wrong_class():
             "sampler": {
                 "class_path": "pkg://tests.utils.dataset.test_create_rl_sampler_on_cpu",
                 "class_name": "MockIncorrectSampler",
-            }
-        }
-    )
+            }})
 
     dataset = MockChatDataset()
 
-    # MockIncorrectSampler is not an instance of AbstractCurriculumSampler, so raises
+    # MockIncorrectSampler is not an instance of AbstractCurriculumSampler, so
+    # raises
     with pytest.raises(AssertionError):
         create_rl_sampler(data_config, dataset)

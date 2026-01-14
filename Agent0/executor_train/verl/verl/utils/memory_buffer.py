@@ -169,7 +169,8 @@ class MemoryBufferModuleWrapper:
     def __init__(self, module: nn.Module):
         super().__init__()
         self.module = module
-        self.weight_buffer_meta = get_weight_buffer_meta_from_module(self.module)
+        self.weight_buffer_meta = get_weight_buffer_meta_from_module(
+            self.module)
         self.memory_buffers = build_memory_buffer(self.weight_buffer_meta)
         build_memory_reference_from_module(self.module, self.memory_buffers)
 
@@ -201,7 +202,8 @@ class MegatronMemoryBufferForRollout:
         self._named_parameters = {}
         self.transform_memory_param_fn = transform_memory_param_fn
 
-    def initialize_weight_buffer(self, weight_buffer_meta_pp: list[dict[str, dict]]):
+    def initialize_weight_buffer(
+            self, weight_buffer_meta_pp: list[dict[str, dict]]):
         """
         Initialize the weight buffer. The weight buffer is obtained according to the actor. We will construct
         a large buffer for each dtype in the weight_buffer.
@@ -224,7 +226,8 @@ class MegatronMemoryBufferForRollout:
             self._weight_buffers[i] = build_memory_reference(
                 weight_buffer_meta, self._memory_buffers[i]
             )
-        self._named_parameters = self.transform_memory_param_fn(self._weight_buffers)
+        self._named_parameters = self.transform_memory_param_fn(
+            self._weight_buffers)
 
     @property
     def named_parameters(self):

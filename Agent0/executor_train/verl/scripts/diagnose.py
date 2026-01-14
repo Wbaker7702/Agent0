@@ -43,8 +43,7 @@ REGIONAL_URLS = {
     "cn": {
         "PYPI(douban)": "https://pypi.douban.com/",
         "Conda(tsinghua)": "https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/free/",
-    }
-}
+    }}
 
 
 def test_connection(name, url, timeout=10):
@@ -212,10 +211,10 @@ def check_cuda_versions():
             print(f"CUDA Runtime : {cuda_runtime_version}")
             import subprocess
 
-            nvcc_output = subprocess.check_output(["nvcc", "--version"]).decode("utf-8")
+            nvcc_output = subprocess.check_output(
+                ["nvcc", "--version"]).decode("utf-8")
             cuda_compiler_version = next(
-                (line for line in nvcc_output.splitlines() if "release" in line), None
-            )
+                (line for line in nvcc_output.splitlines() if "release" in line), None)
             if cuda_compiler_version:
                 print(f"CUDA Compiler : {cuda_compiler_version.strip()}")
             else:
@@ -274,7 +273,10 @@ def _get_system_info():
     """
     cpu_memory = _get_cpu_memory()
     gpu_count, gpu_info = _get_gpu_info()
-    return {"cpu_memory": cpu_memory, "gpu_count": gpu_count, "gpu_info": gpu_info}
+    return {
+        "cpu_memory": cpu_memory,
+        "gpu_count": gpu_count,
+        "gpu_info": gpu_info}
 
 
 def check_system_info():
@@ -296,10 +298,20 @@ def parse_args():
     choices = ["python", "pip", "verl", "system", "os", "environment"]
     for choice in choices:
         parser.add_argument(
-            "--" + choice, default=1, type=int, help="Diagnose {}.".format(choice)
-        )
-    parser.add_argument("--network", default=0, type=int, help="Diagnose network.")
-    parser.add_argument("--hardware", default=0, type=int, help="Diagnose hardware.")
+            "--" + choice,
+            default=1,
+            type=int,
+            help="Diagnose {}.".format(choice))
+    parser.add_argument(
+        "--network",
+        default=0,
+        type=int,
+        help="Diagnose network.")
+    parser.add_argument(
+        "--hardware",
+        default=0,
+        type=int,
+        help="Diagnose hardware.")
     parser.add_argument(
         "--region",
         default="",

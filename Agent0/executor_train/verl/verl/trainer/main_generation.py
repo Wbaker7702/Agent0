@@ -15,6 +15,21 @@
 Generate responses given a dataset of prompts
 """
 
+from verl.workers.fsdp_workers import ActorRolloutRefWorker
+from verl.utils.model import compute_position_id_with_mask
+from verl.utils.hdfs_io import makedirs
+from verl.utils.fs import copy_to_local
+from verl.utils import hf_tokenizer
+from verl.single_controller.ray import (
+    RayClassWithInitArgs,
+    RayResourcePool,
+    RayWorkerGroup,
+)
+from verl.protocol import pad_dataproto_to_divisor, unpad_dataproto
+from verl import DataProto
+from omegaconf import OmegaConf
+import pandas as pd
+from pprint import pprint
 import os
 
 import hydra
@@ -24,24 +39,6 @@ import ray
 os.environ["NCCL_DEBUG"] = "WARN"
 os.environ["TOKENIZERS_PARALLELISM"] = "true"
 # os.environ['TORCH_COMPILE_DISABLE'] = '1'
-
-from pprint import pprint
-
-import pandas as pd
-from omegaconf import OmegaConf
-
-from verl import DataProto
-from verl.protocol import pad_dataproto_to_divisor, unpad_dataproto
-from verl.single_controller.ray import (
-    RayClassWithInitArgs,
-    RayResourcePool,
-    RayWorkerGroup,
-)
-from verl.utils import hf_tokenizer
-from verl.utils.fs import copy_to_local
-from verl.utils.hdfs_io import makedirs
-from verl.utils.model import compute_position_id_with_mask
-from verl.workers.fsdp_workers import ActorRolloutRefWorker
 
 
 @hydra.main(config_path="config", config_name="generation", version_base=None)
@@ -54,8 +51,9 @@ def run_generation(config) -> None:
         # this is for local ray cluster
         ray.init(
             runtime_env={
-                "env_vars": {"TOKENIZERS_PARALLELISM": "true", "NCCL_DEBUG": "WARN"}
-            },
+                "env_vars": {
+                    "TOKENIZERS_PARALLELISM": "true",
+                    "NCCL_DEBUG": "WARN"}},
             num_cpus=config.ray_init.num_cpus,
         )
 
@@ -77,7 +75,8 @@ def main_task(config):
         assert config.data.n_samples == 1, "When temperature=0, n_samples must be 1."
     assert config.data.n_samples >= 1, "n_samples should always >= 1"
 
-    # read dataset. Note that the dataset should directly contain chat template format (e.g., a list of dictionary)
+    # read dataset. Note that the dataset should directly contain chat
+    # template format (e.g., a list of dictionary)
     dataset = pd.read_parquet(config.data.path)
     chat_lst = dataset[config.data.prompt_key].tolist()
 
@@ -91,8 +90,9 @@ def main_task(config):
         cls=ray.remote(ActorRolloutRefWorker), config=config, role="rollout"
     )
     resource_pool = RayResourcePool(
-        process_on_nodes=[config.trainer.n_gpus_per_node] * config.trainer.nnodes
-    )
+        process_on_nodes=[
+            config.trainer.n_gpus_per_node] *
+        config.trainer.nnodes)
     wg = RayWorkerGroup(
         resource_pool=resource_pool,
         ray_cls_with_init=ray_cls_with_init,
@@ -108,7 +108,7 @@ def main_task(config):
     for batch_idx in range(num_batch):
         print(f"[{batch_idx + 1}/{num_batch}] Start to process.")
         batch_chat_lst = chat_lst[
-            batch_idx * config_batch_size : (batch_idx + 1) * config_batch_size
+            batch_idx * config_batch_size: (batch_idx + 1) * config_batch_size
         ]
         inputs = tokenizer.apply_chat_template(
             batch_chat_lst,

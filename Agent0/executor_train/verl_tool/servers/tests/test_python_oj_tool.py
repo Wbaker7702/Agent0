@@ -63,9 +63,9 @@ def test_firejail_python(
         )
     )
 
-    print(
-        "--- Test 3: Taco test cases without fn_name one wrong test cases---"
-    )  # should not pass, I changed the first outputs from 8 to 7 in the expected return
+    # should not pass, I changed the first outputs from 8 to 7 in the expected
+    # return
+    print("--- Test 3: Taco test cases without fn_name one wrong test cases---")
     action = "```python\ndef sub(maxs, mins):\n\tfor i in range(len(maxs)):\n\t\tif maxs[i] != mins[i]:\n\t\t\tif i == len(maxs) - 1:\n\t\t\t\treturn int(maxs[i]) - int(mins[i])\n\t\t\tif i == len(maxs) - 2:\n\t\t\t\treturn int(maxs[i:i + 2]) - int(mins[i:i + 2])\n\t\t\treturn 10\n\treturn 0\n\ndef checkEqual(S):\n\tans = 8\n\tfor k in range(1, len(S)):\n\t\tif len(S) % k != 0:\n\t\t\tcontinue\n\t\tmins = maxs = S[0:k]\n\t\tfor s in range(0, len(S), k):\n\t\t\tmaxs = max(maxs, S[s:s + k])\n\t\t\tmins = min(mins, S[s:s + k])\n\t\tans = min(ans, sub(maxs, mins))\n\treturn ans\n\ndef check12(S):\n\tmaxv = 0\n\tminv = 10\n\tp = 0\n\twhile p < len(S):\n\t\tv = int(S[p])\n\t\tif S[p] == '1' and p + 1 < len(S):\n\t\t\tv = 10 + int(S[p + 1])\n\t\t\tp += 1\n\t\tmaxv = max(maxv, v)\n\t\tminv = min(minv, v)\n\t\tp += 1\n\treturn maxv - minv\nS = input()\nprint(min(checkEqual(S), check12(S)))\n```"
     print(
         _send_test_request(
@@ -136,7 +136,12 @@ def test_firejail_python(
     )
 
 
-def _send_test_request(url, trajectory_id, action, test_name, extra_field=None):
+def _send_test_request(
+        url,
+        trajectory_id,
+        action,
+        test_name,
+        extra_field=None):
     """Helper function to send test requests and process responses"""
     logger.info(f"Testing {test_name} code execution...")
 

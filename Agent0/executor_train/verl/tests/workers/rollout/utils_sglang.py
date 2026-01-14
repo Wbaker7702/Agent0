@@ -33,7 +33,8 @@ def levenshtein(s1, s2):
     for i in range(1, m + 1):
         for j in range(1, n + 1):
             cost = 0 if s1[i - 1] == s2[j - 1] else 1
-            dp[i][j] = min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + cost)
+            dp[i][j] = min(dp[i - 1][j] + 1, dp[i][j - 1] +
+                           1, dp[i - 1][j - 1] + cost)
     return dp[m][n]
 
 
@@ -57,7 +58,8 @@ def initialize_global_process_group(timeout_second=36000, spmd=False):
 
     if not torch.distributed.is_initialized():  # Check if already initialized
         print("Initializing process group...")
-        torch.distributed.init_process_group(timeout=timedelta(seconds=timeout_second))
+        torch.distributed.init_process_group(
+            timeout=timedelta(seconds=timeout_second))
     else:
         print("Process group already initialized.")
 
@@ -74,7 +76,8 @@ def initialize_global_process_group(timeout_second=36000, spmd=False):
         else:
             CUDA_VISIBLE_DEVICES = str(local_rank)
         os.environ["CUDA_VISIBLE_DEVICES"] = CUDA_VISIBLE_DEVICES
-        print(f"CUDA_VISIBLE_DEVICES is not set, set to {CUDA_VISIBLE_DEVICES}")
+        print(
+            f"CUDA_VISIBLE_DEVICES is not set, set to {CUDA_VISIBLE_DEVICES}")
 
     return local_rank, rank, world_size
 
@@ -86,7 +89,8 @@ def clean_torchelastic_env():
 
 
 def load_tokenizer_and_model(local_model_path, dtype="bfloat16"):
-    tokenizer = AutoTokenizer.from_pretrained(local_model_path, padding_side="left")
+    tokenizer = AutoTokenizer.from_pretrained(
+        local_model_path, padding_side="left")
     tokenizer.pad_token = tokenizer.eos_token
     model = AutoModelForCausalLM.from_pretrained(
         local_model_path, torch_dtype=getattr(torch, dtype), device_map="cuda"
@@ -105,8 +109,10 @@ def prepare_inputs(tokenizer, prompts, max_prompt_length):
         tokenized["input_ids"], max_prompt_length, pad_token_id, left_pad=True
     )
     attention_mask = pad_sequence_to_length(
-        tokenized["attention_mask"], max_prompt_length, pad_token_id=0, left_pad=True
-    )
+        tokenized["attention_mask"],
+        max_prompt_length,
+        pad_token_id=0,
+        left_pad=True)
     position_ids = compute_position_id_with_mask(attention_mask)
     position_ids = pad_sequence_to_length(
         position_ids, max_prompt_length, pad_token_id=0, left_pad=True
@@ -130,7 +136,7 @@ def generate_hf_output(
         use_cache=False,
     )
     seq = output.sequences
-    response = seq[:, input_ids.shape[1] :]
+    response = seq[:, input_ids.shape[1]:]
     return tokenizer.batch_decode(response)
 
 

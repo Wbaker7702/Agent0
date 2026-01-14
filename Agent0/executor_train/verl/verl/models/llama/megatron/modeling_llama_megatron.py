@@ -40,7 +40,7 @@ from .layers import (
 )
 
 """
-TODO: 
+TODO:
 1. Add weight initialization. Here we need to be careful on TP weight init.
 2. Add sequence parallel
 3. Load checkpoint from meta LLama pretrained checkpoint
@@ -55,7 +55,11 @@ def _make_causal_mask(
     Make causal mask used for bi-directional self-attention.
     """
     bsz, tgt_len = input_ids_shape
-    mask = torch.full((tgt_len, tgt_len), torch.finfo(dtype).min, device=device)
+    mask = torch.full(
+        (tgt_len,
+         tgt_len),
+        torch.finfo(dtype).min,
+        device=device)
     mask_cond = torch.arange(mask.size(-1), device=device)
     mask.masked_fill_(mask_cond < (mask_cond + 1).view(mask.size(-1), 1), 0)
     mask = mask.to(dtype)
@@ -63,14 +67,18 @@ def _make_causal_mask(
 
 
 # Copied from transformers.models.bart.modeling_bart._expand_mask
-def _expand_mask(mask: torch.Tensor, dtype: torch.dtype, tgt_len: Optional[int] = None):
+def _expand_mask(
+        mask: torch.Tensor,
+        dtype: torch.dtype,
+        tgt_len: Optional[int] = None):
     """
     Expands attention_mask from `[bsz, seq_len]` to `[bsz, 1, tgt_seq_len, src_seq_len]`.
     """
     bsz, src_len = mask.size()
     tgt_len = tgt_len if tgt_len is not None else src_len
 
-    expanded_mask = mask[:, None, None, :].expand(bsz, 1, tgt_len, src_len).to(dtype)
+    expanded_mask = mask[:, None, None, :].expand(
+        bsz, 1, tgt_len, src_len).to(dtype)
 
     inverted_mask = 1.0 - expanded_mask
 
@@ -87,9 +95,13 @@ class ParallelLlamaModel(nn.Module):
         config: LlamaConfig
     """
 
-    def __init__(self, config: LlamaConfig, megatron_config: ModelParallelConfig):
+    def __init__(
+            self,
+            config: LlamaConfig,
+            megatron_config: ModelParallelConfig):
         super().__init__()
-        self.config: TransformerConfig = convert_config(config, megatron_config)
+        self.config: TransformerConfig = convert_config(
+            config, megatron_config)
         self.padding_idx = config.pad_token_id
         self.vocab_size = config.vocab_size
         embedding_kwargs = tp_utils.get_default_kwargs_for_parallel_embedding()
@@ -97,7 +109,8 @@ class ParallelLlamaModel(nn.Module):
             assert embedding_kwargs.get(
                 "config", False
             ), "must have ModelParallelConfig"
-            tp_utils.update_kwargs_with_config(embedding_kwargs, self.megatron_config)
+            tp_utils.update_kwargs_with_config(
+                embedding_kwargs, self.megatron_config)
         self.embed_tokens = tensor_parallel.VocabParallelEmbedding(
             num_embeddings=config.vocab_size,
             embedding_dim=config.hidden_size,
@@ -112,7 +125,8 @@ class ParallelLlamaModel(nn.Module):
         )
         self.norm = ParallelLlamaRMSNorm(config, megatron_config)
 
-    # Copied from transformers.models.bart.modeling_bart.BartDecoder._prepare_decoder_attention_mask
+    # Copied from
+    # transformers.models.bart.modeling_bart.BartDecoder._prepare_decoder_attention_mask
     def _prepare_decoder_attention_mask(
         self, attention_mask, input_shape, inputs_embeds
     ):
@@ -180,16 +194,23 @@ class ParallelLlamaModel(nn.Module):
 
 
 class ParallelLlamaForCausalLM(nn.Module):
-    def __init__(self, config: LlamaConfig, megatron_config: ModelParallelConfig):
+    def __init__(
+            self,
+            config: LlamaConfig,
+            megatron_config: ModelParallelConfig):
         super().__init__()
-        self.config: TransformerConfig = convert_config(config, megatron_config)
-        self.model = ParallelLlamaModel(config, megatron_config=megatron_config)
+        self.config: TransformerConfig = convert_config(
+            config, megatron_config)
+        self.model = ParallelLlamaModel(
+            config, megatron_config=megatron_config)
         self.vocab_size = config.vocab_size
 
         column_kwargs = tp_utils.get_default_kwargs_for_column_parallel_linear()
         if megatron_config is not None:
-            assert column_kwargs.get("config", False), "must have ModelParallelConfig"
-            tp_utils.update_kwargs_with_config(column_kwargs, self.megatron_config)
+            assert column_kwargs.get(
+                "config", False), "must have ModelParallelConfig"
+            tp_utils.update_kwargs_with_config(
+                column_kwargs, self.megatron_config)
 
         self.lm_head = tensor_parallel.ColumnParallelLinear(
             input_size=config.hidden_size,
@@ -216,7 +237,8 @@ class ParallelLlamaForCausalLM(nn.Module):
         Returns:
         ```"""
 
-        # decoder outputs consists of (dec_features, layer_state, dec_hidden, dec_attn)
+        # decoder outputs consists of (dec_features, layer_state, dec_hidden,
+        # dec_attn)
         outputs = self.model(
             input_ids=input_ids,
             attention_mask=attention_mask,
@@ -226,7 +248,8 @@ class ParallelLlamaForCausalLM(nn.Module):
         hidden_states = outputs
         logits = self.lm_head(hidden_states)[0]
 
-        logits = tensor_parallel.gather_from_tensor_model_parallel_region(logits)
+        logits = tensor_parallel.gather_from_tensor_model_parallel_region(
+            logits)
 
         logits = logits.float()
         return CausalLMOutputWithPast(
@@ -249,9 +272,13 @@ class ParallelLlamaModelRmPad(nn.Module):
         config: LlamaConfig
     """
 
-    def __init__(self, config: LlamaConfig, megatron_config: ModelParallelConfig):
+    def __init__(
+            self,
+            config: LlamaConfig,
+            megatron_config: ModelParallelConfig):
         super().__init__()
-        self.config: TransformerConfig = convert_config(config, megatron_config)
+        self.config: TransformerConfig = convert_config(
+            config, megatron_config)
         self.padding_idx = config.pad_token_id
         self.vocab_size = config.vocab_size
         embedding_kwargs = tp_utils.get_default_kwargs_for_parallel_embedding()
@@ -260,7 +287,8 @@ class ParallelLlamaModelRmPad(nn.Module):
             assert embedding_kwargs.get(
                 "config", False
             ), "must have ModelParallelConfig"
-            tp_utils.update_kwargs_with_config(embedding_kwargs, self.megatron_config)
+            tp_utils.update_kwargs_with_config(
+                embedding_kwargs, self.megatron_config)
         self.embed_tokens = tensor_parallel.VocabParallelEmbedding(
             num_embeddings=config.vocab_size,
             embedding_dim=config.hidden_size,
@@ -301,8 +329,7 @@ class ParallelLlamaModelRmPad(nn.Module):
         inputs_embeds = inputs_embeds.transpose(0, 1)
         if self.megatron_config.sequence_parallel:
             inputs_embeds = tensor_parallel.scatter_to_sequence_parallel_region(
-                inputs_embeds
-            )
+                inputs_embeds)
 
         hidden_states = inputs_embeds
         for idx, decoder_layer in enumerate(self.layers):
@@ -323,19 +350,26 @@ class ParallelLlamaModelRmPad(nn.Module):
 
 
 class ParallelLlamaForCausalLMRmPad(nn.Module):
-    def __init__(self, config: LlamaConfig, megatron_config: ModelParallelConfig):
+    def __init__(
+            self,
+            config: LlamaConfig,
+            megatron_config: ModelParallelConfig):
         super().__init__()
-        self.config: TransformerConfig = convert_config(config, megatron_config)
+        self.config: TransformerConfig = convert_config(
+            config, megatron_config)
         self.megatron_config = megatron_config
-        self.model = ParallelLlamaModelRmPad(config, megatron_config=megatron_config)
+        self.model = ParallelLlamaModelRmPad(
+            config, megatron_config=megatron_config)
         self.vocab_size = config.vocab_size
         self._init_head(config)
 
     def _init_head(self, config):
         column_kwargs = tp_utils.get_default_kwargs_for_column_parallel_linear()
         if self.megatron_config is not None:
-            assert column_kwargs.get("config", False), "must have ModelParallelConfig"
-            tp_utils.update_kwargs_with_config(column_kwargs, self.megatron_config)
+            assert column_kwargs.get(
+                "config", False), "must have ModelParallelConfig"
+            tp_utils.update_kwargs_with_config(
+                column_kwargs, self.megatron_config)
         self.lm_head = tensor_parallel.ColumnParallelLinear(
             input_size=config.hidden_size,
             output_size=config.vocab_size,
@@ -377,7 +411,8 @@ class ParallelLlamaForCausalLMRmPad(nn.Module):
         )  # (total_nnz, 1)
 
         # pad input_ids to multiple of tp for all tp ranks
-        # TODO: for better performance, the sp padding should be removed at each layer. Not sure the performance gap
+        # TODO: for better performance, the sp padding should be removed at
+        # each layer. Not sure the performance gap
         if self.megatron_config.sequence_parallel:
             input_ids = sp_utils.pad_to_sequence_parallel(input_ids)
 
@@ -401,7 +436,8 @@ class ParallelLlamaForCausalLMRmPad(nn.Module):
             totol_nnz = cu_seqlens[-1]
             logits = logits[:totol_nnz]  # (total_nnz_padded)
 
-        logits = torch.squeeze(logits, dim=1)  # remove the artificial batch dimension
+        # remove the artificial batch dimension
+        logits = torch.squeeze(logits, dim=1)
         # add removed padding back
         logits = pad_input(
             logits, indices, batch_size, seqlen=sequence_length
@@ -420,8 +456,10 @@ class ParallelLlamaForValueRmPad(ParallelLlamaForCausalLMRmPad):
     def _init_head(self, config):
         column_kwargs = tp_utils.get_default_kwargs_for_column_parallel_linear()
         if self.megatron_config is not None:
-            assert column_kwargs.get("config", False), "must have ModelParallelConfig"
-            tp_utils.update_kwargs_with_config(column_kwargs, self.megatron_config)
+            assert column_kwargs.get(
+                "config", False), "must have ModelParallelConfig"
+            tp_utils.update_kwargs_with_config(
+                column_kwargs, self.megatron_config)
         self.lm_head = nn.Linear(
             in_features=config.hidden_size, out_features=1, bias=False
         )
@@ -471,7 +509,8 @@ class ParallelLlamaModelRmPadPP(nn.Module):
         post_process,
     ):
         super().__init__()
-        self.config: TransformerConfig = convert_config(config, megatron_config)
+        self.config: TransformerConfig = convert_config(
+            config, megatron_config)
         self.padding_idx = config.pad_token_id
         self.vocab_size = config.vocab_size
         self.pre_process = pre_process
@@ -482,7 +521,8 @@ class ParallelLlamaModelRmPadPP(nn.Module):
             assert embedding_kwargs.get(
                 "config", False
             ), "must have ModelParallelConfig"
-            tp_utils.update_kwargs_with_config(embedding_kwargs, self.megatron_config)
+            tp_utils.update_kwargs_with_config(
+                embedding_kwargs, self.megatron_config)
         if pre_process:
             self.embed_tokens = tensor_parallel.VocabParallelEmbedding(
                 num_embeddings=config.vocab_size,
@@ -560,8 +600,7 @@ class ParallelLlamaModelRmPadPP(nn.Module):
             inputs_embeds = inputs_embeds.transpose(0, 1)
             if self.megatron_config.sequence_parallel:
                 inputs_embeds = tensor_parallel.scatter_to_sequence_parallel_region(
-                    inputs_embeds
-                )
+                    inputs_embeds)
 
             hidden_states = inputs_embeds
         else:
@@ -596,7 +635,8 @@ class ParallelLlamaForCausalLMRmPadPP(nn.Module):
         share_embeddings_and_output_weights=False,
     ):
         super().__init__()
-        self.config: TransformerConfig = convert_config(config, megatron_config)
+        self.config: TransformerConfig = convert_config(
+            config, megatron_config)
         self.megatron_config = megatron_config
         self.model = ParallelLlamaModelRmPadPP(
             config,
@@ -628,8 +668,10 @@ class ParallelLlamaForCausalLMRmPadPP(nn.Module):
     def _init_head(self, config):
         column_kwargs = tp_utils.get_default_kwargs_for_column_parallel_linear()
         if self.megatron_config is not None:
-            assert column_kwargs.get("config", False), "must have ModelParallelConfig"
-            tp_utils.update_kwargs_with_config(column_kwargs, self.megatron_config)
+            assert column_kwargs.get(
+                "config", False), "must have ModelParallelConfig"
+            tp_utils.update_kwargs_with_config(
+                column_kwargs, self.megatron_config)
         self.lm_head = tensor_parallel.ColumnParallelLinear(
             input_size=config.hidden_size,
             output_size=config.vocab_size,
@@ -666,7 +708,8 @@ class ParallelLlamaForCausalLMRmPadPP(nn.Module):
         ```"""
 
         # Note that input_ids, attention_mask and position_ids should be passed to every pp layer.
-        # In the first pp, input_ids will be used, in other pp layers hidden_states will be used inside self.model
+        # In the first pp, input_ids will be used, in other pp layers
+        # hidden_states will be used inside self.model
         batch_size, sequence_length = input_ids.shape
         # remove padding here
         input_ids_rmpad, indices, cu_seqlens, max_seqlen_in_batch, *_ = unpad_input(
@@ -674,9 +717,11 @@ class ParallelLlamaForCausalLMRmPadPP(nn.Module):
         )  # (total_nnz, 1)
 
         # pad input_ids to multiple of tp for all tp ranks
-        # TODO: for better performance, the sp padding should be removed at each layer. Not sure the performance gap
+        # TODO: for better performance, the sp padding should be removed at
+        # each layer. Not sure the performance gap
         if self.megatron_config.sequence_parallel:
-            input_ids_rmpad = sp_utils.pad_to_sequence_parallel(input_ids_rmpad)
+            input_ids_rmpad = sp_utils.pad_to_sequence_parallel(
+                input_ids_rmpad)
 
         input_ids_rmpad = input_ids_rmpad.transpose(0, 1)  # (1, total_nnz+pad)
 
@@ -691,17 +736,18 @@ class ParallelLlamaForCausalLMRmPadPP(nn.Module):
 
         if self.post_process:
             hidden_states = outputs
-            # print(f'hidden_states.shape = {hidden_states.shape}') # torch.Size([4, 32, 4096])
+            # print(f'hidden_states.shape = {hidden_states.shape}') #
+            # torch.Size([4, 32, 4096])
             logits = self._forward_head(hidden_states)
-            logits = torch.squeeze(
-                logits, dim=1
-            )  # remove the artificial batch dimension # torch.Size([8, 32, 16])
+            # remove the artificial batch dimension # torch.Size([8, 32, 16])
+            logits = torch.squeeze(logits, dim=1)
 
             # remove padding from sequence parallel
             if self.megatron_config.sequence_parallel:
                 totol_nnz = cu_seqlens[-1]
                 logits = logits[:totol_nnz]  # (total_nnz_padded)
-            # add removed padding back. If input is already rmpad, we let the caller pad_input
+            # add removed padding back. If input is already rmpad, we let the
+            # caller pad_input
             logits = pad_input(
                 logits, indices, batch_size, seqlen=sequence_length
             )  # (batch_size, sequence_length, vocab_size)
@@ -721,8 +767,10 @@ class ParallelLlamaForValueRmPadPP(ParallelLlamaForCausalLMRmPadPP):
     def _init_head(self, config):
         column_kwargs = tp_utils.get_default_kwargs_for_column_parallel_linear()
         if self.megatron_config is not None:
-            assert column_kwargs.get("config", False), "must have ModelParallelConfig"
-            tp_utils.update_kwargs_with_config(column_kwargs, self.megatron_config)
+            assert column_kwargs.get(
+                "config", False), "must have ModelParallelConfig"
+            tp_utils.update_kwargs_with_config(
+                column_kwargs, self.megatron_config)
         self.lm_head = nn.Linear(
             in_features=config.hidden_size, out_features=1, bias=False
         )

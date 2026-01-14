@@ -13,11 +13,13 @@
 # limitations under the License.
 
 import collections
-from dataclasses import fields  # Import the fields function to inspect dataclass fields
+# Import the fields function to inspect dataclass fields
+from dataclasses import fields
 from typing import Any
 
 
-# BaseConfig class inherits from collections.abc.Mapping, which means it can act like a dictionary
+# BaseConfig class inherits from collections.abc.Mapping, which means it
+# can act like a dictionary
 class BaseConfig(collections.abc.Mapping):
     """The BaseConfig provides omegaconf DictConfig-like interface for a dataclass config.
 

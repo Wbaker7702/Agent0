@@ -21,7 +21,9 @@ from verl.trainer.fsdp_sft_trainer import FSDPSFTTrainer
 from verl.utils.distributed import initialize_global_process_group
 
 
-def test_trainer_forward_consistency(trainer: FSDPSFTTrainer, total_steps: int = 4):
+def test_trainer_forward_consistency(
+        trainer: FSDPSFTTrainer,
+        total_steps: int = 4):
     """Test consistency between original forward pass and SP+rmpad forward passes.
 
     Args:
@@ -33,8 +35,8 @@ def test_trainer_forward_consistency(trainer: FSDPSFTTrainer, total_steps: int =
             "\nStarting debug comparison between original and SP+rmpad forward passes..."
         )
         print(
-            f"Sequence parallel size: {trainer.config.ulysses_sequence_parallel_size}"
-        )
+            f"Sequence parallel size: {
+                trainer.config.ulysses_sequence_parallel_size}")
         print(f"Remove padding: {trainer.use_remove_padding}\n")
 
     steps_remaining = total_steps
@@ -46,11 +48,13 @@ def test_trainer_forward_consistency(trainer: FSDPSFTTrainer, total_steps: int =
                 data, batch_size=trainer.config.data.train_batch_size
             ).cuda()
             trainer.fsdp_model.train()
-            micro_batches = data.split(trainer.config.data.micro_batch_size_per_gpu)
+            micro_batches = data.split(
+                trainer.config.data.micro_batch_size_per_gpu)
 
             for idx, micro_batch in enumerate(micro_batches):
                 if trainer.device_mesh.get_rank() == 0:
-                    print(f"\nProcessing micro batch {idx + 1}/{len(micro_batches)}")
+                    print(
+                        f"\nProcessing micro batch {idx + 1}/{len(micro_batches)}")
 
                 # Compute losses using both methods
                 # Disable SP and rmpad
@@ -132,12 +136,15 @@ def create_trainer(config):
     from verl.utils import hf_tokenizer
     from verl.utils.fs import copy_to_local
 
-    local_model_path = copy_to_local(src=config.model.partial_pretrain, verbose=True)
+    local_model_path = copy_to_local(
+        src=config.model.partial_pretrain, verbose=True)
     tokenizer = hf_tokenizer(
         local_model_path, trust_remote_code=config.model.trust_remote_code
     )
-    train_dataset = create_sft_dataset(config.data.train_files, config.data, tokenizer)
-    val_dataset = create_sft_dataset(config.data.val_files, config.data, tokenizer)
+    train_dataset = create_sft_dataset(
+        config.data.train_files, config.data, tokenizer)
+    val_dataset = create_sft_dataset(
+        config.data.val_files, config.data, tokenizer)
 
     return FSDPSFTTrainer(
         config=config,
@@ -163,7 +170,8 @@ if __name__ == "__main__":
     import hydra
     from omegaconf import DictConfig
 
-    @hydra.main(config_path="../../../verl/trainer/config", config_name="sft_trainer")
+    @hydra.main(config_path="../../../verl/trainer/config",
+                config_name="sft_trainer")
     def hydra_entry(cfg: DictConfig) -> None:
         main(cfg)
 

@@ -41,7 +41,7 @@ def truncatefn(s, length=300):
     if len(s) <= length:
         return s
 
-    return s[: length // 2] + "...(truncated) ..." + s[-length // 2 :]
+    return s[: length // 2] + "...(truncated) ..." + s[-length // 2:]
 
 
 class CODE_TYPE(Enum):
@@ -148,7 +148,8 @@ def run_test(in_outs, test=None, debug=False, timeout=15):
                 last_block = astree.body[-1]
                 if isinstance(last_block, ast.If):
                     condition = last_block.test
-                    if ast.unparse(condition).strip() == "__name__ == '__main__'":
+                    if ast.unparse(condition).strip(
+                    ) == "__name__ == '__main__'":
                         test = (
                             ast.unparse(astree.body[:-1])
                             + "\n"
@@ -161,7 +162,8 @@ def run_test(in_outs, test=None, debug=False, timeout=15):
 
             new_test = []
             for x in tmp_test:
-                if (not x.startswith("from ")) and (not x.startswith("import ")):
+                if (not x.startswith("from ")) and (
+                        not x.startswith("import ")):
                     new_test.append("\t" + x + "\n")
                 else:
                     new_test.append(x + "\n")
@@ -207,7 +209,8 @@ def run_test(in_outs, test=None, debug=False, timeout=15):
             print(f"get method = {datetime.now().time()}")
 
         try:
-            method = getattr(tmp, method_name)  # get_attr second arg must be str
+            # get_attr second arg must be str
+            method = getattr(tmp, method_name)
         except Exception:
             signal.alarm(0)
             error_traceback = traceback.format_exc()
@@ -226,7 +229,8 @@ def run_test(in_outs, test=None, debug=False, timeout=15):
             raw_outputs = in_outs["outputs"][index]
             if which_type == CODE_TYPE.call_based:
                 inputs = [json.loads(line) for line in inputs.split("\n")]
-                in_outs["outputs"][index] = json.loads(in_outs["outputs"][index])
+                in_outs["outputs"][index] = json.loads(
+                    in_outs["outputs"][index])
 
                 truncate_line_size = 300 // (raw_inputs.count("\n") + 1)
                 raw_inputs = "\n".join(
@@ -239,7 +243,8 @@ def run_test(in_outs, test=None, debug=False, timeout=15):
             else:
                 raw_inputs = truncatefn(raw_inputs)
                 raw_outputs = truncatefn(raw_outputs, 200)
-            # JSON forces dictionaries to have string keys; this undoes this (assuming a singleton list)
+            # JSON forces dictionaries to have string keys; this undoes this
+            # (assuming a singleton list)
             try:
                 if isinstance(inputs[0], dict):
                     inputs = [{int(k): v for k, v in inputs[0].items()}]
@@ -262,9 +267,9 @@ def run_test(in_outs, test=None, debug=False, timeout=15):
 
             if debug:
                 print(
-                    f"time: {datetime.now().time()} testing index = {index}  inputs = {inputs}, {type(inputs)}. "
-                    f"type = {which_type}"
-                )
+                    f"time: {
+                        datetime.now().time()} testing index = {index}  inputs = {inputs}, {
+                        type(inputs)}. " f"type = {which_type}")
             if which_type == CODE_TYPE.call_based:  # Call-based
                 signal.alarm(timeout)
                 faulthandler.enable()
@@ -273,7 +278,8 @@ def run_test(in_outs, test=None, debug=False, timeout=15):
                     raw_true_output = output
 
                     raw_true_output_copy = json.dumps(output)
-                    raw_true_output_copy = truncatefn(raw_true_output_copy, 200)
+                    raw_true_output_copy = truncatefn(
+                        raw_true_output_copy, 200)
 
                     # ground truth sequences are not tuples
                     if isinstance(output, tuple):
@@ -314,8 +320,7 @@ def run_test(in_outs, test=None, debug=False, timeout=15):
                     faulthandler.disable()
                     if debug:
                         print(
-                            f"Standard input runtime error or time limit exceeded error = {e}"
-                        )
+                            f"Standard input runtime error or time limit exceeded error = {e}")
                     results.append(-1)
                     return results, {
                         "error": repr(e),
@@ -325,9 +330,11 @@ def run_test(in_outs, test=None, debug=False, timeout=15):
                 signal.alarm(0)
                 if debug:
                     print(
-                        f"outputs = {output}, test outputs = {in_outs['outputs'][index]}, inputs = {inputs}, "
-                        f"{type(inputs)}, {output == [in_outs['outputs'][index]]}"
-                    )
+                        f"outputs = {output}, test outputs = {
+                            in_outs['outputs'][index]}, inputs = {inputs}, " f"{
+                            type(inputs)}, {
+                            output == [
+                                in_outs['outputs'][index]]}")
             elif which_type == CODE_TYPE.standard_input:  # Standard input
                 faulthandler.enable()
                 passed = False
@@ -335,7 +342,8 @@ def run_test(in_outs, test=None, debug=False, timeout=15):
                 if isinstance(inputs, list):
                     inputs = "\n".join(inputs)
                 if isinstance(in_outs["outputs"][index], list):
-                    in_outs["outputs"][index] = "\n".join(in_outs["outputs"][index])
+                    in_outs["outputs"][index] = "\n".join(
+                        in_outs["outputs"][index])
 
                 signal.alarm(timeout)
                 with Capturing() as output:
@@ -365,21 +373,26 @@ def run_test(in_outs, test=None, debug=False, timeout=15):
                         nl = "\n"
                         if not isinstance(inputs, list):
                             print(
-                                f"not passed output = {output}, test outputs = {in_outs['outputs'][index]}, "
-                                f"inputs = {inputs.replace(nl, ' new-line ')}, {type(inputs)}, "
-                                f"{output == [in_outs['outputs'][index]]}"
-                            )
+                                f"not passed output = {output}, test outputs = {
+                                    in_outs['outputs'][index]}, " f"inputs = {
+                                    inputs.replace(
+                                        nl, ' new-line ')}, {
+                                    type(inputs)}, " f"{
+                                    output == [
+                                        in_outs['outputs'][index]]}")
                         else:
                             print(
-                                f"not passed output = {output}, test outputs = {in_outs['outputs'][index]}, "
-                                f"inputs = {inputs}, {type(inputs)}, {output == [in_outs['outputs'][index]]}"
-                            )
+                                f"not passed output = {output}, test outputs = {
+                                    in_outs['outputs'][index]}, " f"inputs = {inputs}, {
+                                    type(inputs)}, {
+                                    output == [
+                                        in_outs['outputs'][index]]}")
                     continue
 
                 if passed and debug:
                     print(
-                        f"==> output = {output}, test outputs = {in_outs['outputs'][index]}"
-                    )
+                        f"==> output = {output}, test outputs = {
+                            in_outs['outputs'][index]}")
 
                 if custom_compare_(output, in_outs["outputs"][index]):
                     tmp_result = True
@@ -394,7 +407,8 @@ def run_test(in_outs, test=None, debug=False, timeout=15):
                 try:
                     tmp_result = output == [in_outs["outputs"][index]]
                     if isinstance(in_outs["outputs"][index], list):
-                        tmp_result = tmp_result or (output == in_outs["outputs"][index])
+                        tmp_result = tmp_result or (
+                            output == in_outs["outputs"][index])
                         if isinstance(output[0], str):
                             tmp_result = tmp_result or (
                                 [e.strip() for e in output] == in_outs["outputs"][index]
@@ -413,10 +427,10 @@ def run_test(in_outs, test=None, debug=False, timeout=15):
                     for tmp_index, i in enumerate(in_outs["outputs"][index]):
                         in_outs["outputs"][index][tmp_index] = i.split("\n")
                         in_outs["outputs"][index][tmp_index] = [
-                            x.strip() for x in in_outs["outputs"][index][tmp_index] if x
-                        ]
+                            x.strip() for x in in_outs["outputs"][index][tmp_index] if x]
                 else:
-                    in_outs["outputs"][index] = in_outs["outputs"][index].split("\n")
+                    in_outs["outputs"][index] = in_outs["outputs"][index].split(
+                        "\n")
                     in_outs["outputs"][index] = list(
                         filter(len, in_outs["outputs"][index])
                     )
@@ -427,7 +441,8 @@ def run_test(in_outs, test=None, debug=False, timeout=15):
                 try:
                     tmp_result = output == [in_outs["outputs"][index]]
                     if isinstance(in_outs["outputs"][index], list):
-                        tmp_result = tmp_result or (output == in_outs["outputs"][index])
+                        tmp_result = tmp_result or (
+                            output == in_outs["outputs"][index])
                 except Exception as e:
                     if debug:
                         print(f"Failed check2 exception = {e}")
@@ -451,9 +466,12 @@ def run_test(in_outs, test=None, debug=False, timeout=15):
                         )
                     else:
                         print(
-                            f"@1 output = {output}, test outputs = {in_outs['outputs'][index]}, inputs = {inputs}, "
-                            f"{type(inputs)}, {output == [in_outs['outputs'][index]]} {tmp_result=}"
-                        )
+                            f"@1 output = {output}, test outputs = {
+                                in_outs['outputs'][index]}, inputs = {inputs}, " f"{
+                                type(inputs)}, {
+                                output == [
+                                    in_outs['outputs'][index]]} {
+                                tmp_result=}")
 
                 if debug:
                     print(f"{tmp_result=} @a")
@@ -461,7 +479,8 @@ def run_test(in_outs, test=None, debug=False, timeout=15):
                 try:
                     tmp_result = output == [in_outs["outputs"][index]]
                     if isinstance(in_outs["outputs"][index], list):
-                        tmp_result = tmp_result or (output == in_outs["outputs"][index])
+                        tmp_result = tmp_result or (
+                            output == in_outs["outputs"][index])
                 except Exception as e:
                     if debug:
                         print(f"Failed check3 exception = {e}")
@@ -488,7 +507,8 @@ def run_test(in_outs, test=None, debug=False, timeout=15):
                                 ]
                             )
                         output_float = [float(e) for e in output]
-                        gt_float = [float(e) for e in in_outs["outputs"][index]]
+                        gt_float = [float(e)
+                                    for e in in_outs["outputs"][index]]
                         tmp_result = tmp_result or (
                             (len(output_float) == len(gt_float))
                             and np.allclose(output_float, gt_float)
@@ -509,7 +529,8 @@ def run_test(in_outs, test=None, debug=False, timeout=15):
                         )
                         if not all_ints:
                             output_float = [float(e) for e in output[0]]
-                            gt_float = [float(e) for e in in_outs["outputs"][index][0]]
+                            gt_float = [
+                                float(e) for e in in_outs["outputs"][index][0]]
                             tmp_result = tmp_result or (
                                 (len(output_float) == len(gt_float))
                                 and np.allclose(output_float, gt_float)
@@ -528,7 +549,8 @@ def run_test(in_outs, test=None, debug=False, timeout=15):
                     for tmp_index, i in enumerate(in_outs["outputs"][index]):
                         in_outs["outputs"][index][tmp_index] = set(i.split())
                 else:
-                    in_outs["outputs"][index] = set(in_outs["outputs"][index].split())
+                    in_outs["outputs"][index] = set(
+                        in_outs["outputs"][index].split())
 
                 if debug:
                     print(f"{tmp_result=} @e")
@@ -585,9 +607,11 @@ def run_test(in_outs, test=None, debug=False, timeout=15):
                         )
                     else:
                         print(
-                            f"@2 output = {output}, test outputs = {in_outs['outputs'][index]}, inputs = {inputs}, "
-                            f"{type(inputs)}, {output == [in_outs['outputs'][index]]}"
-                        )
+                            f"@2 output = {output}, test outputs = {
+                                in_outs['outputs'][index]}, inputs = {inputs}, " f"{
+                                type(inputs)}, {
+                                output == [
+                                    in_outs['outputs'][index]]}")
 
                     print(f"results = {results}")
 
@@ -664,8 +688,9 @@ def reliability_guard(maximum_memory_bytes=None):
         )
         if platform.uname().system != "Darwin":
             resource.setrlimit(
-                resource.RLIMIT_STACK, (maximum_memory_bytes, maximum_memory_bytes)
-            )
+                resource.RLIMIT_STACK,
+                (maximum_memory_bytes,
+                 maximum_memory_bytes))
 
     faulthandler.disable()
 

@@ -126,7 +126,8 @@ class NsightSystemsProfiler(DistProfiler):
             rank (int): The rank of the current process.
             config (Optional[ProfilerConfig]): Configuration for the profiler. If None, a default configuration is used.
         """
-        # If no configuration is provided, create a default ProfilerConfig with an empty list of ranks
+        # If no configuration is provided, create a default ProfilerConfig with
+        # an empty list of ranks
         if not config:
             config = ProfilerConfig(ranks=[])
         self.this_step: bool = False

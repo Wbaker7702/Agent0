@@ -12,21 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
-
-os.environ["RAY_DEDUP_LOGS"] = "0"
-os.environ["NCCL_DEBUG"] = "WARN"
-
-import ray
-import torch
-import torch.distributed
-
-from verl.single_controller.base.worker import Worker
 from verl.single_controller.ray.base import (
     RayClassWithInitArgs,
     RayResourcePool,
     RayWorkerGroup,
 )
+from verl.single_controller.base.worker import Worker
+import torch.distributed
+import torch
+import ray
+import os
+
+os.environ["RAY_DEDUP_LOGS"] = "0"
+os.environ["NCCL_DEBUG"] = "WARN"
 
 
 @ray.remote
@@ -37,7 +35,12 @@ class TestAllGatherActor(Worker):
 
     def init(self):
         torch.distributed.init_process_group()
-        self.tensor = torch.zeros(size=(self.size,), dtype=torch.int64, device="cuda")
+        self.tensor = torch.zeros(
+            size=(
+                self.size,
+            ),
+            dtype=torch.int64,
+            device="cuda")
         self.tensor += self.rank
 
     def all_gather(self):
@@ -47,7 +50,8 @@ class TestAllGatherActor(Worker):
             dtype=self.tensor.dtype,
             device=self.tensor.device,
         )
-        torch.distributed.all_gather_into_tensor(output, self.tensor, async_op=False)
+        torch.distributed.all_gather_into_tensor(
+            output, self.tensor, async_op=False)
         return output
 
 
@@ -58,7 +62,12 @@ class TestAllGatherActorV2(Worker):
         self.size = size
 
         torch.distributed.init_process_group()
-        self.tensor = torch.zeros(size=(self.size,), dtype=torch.int64, device="cuda")
+        self.tensor = torch.zeros(
+            size=(
+                self.size,
+            ),
+            dtype=torch.int64,
+            device="cuda")
         self.tensor += self.rank
 
     def all_gather(self):
@@ -68,7 +77,8 @@ class TestAllGatherActorV2(Worker):
             dtype=self.tensor.dtype,
             device=self.tensor.device,
         )
-        torch.distributed.all_gather_into_tensor(output, self.tensor, async_op=False)
+        torch.distributed.all_gather_into_tensor(
+            output, self.tensor, async_op=False)
         return output
 
 

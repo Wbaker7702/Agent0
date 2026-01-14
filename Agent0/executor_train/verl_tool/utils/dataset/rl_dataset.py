@@ -108,7 +108,8 @@ class VerlToolRLHFDataset(RLHFDataset):
 
         return result
 
-    def maybe_filter_out_long_prompts(self, dataframe: datasets.Dataset = None):
+    def maybe_filter_out_long_prompts(
+            self, dataframe: datasets.Dataset = None):
         # filter out too long prompts
         if self.filter_overlong_prompts:
             tokenizer = self.tokenizer
@@ -137,10 +138,10 @@ class VerlToolRLHFDataset(RLHFDataset):
                     )
 
                     return len(
-                        processor(text=[raw_prompt], images=images, videos=videos)[
-                            "input_ids"
-                        ][0]
-                    )
+                        processor(
+                            text=[raw_prompt],
+                            images=images,
+                            videos=videos)["input_ids"][0])
 
             else:
 
@@ -154,7 +155,8 @@ class VerlToolRLHFDataset(RLHFDataset):
             dataframe = dataframe.filter(
                 lambda doc: doc2len(doc) <= self.max_prompt_length,
                 num_proc=self.num_workers,
-                desc=f"Filtering prompts longer than {self.max_prompt_length} tokens",
+                desc=f"Filtering prompts longer than {
+                    self.max_prompt_length} tokens",
             )
 
             print(f"filter dataset len: {len(dataframe)}")
@@ -170,7 +172,8 @@ class VerlToolRLHFDataset(RLHFDataset):
                 try:
                     segments = re.split("(<image>|<video>)", content)
                 except Exception as e:
-                    raise ValueError(f"Error splitting content: {content}") from e
+                    raise ValueError(
+                        f"Error splitting content: {content}") from e
                 segments = [item for item in segments if item != ""]
                 segment_idx = defaultdict(int)
                 for segment in segments:
@@ -218,8 +221,8 @@ class VerlToolRLHFDataset(RLHFDataset):
                                 },
                             }
                             assert Path(
-                                content["image"]
-                            ).exists(), f"Image file {content['image']} does not exist."
+                                content["image"]).exists(), f"Image file {
+                                content['image']} does not exist."
                         elif content["type"] == "video":
                             message["content"][j] = {
                                 "type": "video_url",
@@ -228,8 +231,8 @@ class VerlToolRLHFDataset(RLHFDataset):
                                 },
                             }
                             assert Path(
-                                content["video"]
-                            ).exists(), f"Video file {content['video']} does not exist."
+                                content["video"]).exists(), f"Video file {
+                                content['video']} does not exist."
                         elif content["type"] == "text":
                             message["content"][j] = {
                                 "type": "text",
@@ -237,10 +240,11 @@ class VerlToolRLHFDataset(RLHFDataset):
                             }
                         else:
                             raise ValueError(
-                                f"Unknown content element type: {content['type']}"
-                            )
+                                f"Unknown content element type: {
+                                    content['type']}")
                 elif isinstance(message["content"], str):
-                    message["content"] = [{"type": "text", "text": message["content"]}]
+                    message["content"] = [
+                        {"type": "text", "text": message["content"]}]
                 else:
                     raise ValueError(
                         f"Unknown content type: {type(message['content'])}"

@@ -51,8 +51,8 @@ def test_hf_casual_models():
             )
             model = model.to(device="cuda")
         input_ids = torch.randint(
-            low=0, high=config.vocab_size, size=(batch_size, seqlen), device="cuda"
-        )
+            low=0, high=config.vocab_size, size=(
+                batch_size, seqlen), device="cuda")
         attention_mask = create_random_mask(
             input_ids=input_ids,
             max_ratio_of_left_padding=0.1,
@@ -73,7 +73,8 @@ def test_hf_casual_models():
             rearrange(position_ids.unsqueeze(-1), "b s ... -> (b s) ..."), indices
         ).transpose(0, 1)
 
-        # input with input_ids_rmpad and postition_ids to enable flash attention varlen
+        # input with input_ids_rmpad and postition_ids to enable flash
+        # attention varlen
         logits_rmpad = model(
             input_ids_rmpad, position_ids=position_ids_rmpad, use_cache=False
         ).logits  # (1, total_nnz, vocab_size)
@@ -107,8 +108,8 @@ def test_hf_casual_models():
         )  # (batch, seqlen)
 
         torch.testing.assert_close(
-            masked_mean(log_probs, attention_mask[:, -response_length - 1 : -1]),
-            masked_mean(origin_log_probs, attention_mask[:, -response_length - 1 : -1]),
+            masked_mean(log_probs, attention_mask[:, -response_length - 1: -1]),
+            masked_mean(origin_log_probs, attention_mask[:, -response_length - 1: -1]),
             atol=1e-2,
             rtol=1e-5,
         )
@@ -132,8 +133,8 @@ def test_hf_value_models():
             )
             model = model.to(device="cuda")
         input_ids = torch.randint(
-            low=0, high=config.vocab_size, size=(batch_size, seqlen), device="cuda"
-        )
+            low=0, high=config.vocab_size, size=(
+                batch_size, seqlen), device="cuda")
         attention_mask = create_random_mask(
             input_ids=input_ids,
             max_ratio_of_left_padding=0.1,
@@ -161,12 +162,17 @@ def test_hf_value_models():
             use_cache=False,
         ).logits
 
-        # input with input_ids_rmpad and postition_ids to enable flash attention varlen
+        # input with input_ids_rmpad and postition_ids to enable flash
+        # attention varlen
         rmpad_logits = model(
             input_ids_rmpad, position_ids=position_ids_rmpad, use_cache=False
         ).logits  # (1, total_nnz, 1)
         rmpad_logits = rmpad_logits.squeeze(0)
-        pad_logits = pad_input(rmpad_logits, indices, batch_size, seqlen=seqlen)
+        pad_logits = pad_input(
+            rmpad_logits,
+            indices,
+            batch_size,
+            seqlen=seqlen)
 
         torch.testing.assert_close(
             masked_mean(pad_logits, attention_mask[:, :, None]),

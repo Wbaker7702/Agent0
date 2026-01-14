@@ -40,7 +40,8 @@ class DocstringChecker(ast.NodeVisitor):
                     if self.current_class
                     else node.name
                 )
-                self.missing_docstrings.append((func_name, self.filename, node.lineno))
+                self.missing_docstrings.append(
+                    (func_name, self.filename, node.lineno))
 
         self.function_nesting_level += 1
         self.generic_visit(node)
@@ -55,7 +56,8 @@ class DocstringChecker(ast.NodeVisitor):
                     if self.current_class
                     else node.name
                 )
-                self.missing_docstrings.append((func_name, self.filename, node.lineno))
+                self.missing_docstrings.append(
+                    (func_name, self.filename, node.lineno))
 
         self.function_nesting_level += 1
         self.generic_visit(node)
@@ -65,7 +67,8 @@ class DocstringChecker(ast.NodeVisitor):
         """Visit class definitions and check for docstrings."""
         if not node.name.startswith("_"):
             if not self._has_docstring(node):
-                self.missing_docstrings.append((node.name, self.filename, node.lineno))
+                self.missing_docstrings.append(
+                    (node.name, self.filename, node.lineno))
 
         old_class = self.current_class
         self.current_class = node.name
@@ -139,8 +142,8 @@ def main():
 
     if all_missing_docstrings:
         print(
-            f"\nSUMMARY: Found {len(all_missing_docstrings)} functions/classes missing docstrings:"
-        )
+            f"\nSUMMARY: Found {
+                len(all_missing_docstrings)} functions/classes missing docstrings:")
         print("-" * 60)
 
         by_file = {}
@@ -157,8 +160,8 @@ def main():
         print(f"\nTotal missing docstrings: {len(all_missing_docstrings)}")
 
         raise Exception(
-            f"Found {len(all_missing_docstrings)} functions/classes without proper docstrings!"
-        )
+            f"Found {
+                len(all_missing_docstrings)} functions/classes without proper docstrings!")
 
     else:
         print("\n✅ All functions and classes have proper docstrings!")

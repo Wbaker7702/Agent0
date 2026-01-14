@@ -42,7 +42,13 @@ def get_random_string(length: int) -> str:
     return "".join(random.choice(letters_digits) for _ in range(length))
 
 
-def func_generator(self, method_name, dispatch_fn, collect_fn, execute_fn, blocking):
+def func_generator(
+        self,
+        method_name,
+        dispatch_fn,
+        collect_fn,
+        execute_fn,
+        blocking):
     def func(*args, **kwargs):
         args, kwargs = dispatch_fn(self, *args, **kwargs)
         output = execute_fn(method_name, *args, **kwargs)
@@ -54,7 +60,8 @@ def func_generator(self, method_name, dispatch_fn, collect_fn, execute_fn, block
     return func
 
 
-def sort_placement_group_by_node_ip(pgs: List[PlacementGroup]) -> List[PlacementGroup]:
+def sort_placement_group_by_node_ip(
+        pgs: List[PlacementGroup]) -> List[PlacementGroup]:
     """
     Sort the placement groups by node ip, all bundles in a single placement group should be on the same node.
 
@@ -64,7 +71,8 @@ def sort_placement_group_by_node_ip(pgs: List[PlacementGroup]) -> List[Placement
     With this function, if there's only one resource pool and there's no node change, RANK should be consistent
     across nodes in multiple ray jobs, even if the whole ray cluster is restarted.
     """
-    node_ip = {node["NodeID"]: node["NodeManagerAddress"] for node in ray.nodes()}
+    node_ip = {node["NodeID"]: node["NodeManagerAddress"]
+               for node in ray.nodes()}
     pg_ip = {}
     for pg in pgs:
         specs = ray._private.state.state.placement_group_table(pg.id)
@@ -145,7 +153,10 @@ def extract_pg_from_exist(
         if role_name in src_role_names
     ]
 
-    sorted_src_pgs = sorted(src_pgs, key=lambda pg: pg.bundle_count, reverse=True)
+    sorted_src_pgs = sorted(
+        src_pgs,
+        key=lambda pg: pg.bundle_count,
+        reverse=True)
     sorted_process_on_nodes = sorted(
         [(val, idx) for idx, val in enumerate(resource_pool.store)], reverse=True
     )
@@ -165,7 +176,8 @@ def extract_pg_from_exist(
     return [pg for _, pg in sorted(unsorted_pgs)]
 
 
-def merge_resource_pool(rp1: RayResourcePool, rp2: RayResourcePool) -> RayResourcePool:
+def merge_resource_pool(rp1: RayResourcePool,
+                        rp2: RayResourcePool) -> RayResourcePool:
     assert rp1.use_gpu == rp2.use_gpu, "Both RayResourcePool must either use_gpu or not"
     assert (
         rp1.max_colocate_count == rp2.max_colocate_count
@@ -218,9 +230,9 @@ class RayClassWithInitArgs(ClassWithInitArgs):
                     node_id=target_node_id, soft=False
                 )
             }
-            return self.cls.options(**options).remote(
-                *self.args, cuda_visible_devices=cuda_visible_devices, **self.kwargs
-            )
+            return self.cls.options(**options).remote(*self.args,
+                                                      cuda_visible_devices=cuda_visible_devices,
+                                                      **self.kwargs)
 
         options = {
             "scheduling_strategy": PlacementGroupSchedulingStrategy(
@@ -275,7 +287,8 @@ class RayWorkerGroup(WorkerGroup):
             )
 
         if ray_cls_with_init is not None:
-            self._bind_worker_method(self.ray_cls_with_init.cls, func_generator)
+            self._bind_worker_method(
+                self.ray_cls_with_init.cls, func_generator)
 
     def _is_worker_alive(self, worker: ActorHandle) -> bool:
         worker_state_dict = get_actor(worker._actor_id.hex())
@@ -318,7 +331,8 @@ class RayWorkerGroup(WorkerGroup):
             for local_rank in range(local_world_size):
                 rank += 1
 
-                # we pass in environment variable at option so that Worker can use environment variable to set
+                # we pass in environment variable at option so that Worker can
+                # use environment variable to set
                 env_vars = {
                     "WORLD_SIZE": str(world_size),
                     "RANK": str(rank),
@@ -338,7 +352,8 @@ class RayWorkerGroup(WorkerGroup):
                 cia_name = (
                     match.group(1) if match else cia_name
                 )  # "ActorClass(Obj)" -> "Obj"
-                name = f"{self.name_prefix}{cia_name}_{pg_idx}:{local_rank}"  # e.g. Worker_2:5
+                # e.g. Worker_2:5
+                name = f"{self.name_prefix}{cia_name}_{pg_idx}:{local_rank}"
 
                 ray_cls_with_init.update_options(
                     {"runtime_env": {"env_vars": env_vars}, "name": name}
@@ -371,8 +386,10 @@ class RayWorkerGroup(WorkerGroup):
                             )
                             break
                     assert (
-                        register_center_actor is not None
-                    ), f"failed to get register_center_actor: {self.name_prefix}_register_center in {list_named_actors(all_namespaces=True)}"
+                        register_center_actor is not None), f"failed to get register_center_actor: {
+                        self.name_prefix}_register_center in {
+                        list_named_actors(
+                            all_namespaces=True)}"
                     rank_zero_info = ray.get(
                         register_center_actor.get_rank_zero_info.remote()
                     )
@@ -427,7 +444,9 @@ class RayWorkerGroup(WorkerGroup):
         return new_worker_group_dict
 
     def execute_rank_zero_sync(self, method_name: str, *args, **kwargs):
-        return ray.get(self.execute_rank_zero_async(method_name, *args, **kwargs))
+        return ray.get(
+            self.execute_rank_zero_async(
+                method_name, *args, **kwargs))
 
     def execute_rank_zero_async(self, method_name: str, *args, **kwargs):
         remote_call = getattr(self._workers[0], method_name)
@@ -460,7 +479,10 @@ class RayWorkerGroup(WorkerGroup):
                     sliced_args = tuple(arg[i] for arg in args)
                     sliced_kwargs = {k: v[i] for k, v in kwargs.items()}
                     remote_call = getattr(self._workers[i], method_name)
-                    result.append(remote_call.remote(*sliced_args, **sliced_kwargs))
+                    result.append(
+                        remote_call.remote(
+                            *sliced_args,
+                            **sliced_kwargs))
                 return result
 
         return [
@@ -503,7 +525,8 @@ def _bind_workers_method_to_parent(cls, key, user_defined_cls):
                 method
             ), f"{method_name} in {user_defined_cls} is not callable"
         except Exception:
-            # if it is a property, it will fail because Class doesn't have instance property
+            # if it is a property, it will fail because Class doesn't have
+            # instance property
             continue
 
         if hasattr(method, MAGIC_ATTR):
@@ -511,7 +534,9 @@ def _bind_workers_method_to_parent(cls, key, user_defined_cls):
             def generate_function(name):
                 def func(self, *args, **kwargs):
                     # dispatch to the actual worker
-                    return getattr(self.worker_dict[key], name)(*args, **kwargs)
+                    return getattr(
+                        self.worker_dict[key], name)(
+                        *args, **kwargs)
 
                 return func
 

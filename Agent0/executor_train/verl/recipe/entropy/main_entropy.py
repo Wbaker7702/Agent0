@@ -22,7 +22,9 @@ from .entropy_ray_trainer import RayEntropyTrainer
 from .reward import load_reward_manager
 
 
-@hydra.main(config_path="config", config_name="entropy_trainer", version_base=None)
+@hydra.main(config_path="config",
+            config_name="entropy_trainer",
+            version_base=None)
 def main(config):
     run_ppo(config)
 
@@ -83,7 +85,8 @@ class TaskRunner:
         from verl.utils import hf_processor, hf_tokenizer
 
         trust_remote_code = config.data.get("trust_remote_code", False)
-        tokenizer = hf_tokenizer(local_path, trust_remote_code=trust_remote_code)
+        tokenizer = hf_tokenizer(
+            local_path, trust_remote_code=trust_remote_code)
         processor = hf_processor(
             local_path, use_fast=True
         )  # used for multimodal LLM, could be none
@@ -128,7 +131,9 @@ class TaskRunner:
 
         global_pool_id = "global_pool"
         resource_pool_spec = {
-            global_pool_id: [config.trainer.n_gpus_per_node] * config.trainer.nnodes,
+            global_pool_id: [
+                config.trainer.n_gpus_per_node] *
+            config.trainer.nnodes,
         }
         mapping = {
             Role.ActorRollout: global_pool_id,
@@ -148,7 +153,8 @@ class TaskRunner:
                 from verl.workers.megatron_workers import RewardModelWorker
             else:
                 raise NotImplementedError
-            role_worker_mapping[Role.RewardModel] = ray.remote(RewardModelWorker)
+            role_worker_mapping[Role.RewardModel] = ray.remote(
+                RewardModelWorker)
             mapping[Role.RewardModel] = global_pool_id
 
         # use reference model
@@ -156,7 +162,8 @@ class TaskRunner:
             config.algorithm.use_kl_in_reward
             or config.actor_rollout_ref.actor.use_kl_loss
         ):
-            role_worker_mapping[Role.RefPolicy] = ray.remote(ActorRolloutRefWorker)
+            role_worker_mapping[Role.RefPolicy] = ray.remote(
+                ActorRolloutRefWorker)
             mapping[Role.RefPolicy] = global_pool_id
 
         reward_kwargs = {
@@ -230,9 +237,9 @@ def create_rl_dataset(data_paths, data_config, tokenizer, processor):
         )
         if not issubclass(dataset_cls, Dataset):
             raise TypeError(
-                f"The custom dataset class '{data_config.custom_cls.name}' from '{data_config.custom_cls.path}' "
-                f"must inherit from torch.utils.data.Dataset"
-            )
+                f"The custom dataset class '{
+                    data_config.custom_cls.name}' from '{
+                    data_config.custom_cls.path}' " f"must inherit from torch.utils.data.Dataset")
     else:
         dataset_cls = RLHFDataset
     print(f"Using dataset class: {dataset_cls.__name__}")

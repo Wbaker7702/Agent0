@@ -23,7 +23,8 @@ from transformers import PretrainedConfig
 
 
 class McoreToHFWeightConverterBase:
-    def __init__(self, hf_config: PretrainedConfig, mcore_config: TransformerConfig):
+    def __init__(self, hf_config: PretrainedConfig,
+                 mcore_config: TransformerConfig):
         self.hf_config = hf_config
         self.mcore_config = mcore_config
 
@@ -60,16 +61,20 @@ class McoreToHFWeightConverterDense(McoreToHFWeightConverterBase):
             )
             assert len(params) == 3
         elif "self_attention.linear_proj.weight" in name:
-            convert_names.append(f"model.layers.{layer_number}.self_attn.o_proj.weight")
+            convert_names.append(
+                f"model.layers.{layer_number}.self_attn.o_proj.weight")
             assert len(params) == 1
         elif "self_attention.linear_qkv.layer_norm_weight" in name:
-            convert_names.append(f"model.layers.{layer_number}.input_layernorm.weight")
+            convert_names.append(
+                f"model.layers.{layer_number}.input_layernorm.weight")
             assert len(params) == 1
         elif "self_attention.q_layernorm.weight" in name:
-            convert_names.append(f"model.layers.{layer_number}.self_attn.q_norm.weight")
+            convert_names.append(
+                f"model.layers.{layer_number}.self_attn.q_norm.weight")
             assert len(params) == 1
         elif "self_attention.k_layernorm.weight" in name:
-            convert_names.append(f"model.layers.{layer_number}.self_attn.k_norm.weight")
+            convert_names.append(
+                f"model.layers.{layer_number}.self_attn.k_norm.weight")
             assert len(params) == 1
         else:
             raise NotImplementedError(f"Unsupported parameter name: {name}")
@@ -85,8 +90,10 @@ class McoreToHFWeightConverterDense(McoreToHFWeightConverterBase):
         convert_names = []
         if "mlp.linear_fc1.weight" in name:
             # split gate_proj and up_proj
-            convert_names.append(f"model.layers.{layer_number}.mlp.gate_proj.weight")
-            convert_names.append(f"model.layers.{layer_number}.mlp.up_proj.weight")
+            convert_names.append(
+                f"model.layers.{layer_number}.mlp.gate_proj.weight")
+            convert_names.append(
+                f"model.layers.{layer_number}.mlp.up_proj.weight")
             assert len(params) == 2
         elif "mlp.linear_fc1.layer_norm_weight" in name:
             convert_names.append(
@@ -94,7 +101,8 @@ class McoreToHFWeightConverterDense(McoreToHFWeightConverterBase):
             )
             assert len(params) == 1
         elif "mlp.linear_fc2.weight" in name:
-            convert_names.append(f"model.layers.{layer_number}.mlp.down_proj.weight")
+            convert_names.append(
+                f"model.layers.{layer_number}.mlp.down_proj.weight")
             assert len(params) == 1
         else:
             raise NotImplementedError(f"Unsupported parameter name: {name}")
@@ -144,7 +152,8 @@ class McoreToHFWeightConverterQwen2Moe(McoreToHFWeightConverterDense):
             )
             assert len(params) == 1
         elif "mlp.router.weight" in name:
-            convert_names.append(f"model.layers.{layer_number}.mlp.gate.weight")
+            convert_names.append(
+                f"model.layers.{layer_number}.mlp.gate.weight")
             assert len(params) == 1
         elif "shared_experts.gate_weight" in name:
             convert_names.append(
@@ -153,31 +162,26 @@ class McoreToHFWeightConverterQwen2Moe(McoreToHFWeightConverterDense):
             assert len(params) == 1
         elif "shared_experts.linear_fc1.weight" in name:  # split gate_proj and up_proj
             convert_names.append(
-                f"model.layers.{layer_number}.mlp.shared_expert.gate_proj.weight"
-            )
+                f"model.layers.{layer_number}.mlp.shared_expert.gate_proj.weight")
             convert_names.append(
                 f"model.layers.{layer_number}.mlp.shared_expert.up_proj.weight"
             )
             assert len(params) == 2
         elif "shared_experts.linear_fc2.weight" in name:
             convert_names.append(
-                f"model.layers.{layer_number}.mlp.shared_expert.down_proj.weight"
-            )
+                f"model.layers.{layer_number}.mlp.shared_expert.down_proj.weight")
             assert len(params) == 1
         elif "mlp.experts.linear_fc1" in name:  # split gate_proj and up_proj
             expert_id = name.split("weight")[-1]
             convert_names.append(
-                f"model.layers.{layer_number}.mlp.experts.{expert_id}.gate_proj.weight"
-            )
+                f"model.layers.{layer_number}.mlp.experts.{expert_id}.gate_proj.weight")
             convert_names.append(
-                f"model.layers.{layer_number}.mlp.experts.{expert_id}.up_proj.weight"
-            )
+                f"model.layers.{layer_number}.mlp.experts.{expert_id}.up_proj.weight")
             assert len(params) == 2
         elif "mlp.experts.linear_fc2" in name:
             expert_id = name.split("weight")[-1]
             convert_names.append(
-                f"model.layers.{layer_number}.mlp.experts.{expert_id}.down_proj.weight"
-            )
+                f"model.layers.{layer_number}.mlp.experts.{expert_id}.down_proj.weight")
             assert len(params) == 1
         else:
             raise NotImplementedError(f"Unsupported parameter name: {name}")
@@ -238,7 +242,8 @@ class McoreToHFWeightConverterQwen2_5_VL(McoreToHFWeightConverterDense):
                     convert_names.append(f"model.layers.{layer_number}.{one}")
             else:
                 assert len(params) == 1
-                convert_names.append(f"model.layers.{layer_number}.{mapped_name}")
+                convert_names.append(
+                    f"model.layers.{layer_number}.{mapped_name}")
         elif model_type == "vision_model":
             name_map_after_layer = {
                 "self_attention.linear_proj.weight": "attn.proj.weight",
@@ -253,14 +258,16 @@ class McoreToHFWeightConverterQwen2_5_VL(McoreToHFWeightConverterDense):
                 new_param = torch.cat(params, dim=0)
                 params = [new_param]
                 if "bias" in name_after_layer:
-                    convert_names.append(f"visual.blocks.{layer_number}.attn.qkv.bias")
+                    convert_names.append(
+                        f"visual.blocks.{layer_number}.attn.qkv.bias")
                 else:
                     convert_names.append(
                         f"visual.blocks.{layer_number}.attn.qkv.weight"
                     )
             else:
                 assert len(params) == 1
-                convert_names.append(f"visual.blocks.{layer_number}.{mapped_name}")
+                convert_names.append(
+                    f"visual.blocks.{layer_number}.{mapped_name}")
         else:
             raise NotImplementedError(f"Unsupported model type: {model_type}")
         return convert_names, params
@@ -273,8 +280,12 @@ class McoreToHFWeightConverterQwen2_5_VL(McoreToHFWeightConverterDense):
         convert_names = []
         if model_type == "language_model":
             name_map_after_layer = {
-                "mlp.linear_fc1.weight": ["mlp.gate_proj.weight", "mlp.up_proj.weight"],
-                "mlp.linear_fc1.bias": ["mlp.gate_proj.bias", "mlp.up_proj.bias"],
+                "mlp.linear_fc1.weight": [
+                    "mlp.gate_proj.weight",
+                    "mlp.up_proj.weight"],
+                "mlp.linear_fc1.bias": [
+                    "mlp.gate_proj.bias",
+                    "mlp.up_proj.bias"],
                 "mlp.linear_fc2.weight": "mlp.down_proj.weight",
                 "mlp.linear_fc2.bias": "mlp.down_proj.bias",
                 "mlp.linear_fc1.layer_norm_weight": "post_attention_layernorm.weight",
@@ -287,12 +298,17 @@ class McoreToHFWeightConverterQwen2_5_VL(McoreToHFWeightConverterDense):
                     convert_names.append(f"model.layers.{layer_number}.{one}")
             else:
                 assert len(params) == 1
-                convert_names.append(f"model.layers.{layer_number}.{mapped_name}")
+                convert_names.append(
+                    f"model.layers.{layer_number}.{mapped_name}")
 
         elif model_type == "vision_model":
             name_map_after_layer = {
-                "mlp.linear_fc1.weight": ["mlp.gate_proj.weight", "mlp.up_proj.weight"],
-                "mlp.linear_fc1.bias": ["mlp.gate_proj.bias", "mlp.up_proj.bias"],
+                "mlp.linear_fc1.weight": [
+                    "mlp.gate_proj.weight",
+                    "mlp.up_proj.weight"],
+                "mlp.linear_fc1.bias": [
+                    "mlp.gate_proj.bias",
+                    "mlp.up_proj.bias"],
                 "mlp.linear_fc2.weight": "mlp.down_proj.weight",
                 "mlp.linear_fc2.bias": "mlp.down_proj.bias",
                 "mlp.linear_fc1.layer_norm_weight": "norm2.weight",
@@ -305,7 +321,8 @@ class McoreToHFWeightConverterQwen2_5_VL(McoreToHFWeightConverterDense):
                     convert_names.append(f"visual.blocks.{layer_number}.{one}")
             else:
                 assert len(params) == 1
-                convert_names.append(f"visual.blocks.{layer_number}.{mapped_name}")
+                convert_names.append(
+                    f"visual.blocks.{layer_number}.{mapped_name}")
         else:
             raise NotImplementedError(f"Unsupported model type: {model_type}")
         return convert_names, params
@@ -351,8 +368,8 @@ class McoreToHFWeightConverterDpskv3(McoreToHFWeightConverterBase):
         layer_number = name.split(".")[2]
         name_after_layer = name.split(f".{layer_number}.")[1]
         convert_names.append(
-            f"model.layers.{layer_number}.{name_map_after_layer[name_after_layer]}"
-        )
+            f"model.layers.{layer_number}.{
+                name_map_after_layer[name_after_layer]}")
         return convert_names, params
 
     def _convert_mlp_param(
@@ -394,7 +411,9 @@ class McoreToHFWeightConverterDpskv3(McoreToHFWeightConverterBase):
             "mlp.linear_fc1.layer_norm_weight": "post_attention_layernorm.weight",
             "mlp.linear_fc2.weight": "mlp.down_proj.weight",
             "mlp.shared_experts.linear_fc2.weight": "mlp.shared_experts.down_proj.weight",
-            "mlp.linear_fc1.weight": ["mlp.gate_proj.weight", "mlp.up_proj.weight"],
+            "mlp.linear_fc1.weight": [
+                "mlp.gate_proj.weight",
+                "mlp.up_proj.weight"],
             "mlp.shared_experts.linear_fc1.weight": [
                 "mlp.shared_experts.gate_proj.weight",
                 "mlp.shared_experts.up_proj.weight",
@@ -414,25 +433,24 @@ class McoreToHFWeightConverterDpskv3(McoreToHFWeightConverterBase):
                     convert_names.append(f"model.layers.{layer_number}.{one}")
             else:
                 assert len(params) == 1
-                convert_names.append(f"model.layers.{layer_number}.{mapped_name}")
+                convert_names.append(
+                    f"model.layers.{layer_number}.{mapped_name}")
         else:
             if "mlp.experts.linear_fc1.weight" in name:
                 expert_id = name.split("weight")[-1]
                 convert_names.append(
-                    f"model.layers.{layer_number}.mlp.experts.{expert_id}.gate_proj.weight"
-                )
+                    f"model.layers.{layer_number}.mlp.experts.{expert_id}.gate_proj.weight")
                 convert_names.append(
-                    f"model.layers.{layer_number}.mlp.experts.{expert_id}.up_proj.weight"
-                )
+                    f"model.layers.{layer_number}.mlp.experts.{expert_id}.up_proj.weight")
                 assert len(params) == 2
             elif "mlp.experts.linear_fc2.weight" in name:
                 expert_id = name.split("weight")[-1]
                 convert_names.append(
-                    f"model.layers.{layer_number}.mlp.experts.{expert_id}.down_proj.weight"
-                )
+                    f"model.layers.{layer_number}.mlp.experts.{expert_id}.down_proj.weight")
                 assert len(params) == 1
             else:
-                raise NotImplementedError(f"Unsupported parameter name: {name}")
+                raise NotImplementedError(
+                    f"Unsupported parameter name: {name}")
 
         return convert_names, params
 
@@ -455,9 +473,12 @@ class McoreToHFWeightConverterDpskv3(McoreToHFWeightConverterBase):
             "mtp.layers.0.transformer_layer" in name
         ), "only support transformer layer for now"
         # use proxy name to convert
-        proxy_name = name.replace("mtp.layers.0.transformer_layer", "decoder.layers.61")
+        proxy_name = name.replace(
+            "mtp.layers.0.transformer_layer",
+            "decoder.layers.61")
         if "self_attention" in proxy_name or "input_layernorm.weight" in proxy_name:
-            convert_names, params = self._convert_attention_param(proxy_name, params)
+            convert_names, params = self._convert_attention_param(
+                proxy_name, params)
         elif "mlp" in proxy_name:
             convert_names, params = self._convert_mlp_param(proxy_name, params)
         else:
@@ -505,16 +526,13 @@ class McoreToHFWeightConverterMixtral(McoreToHFWeightConverterDense):
         elif "mlp.experts.linear_fc1.weight" in name:
             expert_id = name.split("weight")[-1]
             convert_names.append(
-                f"model.layers.{layer_number}.block_sparse_moe.experts.{expert_id}.w1.weight"
-            )
+                f"model.layers.{layer_number}.block_sparse_moe.experts.{expert_id}.w1.weight")
             convert_names.append(
-                f"model.layers.{layer_number}.block_sparse_moe.experts.{expert_id}.w3.weight"
-            )
+                f"model.layers.{layer_number}.block_sparse_moe.experts.{expert_id}.w3.weight")
         elif "mlp.experts.linear_fc2.weight" in name:
             expert_id = name.split("weight")[-1]
             convert_names.append(
-                f"model.layers.{layer_number}.block_sparse_moe.experts.{expert_id}.w2.weight"
-            )
+                f"model.layers.{layer_number}.block_sparse_moe.experts.{expert_id}.w2.weight")
         else:
             raise NotImplementedError(f"Unsupported parameter name: {name}")
         return convert_names, params
@@ -544,22 +562,20 @@ class McoreToHFWeightConverterQwen3Moe(McoreToHFWeightConverterDense):
             )
             assert len(params) == 1
         elif "mlp.router.weight" in name:
-            convert_names.append(f"model.layers.{layer_number}.mlp.gate.weight")
+            convert_names.append(
+                f"model.layers.{layer_number}.mlp.gate.weight")
             assert len(params) == 1
         elif "mlp.experts.linear_fc1" in name:  # split gate_proj and up_proj
             expert_id = name.split("weight")[-1]
             convert_names.append(
-                f"model.layers.{layer_number}.mlp.experts.{expert_id}.gate_proj.weight"
-            )
+                f"model.layers.{layer_number}.mlp.experts.{expert_id}.gate_proj.weight")
             convert_names.append(
-                f"model.layers.{layer_number}.mlp.experts.{expert_id}.up_proj.weight"
-            )
+                f"model.layers.{layer_number}.mlp.experts.{expert_id}.up_proj.weight")
             assert len(params) == 2
         elif "mlp.experts.linear_fc2" in name:
             expert_id = name.split("weight")[-1]
             convert_names.append(
-                f"model.layers.{layer_number}.mlp.experts.{expert_id}.down_proj.weight"
-            )
+                f"model.layers.{layer_number}.mlp.experts.{expert_id}.down_proj.weight")
             assert len(params) == 1
         else:
             raise NotImplementedError(f"Unsupported parameter name: {name}")

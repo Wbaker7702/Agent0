@@ -41,7 +41,8 @@ class RewardConfig:
                     self.reward_function.rsplit(":", maxsplit=1)
                 )
 
-            if os.path.exists(self.reward_function):  # ray job uses absolute path
+            if os.path.exists(
+                    self.reward_function):  # ray job uses absolute path
                 self.reward_function = os.path.abspath(self.reward_function)
             else:
                 self.reward_function = None

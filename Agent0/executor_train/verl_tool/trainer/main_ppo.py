@@ -51,7 +51,8 @@ def run_ppo(config) -> None:
         )
 
     # Create a remote instance of the TaskRunner class, and
-    # Execute the `run` method of the TaskRunner instance remotely and wait for it to complete
+    # Execute the `run` method of the TaskRunner instance remotely and wait
+    # for it to complete
     runner = TaskRunner.remote()
     ray.get(runner.run.remote(config))
 
@@ -65,7 +66,8 @@ def run_ppo(config) -> None:
 @ray.remote(num_cpus=1)  # please make sure main_task is not scheduled on head
 class TaskRunner:
     def run(self, config):
-        # Print the initial configuration. `resolve=True` will evaluate symbolic values.
+        # Print the initial configuration. `resolve=True` will evaluate
+        # symbolic values.
         from pprint import pprint
 
         from omegaconf import OmegaConf
@@ -86,7 +88,8 @@ class TaskRunner:
         from verl.utils import hf_processor, hf_tokenizer
 
         trust_remote_code = config.data.get("trust_remote_code", False)
-        tokenizer = hf_tokenizer(local_path, trust_remote_code=trust_remote_code)
+        tokenizer = hf_tokenizer(
+            local_path, trust_remote_code=trust_remote_code)
         # Used for multimodal LLM, could be None
         processor = hf_processor(
             local_path, trust_remote_code=trust_remote_code, use_fast=True
@@ -155,7 +158,9 @@ class TaskRunner:
         # Map roles to the resource pool.
         global_pool_id = "global_pool"
         resource_pool_spec = {
-            global_pool_id: [config.trainer.n_gpus_per_node] * config.trainer.nnodes,
+            global_pool_id: [
+                config.trainer.n_gpus_per_node] *
+            config.trainer.nnodes,
         }
         mapping = {
             Role.ActorRollout: global_pool_id,
@@ -175,7 +180,8 @@ class TaskRunner:
                 from verl.workers.megatron_workers import RewardModelWorker
             else:
                 raise NotImplementedError
-            role_worker_mapping[Role.RewardModel] = ray.remote(RewardModelWorker)
+            role_worker_mapping[Role.RewardModel] = ray.remote(
+                RewardModelWorker)
             mapping[Role.RewardModel] = global_pool_id
 
         # Add a reference policy worker if KL loss or KL reward is used.
@@ -183,7 +189,8 @@ class TaskRunner:
             config.algorithm.use_kl_in_reward
             or config.actor_rollout_ref.actor.use_kl_loss
         ):
-            role_worker_mapping[Role.RefPolicy] = ray.remote(ActorRolloutRefWorker)
+            role_worker_mapping[Role.RefPolicy] = ray.remote(
+                ActorRolloutRefWorker)
             mapping[Role.RefPolicy] = global_pool_id
 
         # Load the reward manager for training and validation.
@@ -265,11 +272,13 @@ def create_rl_dataset(data_paths, data_config, tokenizer, processor):
         dataset_cls = load_extern_type(
             data_config.custom_cls.path, data_config.custom_cls.name
         )
-        # Verify that the custom dataset class inherits from torch.utils.data.Dataset
+        # Verify that the custom dataset class inherits from
+        # torch.utils.data.Dataset
         if not issubclass(dataset_cls, Dataset):
             raise TypeError(
-                f"The custom dataset class '{data_config.custom_cls.name}' from '{data_config.custom_cls.path}' must inherit from torch.utils.data.Dataset"
-            )
+                f"The custom dataset class '{
+                    data_config.custom_cls.name}' from '{
+                    data_config.custom_cls.path}' must inherit from torch.utils.data.Dataset")
     else:
         # Use the default RLHFDataset class if no custom class is specified
         dataset_cls = RLHFDataset
@@ -300,7 +309,8 @@ def create_rl_sampler(data_config, dataset):
     from torch.utils.data import RandomSampler, SequentialSampler
 
     # Use a sampler to facilitate checkpoint resumption.
-    # If shuffling is enabled in the data configuration, create a random sampler.
+    # If shuffling is enabled in the data configuration, create a random
+    # sampler.
     if data_config.shuffle:
         train_dataloader_generator = torch.Generator()
         train_dataloader_generator.manual_seed(data_config.get("seed", 1))
@@ -308,7 +318,8 @@ def create_rl_sampler(data_config, dataset):
             data_source=dataset, generator=train_dataloader_generator
         )
     else:
-        # If shuffling is disabled, use a sequential sampler to iterate through the dataset in order.
+        # If shuffling is disabled, use a sequential sampler to iterate through
+        # the dataset in order.
         sampler = SequentialSampler(data_source=dataset)
 
     return sampler

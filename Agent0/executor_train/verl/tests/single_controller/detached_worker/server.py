@@ -15,34 +15,32 @@
 Server starts a Trainer. Client sends data to the server to train.
 """
 
-import os
-
-os.environ["MEGATRON_USE_CUDA_TIMER"] = "0"
-os.environ["MEGATRON_START_PROCESS_TIMER"] = "False"
-os.environ["NCCL_DEBUG"] = "WARN"
-
-import ray
-import torch
-from megatron.core import parallel_state as mpu
-from megatron.core import tensor_parallel
-from megatron.core.models.gpt.gpt_model import ModelType
-from omegaconf import OmegaConf
-from tensordict import TensorDict
-from torch import nn
-from transformers import LlamaConfig
-
-from verl import DataProto
-from verl.models.llama.megatron import ParallelLlamaForCausalLMRmPadPP
-from verl.single_controller.base.decorator import Dispatch, register
-from verl.single_controller.base.megatron.worker import MegatronWorker
-from verl.single_controller.ray import RayClassWithInitArgs, RayResourcePool
-from verl.single_controller.ray.megatron import NVMegatronRayWorkerGroup
-from verl.utils.megatron.optimizer import get_megatron_optimizer
 from verl.utils.megatron_utils import (
     get_model,
     init_megatron_optim_config,
     mcore_model_parallel_config,
 )
+from verl.utils.megatron.optimizer import get_megatron_optimizer
+from verl.single_controller.ray.megatron import NVMegatronRayWorkerGroup
+from verl.single_controller.ray import RayClassWithInitArgs, RayResourcePool
+from verl.single_controller.base.megatron.worker import MegatronWorker
+from verl.single_controller.base.decorator import Dispatch, register
+from verl.models.llama.megatron import ParallelLlamaForCausalLMRmPadPP
+from verl import DataProto
+from transformers import LlamaConfig
+from torch import nn
+from tensordict import TensorDict
+from omegaconf import OmegaConf
+from megatron.core.models.gpt.gpt_model import ModelType
+from megatron.core import tensor_parallel
+from megatron.core import parallel_state as mpu
+import torch
+import ray
+import os
+
+os.environ["MEGATRON_USE_CUDA_TIMER"] = "0"
+os.environ["MEGATRON_START_PROCESS_TIMER"] = "False"
+os.environ["NCCL_DEBUG"] = "WARN"
 
 
 @ray.remote
@@ -137,9 +135,8 @@ class Trainer(MegatronWorker):
             self.megatron_config, self.megatron_config.timers
         )
 
-        return DataProto(
-            batch=TensorDict({"loss": output.detach()}, batch_size=output.shape[0])
-        )
+        return DataProto(batch=TensorDict(
+            {"loss": output.detach()}, batch_size=output.shape[0]))
 
 
 if __name__ == "__main__":

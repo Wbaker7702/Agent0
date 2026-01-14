@@ -67,8 +67,8 @@ class FlopsCounter:
     def __init__(self, config: "LlamaConfig"):
         if config.model_type not in VALID_MODLE_TYPE:
             print(
-                f"Only support {VALID_MODLE_TYPE}, but got {config.model_type}. MFU will always be zero."
-            )
+                f"Only support {VALID_MODLE_TYPE}, but got {
+                    config.model_type}. MFU will always be zero.")
 
         self.estimate_func = {
             "llama": self._estimate_llama_flops,
@@ -106,7 +106,8 @@ class FlopsCounter:
         )
         emd_and_lm_head_N = vocab_size * hidden_size * 2
         # non-attn all_layer parm
-        dense_N = (mlp_N + attn_linear_N) * num_hidden_layers + emd_and_lm_head_N
+        dense_N = (mlp_N + attn_linear_N) * \
+            num_hidden_layers + emd_and_lm_head_N
         # non-attn all_layer & all_token fwd & bwd flops
         dense_N_flops = 6 * dense_N * tokens_sum
 
@@ -116,8 +117,11 @@ class FlopsCounter:
             seqlen_square_sum += seqlen * seqlen
 
         attn_qkv_flops = (
-            12 * seqlen_square_sum * head_dim * num_attention_heads * num_hidden_layers
-        )
+            12 *
+            seqlen_square_sum *
+            head_dim *
+            num_attention_heads *
+            num_hidden_layers)
 
         # all_layer & all_token fwd & bwd flops
         flops_all_token = dense_N_flops + attn_qkv_flops

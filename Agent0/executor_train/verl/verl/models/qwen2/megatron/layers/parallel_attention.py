@@ -40,7 +40,12 @@ from verl.utils.megatron import tensor_parallel as tp_utils
 
 
 class Qwen2RotaryEmbedding(nn.Module):
-    def __init__(self, dim, max_position_embeddings=2048, base=10000, device=None):
+    def __init__(
+            self,
+            dim,
+            max_position_embeddings=2048,
+            base=10000,
+            device=None):
         super().__init__()
 
         self.dim = dim
@@ -65,15 +70,23 @@ class Qwen2RotaryEmbedding(nn.Module):
         )
 
         freqs = torch.einsum("i,j->ij", t, self.inv_freq)
-        # Different from paper, but it uses a different permutation in order to obtain the same calculation
+        # Different from paper, but it uses a different permutation in order to
+        # obtain the same calculation
         emb = torch.cat((freqs, freqs), dim=-1)
-        self.register_buffer("cos_cached", emb.cos().to(dtype), persistent=False)
-        self.register_buffer("sin_cached", emb.sin().to(dtype), persistent=False)
+        self.register_buffer(
+            "cos_cached",
+            emb.cos().to(dtype),
+            persistent=False)
+        self.register_buffer(
+            "sin_cached",
+            emb.sin().to(dtype),
+            persistent=False)
 
     def forward(self, x, seq_len=None):
         # x: [bs, num_attention_heads, seq_len, head_size]
         if seq_len > self.max_seq_len_cached:
-            self._set_cos_sin_cache(seq_len=seq_len, device=x.device, dtype=x.dtype)
+            self._set_cos_sin_cache(
+                seq_len=seq_len, device=x.device, dtype=x.dtype)
 
         return (
             self.cos_cached[:seq_len].to(dtype=x.dtype),
@@ -103,10 +116,17 @@ class Qwen2LinearScalingRotaryEmbedding(Qwen2RotaryEmbedding):
         t = t / self.scaling_factor
 
         freqs = torch.einsum("i,j->ij", t, self.inv_freq)
-        # Different from paper, but it uses a different permutation in order to obtain the same calculation
+        # Different from paper, but it uses a different permutation in order to
+        # obtain the same calculation
         emb = torch.cat((freqs, freqs), dim=-1)
-        self.register_buffer("cos_cached", emb.cos().to(dtype), persistent=False)
-        self.register_buffer("sin_cached", emb.sin().to(dtype), persistent=False)
+        self.register_buffer(
+            "cos_cached",
+            emb.cos().to(dtype),
+            persistent=False)
+        self.register_buffer(
+            "sin_cached",
+            emb.sin().to(dtype),
+            persistent=False)
 
 
 class Qwen2DynamicNTKScalingRotaryEmbedding(Qwen2RotaryEmbedding):
@@ -141,16 +161,23 @@ class Qwen2DynamicNTKScalingRotaryEmbedding(Qwen2RotaryEmbedding):
         )
 
         freqs = torch.einsum("i,j->ij", t, self.inv_freq)
-        # Different from paper, but it uses a different permutation in order to obtain the same calculation
+        # Different from paper, but it uses a different permutation in order to
+        # obtain the same calculation
         emb = torch.cat((freqs, freqs), dim=-1)
-        self.register_buffer("cos_cached", emb.cos().to(dtype), persistent=False)
-        self.register_buffer("sin_cached", emb.sin().to(dtype), persistent=False)
+        self.register_buffer(
+            "cos_cached",
+            emb.cos().to(dtype),
+            persistent=False)
+        self.register_buffer(
+            "sin_cached",
+            emb.sin().to(dtype),
+            persistent=False)
 
 
 def rotate_half(x):
     """Rotates half the hidden dims of the input."""
     x1 = x[..., : x.shape[-1] // 2]
-    x2 = x[..., x.shape[-1] // 2 :]
+    x2 = x[..., x.shape[-1] // 2:]
     return torch.cat((-x2, x1), dim=-1)
 
 
@@ -173,13 +200,17 @@ def repeat_kv(hidden_states: torch.Tensor, n_rep: int) -> torch.Tensor:
     hidden_states = hidden_states[:, :, None, :, :].expand(
         batch, num_key_value_heads, n_rep, slen, head_dim
     )
-    return hidden_states.reshape(batch, num_key_value_heads * n_rep, slen, head_dim)
+    return hidden_states.reshape(
+        batch, num_key_value_heads * n_rep, slen, head_dim)
 
 
 class ParallelQwen2Attention(nn.Module):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
 
-    def __init__(self, config: Qwen2Config, megatron_config: ModelParallelConfig):
+    def __init__(
+            self,
+            config: Qwen2Config,
+            megatron_config: ModelParallelConfig):
         super().__init__()
         self.config = config
         self.megatron_config = megatron_config
@@ -194,8 +225,9 @@ class ParallelQwen2Attention(nn.Module):
         # assign values after tp
         tp_size = mpu.get_tensor_model_parallel_world_size()
         assert (
-            self.num_heads % tp_size == 0
-        ), f"num_head must be divisible by tp_size. Got num_head={self.num_heads}, tp_size={tp_size}"
+            self.num_heads %
+            tp_size == 0), f"num_head must be divisible by tp_size. Got num_head={
+            self.num_heads}, tp_size={tp_size}"
         assert self.num_key_value_heads % tp_size == 0, (
             f"num_key_value_heads must be divisible by tp_size. Got num_key_value_heads="
             f"{self.num_key_value_heads}, tp_size={tp_size}"
@@ -207,16 +239,18 @@ class ParallelQwen2Attention(nn.Module):
 
         if (self.head_dim * self.num_heads) != self.hidden_size:
             raise ValueError(
-                f"hidden_size must be divisible by num_heads (got `hidden_size`: {self.hidden_size} and "
-                f"`num_heads`: {self.num_heads})."
-            )
+                f"hidden_size must be divisible by num_heads (got `hidden_size`: {
+                    self.hidden_size} and " f"`num_heads`: {
+                    self.num_heads}).")
 
         column_kwargs = tp_utils.get_default_kwargs_for_column_parallel_linear()
         row_kwargs = tp_utils.get_default_kwargs_for_row_parallel_linear()
 
         if megatron_config is not None:
-            assert column_kwargs.get("config", False), "must have ModelParallelConfig"
-            assert row_kwargs.get("config", False), "must have ModelParallelConfig"
+            assert column_kwargs.get(
+                "config", False), "must have ModelParallelConfig"
+            assert row_kwargs.get(
+                "config", False), "must have ModelParallelConfig"
             tp_utils.update_kwargs_with_config(column_kwargs, megatron_config)
             tp_utils.update_kwargs_with_config(row_kwargs, megatron_config)
 
@@ -263,12 +297,13 @@ class ParallelQwen2Attention(nn.Module):
             .contiguous()
         )
 
-    def forward(
-        self,
-        hidden_states: torch.Tensor,
-        attention_mask: Optional[torch.Tensor] = None,
-        position_ids: Optional[torch.LongTensor] = None,
-    ) -> tuple[torch.Tensor, Optional[torch.Tensor], Optional[tuple[torch.Tensor]]]:
+    def forward(self,
+                hidden_states: torch.Tensor,
+                attention_mask: Optional[torch.Tensor] = None,
+                position_ids: Optional[torch.LongTensor] = None,
+                ) -> tuple[torch.Tensor,
+                           Optional[torch.Tensor],
+                           Optional[tuple[torch.Tensor]]]:
         bsz, q_len, _ = hidden_states.size()
         qkv = self.qkv_proj(hidden_states)[0]
         query_states, key_states, value_states = qkv.split(
@@ -300,15 +335,24 @@ class ParallelQwen2Attention(nn.Module):
 
         if attn_weights.size() != (bsz, self.num_heads_per_tp, q_len, kv_seq_len):
             raise ValueError(
-                f"Attention weights should be of size {(bsz, self.num_heads_per_tp, q_len, kv_seq_len)}, "
-                f"but is {attn_weights.size()}"
-            )
+                f"Attention weights should be of size {
+                    (
+                        bsz,
+                        self.num_heads_per_tp,
+                        q_len,
+                        kv_seq_len)}, " f"but is {
+                    attn_weights.size()}")
 
         if attention_mask is not None:
             if attention_mask.size() != (bsz, 1, q_len, kv_seq_len):
                 raise ValueError(
-                    f"Attention mask should be of size {(bsz, 1, q_len, kv_seq_len)}, but is {attention_mask.size()}"
-                )
+                    f"Attention mask should be of size {
+                        (
+                            bsz,
+                            1,
+                            q_len,
+                            kv_seq_len)}, but is {
+                        attention_mask.size()}")
             attn_weights = attn_weights + attention_mask
 
         # upcast attention to fp32
@@ -319,9 +363,13 @@ class ParallelQwen2Attention(nn.Module):
 
         if attn_output.size() != (bsz, self.num_heads_per_tp, q_len, self.head_dim):
             raise ValueError(
-                f"`attn_output` should be of size {(bsz, self.num_heads_per_tp, q_len, self.head_dim)}, "
-                f"but is {attn_output.size()}"
-            )
+                f"`attn_output` should be of size {
+                    (
+                        bsz,
+                        self.num_heads_per_tp,
+                        q_len,
+                        self.head_dim)}, " f"but is {
+                    attn_output.size()}")
 
         attn_output = attn_output.transpose(1, 2).contiguous()
         attn_output = attn_output.reshape(bsz, q_len, self.hidden_size_per_tp)
@@ -336,7 +384,14 @@ Remove padding Attention
 """
 
 
-def apply_rotary_pos_emb_rmpad(q, k, cos, sin, position_ids, indices, sequence_length):
+def apply_rotary_pos_emb_rmpad(
+        q,
+        k,
+        cos,
+        sin,
+        position_ids,
+        indices,
+        sequence_length):
     batch_size = position_ids.shape[0]
 
     q = pad_input(
@@ -348,8 +403,16 @@ def apply_rotary_pos_emb_rmpad(q, k, cos, sin, position_ids, indices, sequence_l
     q_embed = (q * cos) + (rotate_half(q) * sin)
     k_embed = (k * cos) + (rotate_half(k) * sin)
 
-    q_embed = index_first_axis(rearrange(q_embed, "b s ... -> (b s) ..."), indices)
-    k_embed = index_first_axis(rearrange(k_embed, "b s ... -> (b s) ..."), indices)
+    q_embed = index_first_axis(
+        rearrange(
+            q_embed,
+            "b s ... -> (b s) ..."),
+        indices)
+    k_embed = index_first_axis(
+        rearrange(
+            k_embed,
+            "b s ... -> (b s) ..."),
+        indices)
 
     return q_embed, k_embed
 

@@ -22,7 +22,9 @@ from recipe.spin.spin_trainer import RaySPINTrainer
 from verl.trainer.ppo.reward import get_custom_reward_fn
 
 
-@hydra.main(config_path="config", config_name="spin_trainer", version_base=None)
+@hydra.main(config_path="config",
+            config_name="spin_trainer",
+            version_base=None)
 def main(config):
     run_ppo(config)
 
@@ -71,7 +73,8 @@ class TaskRunner:
         from verl.utils import hf_processor, hf_tokenizer
 
         trust_remote_code = config.data.get("trust_remote_code", False)
-        tokenizer = hf_tokenizer(local_path, trust_remote_code=trust_remote_code)
+        tokenizer = hf_tokenizer(
+            local_path, trust_remote_code=trust_remote_code)
         processor = hf_processor(
             local_path, use_fast=True
         )  # used for multimodal LLM, could be none
@@ -104,7 +107,9 @@ class TaskRunner:
 
         global_pool_id = "global_pool"
         resource_pool_spec = {
-            global_pool_id: [config.trainer.n_gpus_per_node] * config.trainer.nnodes,
+            global_pool_id: [
+                config.trainer.n_gpus_per_node] *
+            config.trainer.nnodes,
         }
         mapping = {
             Role.ActorRollout: global_pool_id,
@@ -118,7 +123,8 @@ class TaskRunner:
                 from verl.workers.megatron_workers import RewardModelWorker
             else:
                 raise NotImplementedError
-            role_worker_mapping[Role.RewardModel] = ray.remote(RewardModelWorker)
+            role_worker_mapping[Role.RewardModel] = ray.remote(
+                RewardModelWorker)
             mapping[Role.RewardModel] = global_pool_id
 
         # use reference model
@@ -131,7 +137,8 @@ class TaskRunner:
 
         # Note(haibin.lin): please make sure custom reward managers are imported and
         # registered via `verl.workers.reward_manager.register`
-        reward_manager_name = config.reward_model.get("reward_manager", "naive")
+        reward_manager_name = config.reward_model.get(
+            "reward_manager", "naive")
         reward_manager_cls = get_reward_manager_cls(reward_manager_name)
 
         compute_score = get_custom_reward_fn(config)

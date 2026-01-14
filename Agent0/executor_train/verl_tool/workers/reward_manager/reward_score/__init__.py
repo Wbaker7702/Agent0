@@ -1,4 +1,8 @@
-def _default_compute_score(data_source, solution_str, ground_truth, extra_info=None):
+def _default_compute_score(
+        data_source,
+        solution_str,
+        ground_truth,
+        extra_info=None):
     if data_source == "openai/gsm8k":
         from verl.utils.reward_score import gsm8k
 
@@ -14,7 +18,8 @@ def _default_compute_score(data_source, solution_str, ground_truth, extra_info=N
         # [Optional] Math-Verify Integration
         # For enhanced accuracy, consider utilizing Math-Verify (https://github.com/huggingface/Math-Verify).
         # Note: Math-Verify needs to be manually installed via pip: `pip install math-verify`.
-        # To use it, override the `compute_score` function with the following implementation:
+        # To use it, override the `compute_score` function with the following
+        # implementation:
 
         # from verl.utils.reward_score import math_verify
         # res = math_verify.compute_score(solution_str, ground_truth)
@@ -36,7 +41,8 @@ def _default_compute_score(data_source, solution_str, ground_truth, extra_info=N
     elif data_source in ["codecontests", "apps", "codeforces", "taco"]:
         from verl.utils.reward_score import prime_code
 
-        res = prime_code.compute_score(solution_str, ground_truth, continuous=True)
+        res = prime_code.compute_score(
+            solution_str, ground_truth, continuous=True)
     elif data_source in ["hiyouga/geometry3k"]:
         from verl.utils.reward_score import geo3k
 

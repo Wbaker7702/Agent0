@@ -63,9 +63,8 @@ class TokenBucketWorker:
 
 class ExecutionWorker:
     def __init__(self, enable_global_rate_limit=True, rate_limit=10):
-        self.rate_limit_worker = (
-            self._init_rate_limit(rate_limit) if enable_global_rate_limit else None
-        )
+        self.rate_limit_worker = (self._init_rate_limit(
+            rate_limit) if enable_global_rate_limit else None)
 
     def _init_rate_limit(self, rate_limit):
         # TODO validation for rate_limit
@@ -96,12 +95,10 @@ def init_execution_pool(
 ):
     if mode == PoolMode.ThreadMode:
         return (
-            ray.remote(ExecutionWorker)
-            .options(max_concurrency=num_workers)
-            .remote(
-                enable_global_rate_limit=enable_global_rate_limit, rate_limit=rate_limit
-            )
-        )
+            ray.remote(ExecutionWorker) .options(
+                max_concurrency=num_workers) .remote(
+                enable_global_rate_limit=enable_global_rate_limit,
+                rate_limit=rate_limit))
     else:
         raise NotImplementedError("Process mode is not implemented yet")
         # return ray.util.multiprocessing.Pool(processes=num_workers)
@@ -144,7 +141,8 @@ class SandboxFusionTool(BaseTool):
         self.rate_limit = config.get("rate_limit", 10)
         self.default_timeout = config.get("default_timeout", 30)
         self.default_language = config.get("default_language", "python")
-        self.enable_global_rate_limit = config.get("enable_global_rate_limit", True)
+        self.enable_global_rate_limit = config.get(
+            "enable_global_rate_limit", True)
         self.execution_pool = init_execution_pool(
             num_workers=self.num_workers,
             enable_global_rate_limit=self.enable_global_rate_limit,
@@ -207,8 +205,7 @@ class SandboxFusionTool(BaseTool):
         if metadata["run_status"] == "Finished":
             actual_output = metadata["stdout"] + metadata["stderr"]
             logger.debug(
-                f"actual_output from sandbox fusion: {actual_output},{instance_id}"
-            )
+                f"actual_output from sandbox fusion: {actual_output},{instance_id}")
             return actual_output
         else:
             return "no stdout here"

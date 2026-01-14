@@ -79,7 +79,8 @@ def test():
     del rm_wg
     del ref_wg
 
-    [ray.util.remove_placement_group(pg) for pg in resource_pool.get_placement_groups()]
+    [ray.util.remove_placement_group(pg)
+     for pg in resource_pool.get_placement_groups()]
     print("wait 5s to remove placemeng_group")
     time.sleep(5)
     # test single-node-multi-partition
@@ -87,18 +88,21 @@ def test():
     print("test single-node-multi-partition")
     rm_resource_pool = RayResourcePool([4], use_gpu=True, name_prefix="rm")
     ref_resource_pool = RayResourcePool([4], use_gpu=True, name_prefix="ref")
-    total_resource_pool = merge_resource_pool(rm_resource_pool, ref_resource_pool)
+    total_resource_pool = merge_resource_pool(
+        rm_resource_pool, ref_resource_pool)
 
     assert rm_resource_pool.world_size == 4
     assert ref_resource_pool.world_size == 4
     assert total_resource_pool.world_size == 8
 
     actor_wg = RayWorkerGroup(
-        total_resource_pool, class_with_args, name_prefix="high_level_api_actor"
-    )
+        total_resource_pool,
+        class_with_args,
+        name_prefix="high_level_api_actor")
     critic_wg = RayWorkerGroup(
-        total_resource_pool, class_with_args, name_prefix="high_level_api_critic"
-    )
+        total_resource_pool,
+        class_with_args,
+        name_prefix="high_level_api_critic")
     rm_wg = RayWorkerGroup(
         rm_resource_pool, class_with_args, name_prefix="high_level_api_rm"
     )

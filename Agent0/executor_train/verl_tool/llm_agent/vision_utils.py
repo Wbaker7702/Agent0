@@ -64,8 +64,9 @@ def encode_image(img: Image.Image) -> str:
         return img_str
     else:
         raise ValueError(
-            f"Unsupported image type: {type(img)}. Expected str or PIL Image, got {type(img)}."
-        )
+            f"Unsupported image type: {
+                type(img)}. Expected str or PIL Image, got {
+                type(img)}.")
 
 
 def decode_image(img_str):
@@ -84,7 +85,8 @@ def encode_image_url(img: Union[str, dict, Image.Image]) -> str:
     else:
         img = process_image(img)
     encoded_img = encode_image(img)
-    return f"data:image/jpeg;base64,{encoded_img}"  # Assume img is a base64 string or file path
+    # Assume img is a base64 string or file path
+    return f"data:image/jpeg;base64,{encoded_img}"
 
 
 def encode_video_url(
@@ -116,7 +118,8 @@ def encode_video_url(
                 fps_max_frames=fps_max_frames,
             )
     encoded_frames = [encode_image(frame) for frame in frames]
-    return f"data:video/jpeg;base64,{','.join(encoded_frames)}"  # Assume video is a list of processed images
+    # Assume video is a list of processed images
+    return f"data:video/jpeg;base64,{','.join(encoded_frames)}"
 
 
 def decode_video_url(video_url: str) -> list:

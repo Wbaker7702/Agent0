@@ -75,9 +75,8 @@ class SearchExecutionWorker:
     """Worker for executing search operations with optional rate limiting."""
 
     def __init__(self, enable_global_rate_limit=True, rate_limit=10):
-        self.rate_limit_worker = (
-            self._init_rate_limit(rate_limit) if enable_global_rate_limit else None
-        )
+        self.rate_limit_worker = (self._init_rate_limit(
+            rate_limit) if enable_global_rate_limit else None)
 
     def _init_rate_limit(self, rate_limit):
         """Initialize singleton rate limiter."""
@@ -113,12 +112,10 @@ def init_search_execution_pool(
     """Initialize search execution pool."""
     if mode == PoolMode.ThreadMode:
         return (
-            ray.remote(SearchExecutionWorker)
-            .options(max_concurrency=num_workers)
-            .remote(
-                enable_global_rate_limit=enable_global_rate_limit, rate_limit=rate_limit
-            )
-        )
+            ray.remote(SearchExecutionWorker) .options(
+                max_concurrency=num_workers) .remote(
+                enable_global_rate_limit=enable_global_rate_limit,
+                rate_limit=rate_limit))
     else:
         raise NotImplementedError("Process mode is not implemented yet")
 
@@ -173,7 +170,8 @@ class SearchTool(BaseTool):
         self.rate_limit = config.get("rate_limit", 120)
         self.timeout = config.get("timeout", 30)
 
-        self.enable_global_rate_limit = config.get("enable_global_rate_limit", True)
+        self.enable_global_rate_limit = config.get(
+            "enable_global_rate_limit", True)
         self.execution_pool = init_search_execution_pool(
             num_workers=self.num_workers,
             enable_global_rate_limit=self.enable_global_rate_limit,
@@ -240,7 +238,8 @@ class SearchTool(BaseTool):
             concurrent_semaphore=None,  # Ray handles concurrency control
             timeout=timeout,
         )
-        logger.debug(f"Search result for instance {instance_id}: {result_text}")
+        logger.debug(
+            f"Search result for instance {instance_id}: {result_text}")
         return result_text, metadata
 
     @rollout_trace_op
@@ -261,11 +260,13 @@ class SearchTool(BaseTool):
         timeout = self.timeout
         query_list_from_params = parameters.get("query_list")
 
-        if not query_list_from_params or not isinstance(query_list_from_params, list):
+        if not query_list_from_params or not isinstance(
+                query_list_from_params, list):
             error_msg = (
                 "Error: 'query_list' is missing, empty, or not a list in parameters."
             )
-            logger.error(f"[SearchTool] {error_msg} Received parameters: {parameters}")
+            logger.error(
+                f"[SearchTool] {error_msg} Received parameters: {parameters}")
             return json.dumps({"result": error_msg}), 0.0, {}
 
         # Execute search using Ray execution pool
@@ -280,7 +281,8 @@ class SearchTool(BaseTool):
             )
 
             # Store results in instance dictionary
-            self._instance_dict[instance_id]["reward"].append(result_text.strip())
+            self._instance_dict[instance_id]["reward"].append(
+                result_text.strip())
 
             # Convert metadata to metrics
             metrics = {
@@ -293,7 +295,8 @@ class SearchTool(BaseTool):
             return result_text, 0.0, metrics
 
         except Exception as e:
-            error_result = json.dumps({"result": f"Search execution failed: {e}"})
+            error_result = json.dumps(
+                {"result": f"Search execution failed: {e}"})
             logger.error(f"[SearchTool] Execution failed: {e}")
             return error_result, 0.0, {"error": str(e)}
 

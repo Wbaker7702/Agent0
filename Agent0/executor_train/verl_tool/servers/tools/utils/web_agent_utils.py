@@ -1,19 +1,19 @@
+import time
+import os
+from .deepsearch_utils import extract_snippet_with_context
+from concurrent.futures import ThreadPoolExecutor
+from tqdm import tqdm
+from typing import Optional, List, Dict, Union
+from openai import OpenAI
+from collections import defaultdict
+import string
+from collections import Counter
+import numpy as np
+import json
+import re
 import sys
 
 sys.path.append("..")
-
-import re
-import json
-import numpy as np
-from collections import Counter
-import string
-import os, time
-from collections import defaultdict
-from openai import OpenAI
-from typing import Optional, List, Dict, Union
-from tqdm import tqdm
-from concurrent.futures import ThreadPoolExecutor
-from .deepsearch_utils import extract_snippet_with_context
 
 
 def extract_answer(output, mode="gen"):
@@ -33,11 +33,11 @@ def extract_answer(output, mode="gen"):
         pattern_info = "**Final Information**"
         pattern_step = "**Modified Reasoning Steps**"
         if pattern_info in output:
-            extracted_text = (
-                output.split(pattern_info)[-1].replace("\n", "").strip("```").strip()
-            )
+            extracted_text = (output.split(pattern_info)
+                              [-1].replace("\n", "").strip("```").strip())
         elif pattern_step in output:
-            extracted_text = output.split(pattern_step)[-1].strip("```").strip()
+            extracted_text = output.split(
+                pattern_step)[-1].strip("```").strip()
         else:
             # extracted_text = "No helpful information found."
             extracted_text = output
@@ -57,7 +57,8 @@ def extract_answer(output, mode="gen"):
     return extracted_text
 
 
-def get_webpage_to_reasonchain_instruction(prev_reasoning, search_query, document):
+def get_webpage_to_reasonchain_instruction(
+        prev_reasoning, search_query, document):
     return f"""**Task Instruction:**
 
 You are tasked with reading and analyzing web pages based on the following inputs: **Previous Reasoning Steps**, **Current Search Query**, and **Searched Web Pages**. Your objective is to extract relevant and helpful information for **Current Search Query** from the **Searched Web Pages** and seamlessly integrate this information into the **Previous Reasoning Steps** to continue reasoning for the original question.
@@ -79,13 +80,13 @@ You are tasked with reading and analyzing web pages based on the following input
 [Helpful information]
 
 **Inputs:**
-- **Previous Reasoning Steps:**  
+- **Previous Reasoning Steps:**
 {prev_reasoning}
 
-- **Current Search Query:**  
+- **Current Search Query:**
 {search_query}
 
-- **Searched Web Pages:**  
+- **Searched Web Pages:**
 {document}
 
 Now you should analyze each web page and find helpful information based on the current search query "{search_query}" and previous reasoning steps.
@@ -117,11 +118,13 @@ def get_prev_reasoning_chain(
     begin_search_result_tag: str = "<result>",
 ) -> str:
     if isinstance(all_reasoning_steps, str):
-        all_reasoning_steps = all_reasoning_steps.replace("\n\n", "\n").split("\n")
+        all_reasoning_steps = all_reasoning_steps.replace(
+            "\n\n", "\n").split("\n")
     else:
         all_reasoning_steps = [step for step in all_reasoning_steps if step]
 
-    prev_steps = [f"Step {i + 1}: {step}" for i, step in enumerate(all_reasoning_steps)]
+    prev_steps = [f"Step {i + 1}: {step}" for i,
+                  step in enumerate(all_reasoning_steps)]
 
     if len(prev_steps) <= 5:
         truncated_prev_reasoning = "\n\n".join(prev_steps)
@@ -136,7 +139,7 @@ def get_prev_reasoning_chain(
             ):
                 truncated_prev_reasoning += step + "\n\n"
             else:
-                if truncated_prev_reasoning[-len("\n\n...\n\n") :] != "\n\n...\n\n":
+                if truncated_prev_reasoning[-len("\n\n...\n\n"):] != "\n\n...\n\n":
                     truncated_prev_reasoning += "...\n\n"
     truncated_prev_reasoning = truncated_prev_reasoning.strip("\n")
     return truncated_prev_reasoning
@@ -178,9 +181,13 @@ def generate_webpage_to_reasonchain_batch(
     for output in raw_outputs:
         if output is None or output == "None" or output == "":
             sum_error += 1
-    print(f"summarization_error: {sum_error}, ratios: {sum_error / len(raw_outputs)}")
+    print(
+        f"summarization_error: {sum_error}, ratios: {
+            sum_error /
+            len(raw_outputs)}")
 
-    extracted_infos = [extract_answer(raw, mode="infogen") for raw in raw_outputs]
+    extracted_infos = [extract_answer(raw, mode="infogen")
+                       for raw in raw_outputs]
 
     return extracted_infos
 
@@ -196,6 +203,7 @@ def generate_webpage_to_reasonchain(
         prev_reasoning, search_query, document
     )
     prompt = {"role": "user", "content": user_prompt}
-    raw_output = webpage_analysis_single(summ_model_url, summ_model_path, prompt)
+    raw_output = webpage_analysis_single(
+        summ_model_url, summ_model_path, prompt)
     analyzed_info = extract_answer(raw_output, mode="infogen")
     return analyzed_info

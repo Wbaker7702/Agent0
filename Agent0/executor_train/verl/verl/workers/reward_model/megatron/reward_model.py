@@ -81,8 +81,9 @@ class MegatronRewardModel(BasePPORewardModel):
         for id, mask in zip(input_ids, attention_mask, strict=True):
             # 1. remove pad for each sequence
             non_zero_indices = torch.nonzero(mask).view(-1)
-            begin_pos, end_pos = non_zero_indices[0].item(), non_zero_indices[-1].item()
-            valid_id = id[begin_pos : end_pos + 1]
+            begin_pos, end_pos = non_zero_indices[0].item(
+            ), non_zero_indices[-1].item()
+            valid_id = id[begin_pos: end_pos + 1]
             # 2. decode by sft_tokenizer, remove sft system prompts
             decode_result = self.sft_tokenizer.decode(valid_id)
             # workaround
@@ -95,23 +96,26 @@ class MegatronRewardModel(BasePPORewardModel):
             if print_decode and torch.distributed.get_rank() == 0:
                 # only print first decode result
                 print(
-                    f"device {get_device_id()}: sft decode result:\n{decode_result}\n \
-                        \ndevice {get_device_id()}: sft decode result with \
-                        rm chat template:\n{decode_with_rm_chat}\n\n"
-                )
+                    f"device {
+                        get_device_id()}: sft decode result:\n{decode_result}\n \
+                        \ndevice {
+                        get_device_id()}: sft decode result with \
+                        rm chat template:\n{decode_with_rm_chat}\n\n")
                 print_decode = False
             # 3. encode by rm_tokenizer
-            rm_input_ids = self.rm_tokenizer(decode_with_rm_chat, return_tensors="pt")[
-                "input_ids"
-            ][0].to(input_ids.device)
+            rm_input_ids = self.rm_tokenizer(
+                decode_with_rm_chat,
+                return_tensors="pt")["input_ids"][0].to(
+                input_ids.device)
             # 4. generate attention_mask and position_ids
-            rm_attention_mask = torch.ones_like(rm_input_ids, device=input_ids.device)
+            rm_attention_mask = torch.ones_like(
+                rm_input_ids, device=input_ids.device)
             cur_seqlen = rm_input_ids.shape[-1]
-            # NOTE(gh): the later reward compute will process the shape (bs, seqlen_pad_128)
+            # NOTE(gh): the later reward compute will process the shape (bs,
+            # seqlen_pad_128)
             if cur_seqlen > ori_seqlen:
                 print(
-                    f"warninig: rm encode seqlen {cur_seqlen} > sft encode seqlen {ori_seqlen}"
-                )
+                    f"warninig: rm encode seqlen {cur_seqlen} > sft encode seqlen {ori_seqlen}")
                 rm_input_ids = rm_input_ids[:ori_seqlen]
                 rm_attention_mask = rm_attention_mask[:ori_seqlen]
             else:
@@ -122,9 +126,11 @@ class MegatronRewardModel(BasePPORewardModel):
                 rm_attention_mask = pad_sequence_to_length(
                     rm_attention_mask, ori_seqlen, 0
                 )
-            rm_position_ids = torch.arange(0, ori_seqlen, device=input_ids.device)
+            rm_position_ids = torch.arange(
+                0, ori_seqlen, device=input_ids.device)
             input_ids_for_rm.append(torch.unsqueeze(rm_input_ids, dim=0))
-            attention_mask_for_rm.append(torch.unsqueeze(rm_attention_mask, dim=0))
+            attention_mask_for_rm.append(
+                torch.unsqueeze(rm_attention_mask, dim=0))
             position_ids_for_rm.append(torch.unsqueeze(rm_position_ids, dim=0))
         input_ids_for_rm = torch.cat(input_ids_for_rm, dim=0)
         attention_mask_for_rm = torch.cat(attention_mask_for_rm, dim=0)
@@ -202,8 +208,12 @@ class MegatronRewardModel(BasePPORewardModel):
         # (bs, seqlen', hidden_size) -> (bs, seqlen', 1) -> (bs, seqlen')
         token_level_rewards = logits
         # find the last token reward
-        ends = attention_mask.cumsum(dim=-1).argmax(dim=-1).view(-1, 1)  # (bs, 1)
-        rewards = torch.gather(token_level_rewards, dim=1, index=ends)  # (bs, 1)
+        ends = attention_mask.cumsum(
+            dim=-1).argmax(dim=-1).view(-1, 1)  # (bs, 1)
+        rewards = torch.gather(
+            token_level_rewards,
+            dim=1,
+            index=ends)  # (bs, 1)
 
         if self.use_different_tokenizer:
             data.batch.update(ori_values)
@@ -218,7 +228,9 @@ class MegatronRewardModel(BasePPORewardModel):
         # assign last valid token reward to ori position
         if position_ids.dim() == 3:  # qwen2vl mrope [bs, 3, seq_len]
             position_ids = position_ids[:, 0, :]
-        eos_mask_idx = torch.argmax(position_ids * attention_mask, dim=-1)  # (bs,)
+        eos_mask_idx = torch.argmax(
+            position_ids * attention_mask,
+            dim=-1)  # (bs,)
         eos_mask = torch.zeros_like(attention_mask)
         eos_mask[torch.arange(batch_size), eos_mask_idx] = 1.0
 
@@ -259,7 +271,8 @@ class MegatronRewardModel(BasePPORewardModel):
             group=mpu.get_pipeline_model_parallel_group(),
         )
 
-        mini_batch.batch["attention_mask"] = mini_batch.batch["attention_mask"].to(bool)
+        mini_batch.batch["attention_mask"] = mini_batch.batch["attention_mask"].to(
+            bool)
 
         self.has_multi_modal_inputs = (
             "multi_modal_inputs" in mini_batch.non_tensor_batch.keys()
@@ -353,7 +366,8 @@ class MegatronRewardModel(BasePPORewardModel):
         )
 
         # TODO: we may use the new schedule instead
-        # for flash-attn: (seq_len, batch_size, hidden_size) = (mbs*seq_len, 1, hidden_size)
+        # for flash-attn: (seq_len, batch_size, hidden_size) = (mbs*seq_len, 1,
+        # hidden_size)
         if mpu.get_pipeline_model_parallel_world_size() > 1:
             losses_reduced = forward_backward_func(
                 forward_step_func=forward_step,
@@ -397,5 +411,6 @@ class MegatronRewardModel(BasePPORewardModel):
         if self.device == "cpu":
             for reward_model_module in self.reward_model_module:
                 for name, param in reward_model_module.named_parameters():
-                    param.data = param.data.to(get_device_id(), non_blocking=True)
+                    param.data = param.data.to(
+                        get_device_id(), non_blocking=True)
             self.device = get_device_name()

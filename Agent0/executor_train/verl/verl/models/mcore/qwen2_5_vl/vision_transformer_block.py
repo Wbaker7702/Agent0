@@ -35,8 +35,11 @@ class Qwen2_5VisionTransformerBlock(TransformerBlock):
 
         def custom(start: int, end: int):
             def custom_forward(
-                hidden_states, attention_mask, context, context_mask, rotary_pos_emb
-            ):
+                    hidden_states,
+                    attention_mask,
+                    context,
+                    context_mask,
+                    rotary_pos_emb):
                 for index in range(start, end):
                     if index in fullatt_block_indexes:
                         packed_seq_params_now = packed_seq_params_full
@@ -97,7 +100,8 @@ class Qwen2_5VisionTransformerBlock(TransformerBlock):
         elif self.config.recompute_method == "block":
             # Checkpoint the input activation of only a set number of individual
             # Transformer layers and skip the rest.
-            # A method fully use the device memory removing redundant re-computation.
+            # A method fully use the device memory removing redundant
+            # re-computation.
             recompute_skip_num_layers = 0
             for layer_idx in range(self.num_layers_per_pipeline_rank):
                 # Skip recomputation when input grad computation is not needed.
@@ -177,7 +181,8 @@ class Qwen2_5VisionTransformerBlock(TransformerBlock):
             inference_context, inference_params
         )
 
-        # Delete the obsolete reference to the initial input tensor if necessary
+        # Delete the obsolete reference to the initial input tensor if
+        # necessary
         if isinstance(hidden_states, WrappedTensor):
             hidden_states = hidden_states.unwrap()
 
@@ -185,7 +190,8 @@ class Qwen2_5VisionTransformerBlock(TransformerBlock):
             # See set_input_tensor()
             hidden_states = self.input_tensor
 
-        # Update the inference parameters with the current batch size in case it is variable
+        # Update the inference parameters with the current batch size in case
+        # it is variable
         if inference_context and not self.training:
             inference_context.current_batch_size = hidden_states.size(1)
 
@@ -224,9 +230,8 @@ class Qwen2_5VisionTransformerBlock(TransformerBlock):
         use_inner_fp8_context = (
             self.config.fp8 and self.config.fp8_recipe != Fp8Recipe.delayed
         )
-        outer_fp8_context = (
-            get_fp8_context(self.config) if use_outer_fp8_context else nullcontext()
-        )
+        outer_fp8_context = (get_fp8_context(self.config)
+                             if use_outer_fp8_context else nullcontext())
 
         with rng_context, outer_fp8_context:
             # Forward pass.
@@ -274,8 +279,7 @@ class Qwen2_5VisionTransformerBlock(TransformerBlock):
                         and self.group_prefetch_offload_commit_async is not None
                     ):
                         hidden_states = self.group_prefetch_offload_commit_async(
-                            hidden_states
-                        )
+                            hidden_states)
 
         # Final layer norm.
         if self.final_layernorm is not None:

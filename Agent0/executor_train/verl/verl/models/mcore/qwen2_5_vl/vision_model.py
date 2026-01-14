@@ -30,7 +30,8 @@ from torch.nn import functional as F
 from .vision_transformer_block import Qwen2_5VisionTransformerBlock as TransformerBlock
 
 
-# copied from https://github.com/huggingface/transformers/blob/main/src/transformers/models/qwen2_vl/modeling_qwen2_vl.py
+# copied from
+# https://github.com/huggingface/transformers/blob/main/src/transformers/models/qwen2_vl/modeling_qwen2_vl.py
 class PatchEmbed(nn.Module):
     def __init__(
         self,
@@ -69,11 +70,13 @@ class PatchEmbed(nn.Module):
         return hidden_states
 
 
-# copied from https://github.com/huggingface/transformers/blob/main/src/transformers/models/qwen2_vl/modeling_qwen2_vl.py
+# copied from
+# https://github.com/huggingface/transformers/blob/main/src/transformers/models/qwen2_vl/modeling_qwen2_vl.py
 class VisionRotaryEmbedding(nn.Module):
     def __init__(self, dim: int, theta: float = 10000.0) -> None:
         super().__init__()
-        inv_freq = 1.0 / (theta ** (torch.arange(0, dim, 2, dtype=torch.float) / dim))
+        inv_freq = 1.0 / \
+            (theta ** (torch.arange(0, dim, 2, dtype=torch.float) / dim))
         self.register_buffer("inv_freq", inv_freq, persistent=False)
 
     def forward(self, seqlen: int) -> torch.Tensor:
@@ -141,7 +144,8 @@ class Qwen2_5VisionModel(VisionModule):
         # Transformer layers.
         # TODO: Follow-up changes will make pre and post_process configurable. They are needed for supporting
         # pipeline parallelism.
-        # NOTE: a final layer norm and/or linear layer present in some implementations are omitted here.
+        # NOTE: a final layer norm and/or linear layer present in some
+        # implementations are omitted here.
         self.decoder = TransformerBlock(
             config=transformer_config,
             spec=transformer_layer_spec,
@@ -198,10 +202,12 @@ class Qwen2_5VisionModel(VisionModule):
             )
             wpos_ids = wpos_ids.permute(0, 2, 1, 3)
             wpos_ids = wpos_ids.flatten()
-            pos_ids.append(torch.stack([hpos_ids, wpos_ids], dim=-1).repeat(t, 1))
+            pos_ids.append(torch.stack(
+                [hpos_ids, wpos_ids], dim=-1).repeat(t, 1))
         pos_ids = torch.cat(pos_ids, dim=0).to(grid_thw.device)
         max_grid_size = grid_thw[:, 1:].max()
-        rotary_pos_emb_full = self.rotary_pos_emb(max_grid_size).to(grid_thw.device)
+        rotary_pos_emb_full = self.rotary_pos_emb(
+            max_grid_size).to(grid_thw.device)
         rotary_pos_emb = rotary_pos_emb_full[pos_ids].flatten(1)
         return rotary_pos_emb
 
@@ -243,9 +249,8 @@ class Qwen2_5VisionModel(VisionModule):
             index_padded = index_padded.reshape(-1)
             index_new = index_padded[index_padded != -100]
             window_index.append(index_new + window_index_id)
-            cu_seqlens_tmp = (
-                seqlens.cumsum(0) * self.spatial_merge_unit + cu_window_seqlens[-1]
-            )
+            cu_seqlens_tmp = (seqlens.cumsum(
+                0) * self.spatial_merge_unit + cu_window_seqlens[-1])
             cu_window_seqlens.extend(cu_seqlens_tmp.tolist())
             window_index_id += (grid_t * llm_grid_h * llm_grid_w).item()
         window_index = torch.cat(window_index, dim=0)
@@ -274,7 +279,8 @@ class Qwen2_5VisionModel(VisionModule):
         assert self.input_tensor is None
         assert inference_params is None
 
-        # Rotary positional embeddings (embedding is None for PP intermediate devices)
+        # Rotary positional embeddings (embedding is None for PP intermediate
+        # devices)
         vision_data = self.patch_embed(vision_data)
         window_index, cu_window_seqlens = self.get_window_index(grid_thw)
         cu_window_seqlens = torch.tensor(
@@ -296,7 +302,8 @@ class Qwen2_5VisionModel(VisionModule):
             seq_len // self.spatial_merge_unit, self.spatial_merge_unit, -1
         )
         rotary_pos_emb = rotary_pos_emb[window_index, :, :]
-        rotary_pos_emb = rotary_pos_emb.reshape(seq_len, 1, 1, -1).repeat(1, 1, 1, 2)
+        rotary_pos_emb = rotary_pos_emb.reshape(
+            seq_len, 1, 1, -1).repeat(1, 1, 1, 2)
 
         hidden_states = self.decoder(
             hidden_states=vision_data,
@@ -309,7 +316,8 @@ class Qwen2_5VisionModel(VisionModule):
             **(extra_block_kwargs or {}),
         )
 
-        hidden_states = self.projection(hidden_states.view(-1, self.merge_hidden_size))
+        hidden_states = self.projection(
+            hidden_states.view(-1, self.merge_hidden_size))
         reverse_indices = torch.argsort(window_index)
         return hidden_states[reverse_indices, :]
 

@@ -47,7 +47,7 @@ logger.setLevel(os.getenv("VERL_PPO_LOGGING_LEVEL", "WARN"))
 """
 Megatron Hybrid Engine:
 - During training, only the current pp stage holds the parameters
-- Before inference, broadcast the parameters of the current pp rank to all other pp ranks (all pp ranks holds all 
+- Before inference, broadcast the parameters of the current pp rank to all other pp ranks (all pp ranks holds all
   the parameters)
 - Bind the parameters to the inference engine
 - Do inference in tp. pp is treated as additional dp
@@ -140,7 +140,8 @@ class MegatronSGLangShardingManager(BaseShardingManager):
         named_tensors = params
         load_format = None
         for tensor_index, (name, tensor) in enumerate(named_tensors):
-            serialized_tensor = MultiprocessingSerializer.serialize(tensor.detach())
+            serialized_tensor = MultiprocessingSerializer.serialize(
+                tensor.detach())
 
             if self.device_mesh["tp"].get_local_rank() == 0:
                 gathered_serialized_tensors = [
@@ -194,7 +195,8 @@ class MegatronSGLangShardingManager(BaseShardingManager):
         if self.offload_param:
             offload_megatron_model_to_cpu(self.actor_module)
         get_torch_device().empty_cache()
-        # important: need to manually set the random states of each tp to be identical.
+        # important: need to manually set the random states of each tp to be
+        # identical.
         if self.device_mesh is not None:
             self.torch_random_states = get_torch_device().get_rng_state()
             get_torch_device().set_rng_state(self.gen_random_states)

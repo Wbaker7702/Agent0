@@ -203,20 +203,30 @@ class MegatronPPOActor(BasePPOActor):
             ), "max_token_len must be set when use_dynamic_bsz is True"
             max_token_len = max_token_len * self.config.megatron.context_parallel_size
 
-        def compute_logprobs_fn(output, data, use_dynamic_bsz=False, indices=None):
+        def compute_logprobs_fn(
+                output,
+                data,
+                use_dynamic_bsz=False,
+                indices=None):
             response = data["responses"]
             response_length = response.size(1)
-            log_probs = output["log_probs"][:, -response_length - 1 : -1].contiguous()
+            log_probs = output["log_probs"][:, -
+                                            response_length - 1: -1].contiguous()
             return {"log_probs": log_probs}
 
         # We make recompute_old_log_prob by default here.
         # TODO (zhangchi.usc1992): actually, this function should only return log_prob and this logic should be
         # handled by user outside
-        recompute_old_log_prob = self.config.get("recompute_old_log_prob", True)
+        recompute_old_log_prob = self.config.get(
+            "recompute_old_log_prob", True)
 
         entropys = torch.Tensor()
         if recompute_old_log_prob:
-            select_keys = ["responses", "input_ids", "attention_mask", "position_ids"]
+            select_keys = [
+                "responses",
+                "input_ids",
+                "attention_mask",
+                "position_ids"]
             batch = data.select(batch_keys=select_keys).batch
             input_ids = batch["input_ids"]
             batch_size = input_ids.size(0)
@@ -270,11 +280,13 @@ class MegatronPPOActor(BasePPOActor):
                 if calculate_entropy:
                     # Note that o[0] is metrics, o[1] is entropy
                     if mpu.is_pipeline_last_stage(ignore_virtual=True):
-                        entropys = torch.cat([o[1] for o in output["output"]], dim=0)
+                        entropys = torch.cat(
+                            [o[1] for o in output["output"]], dim=0)
                         entropys = entropys.to(torch.float32)
                         if use_dynamic_bsz:
                             indices = output["indices"]
-                            indices = list(itertools.chain.from_iterable(indices))
+                            indices = list(
+                                itertools.chain.from_iterable(indices))
                             assert len(indices) == entropys.size(
                                 0
                             ), f"{len(indices)} vs. {entropys.size()}"
@@ -376,7 +388,8 @@ class MegatronPPOActor(BasePPOActor):
             group=mpu.get_pipeline_model_parallel_group(),
         )
         # split into micro-batches
-        mini_batch.batch["attention_mask"] = mini_batch.batch["attention_mask"].to(bool)
+        mini_batch.batch["attention_mask"] = mini_batch.batch["attention_mask"].to(
+            bool)
         self.has_multi_modal_inputs = (
             "multi_modal_inputs" in mini_batch.non_tensor_batch.keys()
         )
@@ -437,7 +450,8 @@ class MegatronPPOActor(BasePPOActor):
 
         def loss_func(output, data, meta_info):
             # For memory efficiency
-            # We move calculation of entropy to compute_log_probs, forward_only == True
+            # We move calculation of entropy to compute_log_probs, forward_only
+            # == True
             device = output["log_probs"].device
             metrics = {}
             if forward_only:
@@ -457,7 +471,8 @@ class MegatronPPOActor(BasePPOActor):
             loss_agg_mode = self.config.loss_agg_mode
 
             # compute policy loss
-            log_prob = output["log_probs"][:, -response_length - 1 : -1].contiguous()
+            log_prob = output["log_probs"][:, -
+                                           response_length - 1: -1].contiguous()
             ret_entropy = None
             stats = {}
             if not forward_only:
@@ -508,18 +523,16 @@ class MegatronPPOActor(BasePPOActor):
                         config=self.config,
                     )
 
-                stats.update(
-                    {
-                        "actor/pg_loss": pg_loss.detach().item(),
-                        "actor/pg_clipfrac": pg_clipfrac.detach().item(),
-                        "actor/ppo_kl": ppo_kl.detach().item(),
-                        "actor/pg_clipfrac_lower": pg_clipfrac_lower.detach().item(),
-                    }
-                )
+                stats.update({"actor/pg_loss": pg_loss.detach().item(),
+                              "actor/pg_clipfrac": pg_clipfrac.detach().item(),
+                              "actor/ppo_kl": ppo_kl.detach().item(),
+                              "actor/pg_clipfrac_lower": pg_clipfrac_lower.detach().item(),
+                              })
                 policy_loss = pg_loss
 
             if calculate_entropy:
-                entropy = output["entropy"][:, -response_length - 1 : -1].contiguous()
+                entropy = output["entropy"][:, -
+                                            response_length - 1: -1].contiguous()
                 if not forward_only:
                     entropy_loss = agg_loss(
                         loss_mat=entropy,
@@ -579,7 +592,7 @@ class MegatronPPOActor(BasePPOActor):
             responses = batch["responses"]
             response_length = responses.size(1)
             label = position_ids.clone()
-            label[:, -response_length - 1 : -1] = responses
+            label[:, -response_length - 1: -1] = responses
             label_mask = attention_mask.clone()
             label_mask[:, : -response_length - 1] = False
             label_mask[:, -1] = False
@@ -612,12 +625,14 @@ class MegatronPPOActor(BasePPOActor):
                     if calculate_entropy:
                         entropy = vocab_parallel_entropy(logits)
                         ret["entropy"] = entropy
-                    log_probs = vocab_parallel_log_probs_from_logits(logits, label)
+                    log_probs = vocab_parallel_log_probs_from_logits(
+                        logits, label)
                     log_probs = log_probs.masked_fill(~label_mask, 0.0)
                     ret["log_probs"] = log_probs
                     return ret
 
-                logits_processor_args = {"label": label, "label_mask": label_mask}
+                logits_processor_args = {
+                    "label": label, "label_mask": label_mask}
                 output = forward_fn(
                     model,
                     input_ids,
@@ -646,7 +661,8 @@ class MegatronPPOActor(BasePPOActor):
         )
 
         # TODO: we may use the new schedule instead
-        # for flash-attn: (seq_len, batch_size, hidden_size) = (mbs*seq_len, 1, hidden_size)
+        # for flash-attn: (seq_len, batch_size, hidden_size) = (mbs*seq_len, 1,
+        # hidden_size)
         if mpu.get_pipeline_model_parallel_world_size() > 1:
             losses_reduced = forward_backward_func(
                 forward_step_func=forward_step,
@@ -697,9 +713,11 @@ class MegatronPPOActor(BasePPOActor):
         for data in dataloader:
             data.to(get_device_id())
             self.actor_optimizer.zero_grad()
-            # use use_contiguous_buffers_in_local_ddp and no overlap_dp_param_comm
+            # use use_contiguous_buffers_in_local_ddp and no
+            # overlap_dp_param_comm
             for chunk in self.actor_module:
-                # if use distributed optimizer, zero grad buffer will be handled by optimizer
+                # if use distributed optimizer, zero grad buffer will be
+                # handled by optimizer
                 chunk.zero_grad_buffer()
 
             calculate_entropy = self.config.entropy_coeff != 0
@@ -723,7 +741,8 @@ class MegatronPPOActor(BasePPOActor):
             )
             metric_micro_batch = metric_micro_batch["output"]
             for metric in metric_micro_batch:
-                # Note that o[0] is metrics, o[1] is entropy, o[2] is response_mask
+                # Note that o[0] is metrics, o[1] is entropy, o[2] is
+                # response_mask
                 append_to_dict(
                     metrics, metric[0]
                 )  # append the metric from this micro-batch to global metrics.

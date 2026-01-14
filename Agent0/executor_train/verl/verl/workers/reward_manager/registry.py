@@ -28,8 +28,8 @@ def register(name):
     def decorator(cls):
         if name in REWARD_MANAGER_REGISTRY and REWARD_MANAGER_REGISTRY[name] != cls:
             raise ValueError(
-                f"Reward manager {name} has already been registered: {REWARD_MANAGER_REGISTRY[name]} vs {cls}"
-            )
+                f"Reward manager {name} has already been registered: {
+                    REWARD_MANAGER_REGISTRY[name]} vs {cls}")
         REWARD_MANAGER_REGISTRY[name] = cls
         return cls
 
