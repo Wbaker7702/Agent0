@@ -1,4 +1,4 @@
-# Copyright 2025 Bytedance Ltd. and/or its affiliates
+# Copyright 2025-2026 Bytedance Ltd. and/or its affiliates
 #
 # This code is inspired by the torchtune.
 # https://github.com/pytorch/torchtune/blob/main/torchtune/utils/_device.py
