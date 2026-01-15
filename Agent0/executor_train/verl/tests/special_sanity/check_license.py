@@ -1,4 +1,4 @@
-# Copyright 2024 Bytedance Ltd. and/or its affiliates
+# Copyright 2024-2026 Bytedance Ltd. and/or its affiliates
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,13 +14,13 @@
 from argparse import ArgumentParser
 from pathlib import Path
 
-license_head_bytedance = "Copyright 2024 Bytedance Ltd. and/or its affiliates"
-license_head_bytedance_25 = "Copyright 2025 Bytedance Ltd. and/or its affiliates"
+license_head_bytedance = "Copyright 2024-2026 Bytedance Ltd. and/or its affiliates"
+license_head_bytedance_25 = "Copyright 2025-2026 Bytedance Ltd. and/or its affiliates"
 # Add custom license headers below
 license_head_prime = "Copyright 2024 PRIME team and/or its affiliates"
-license_head_individual = "Copyright 2025 Individual Contributor:"
-license_head_sglang = "Copyright 2023-2024 SGLang Team"
-license_head_modelbest = "Copyright 2025 ModelBest Inc. and/or its affiliates"
+license_head_individual = "Copyright 2025-2026 Individual Contributor:"
+license_head_sglang = "Copyright 2023-2026 SGLang Team"
+license_head_modelbest = "Copyright 2025-2026 ModelBest Inc. and/or its affiliates"
 license_head_amazon = "Copyright 2025 Amazon.com Inc and/or its affiliates"
 license_headers = [
     license_head_bytedance,

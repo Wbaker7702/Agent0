@@ -1,7 +1,7 @@
-# Copyright 2024 Bytedance Ltd. and/or its affiliates
+# Copyright 2024-2026 Bytedance Ltd. and/or its affiliates
 # Copyright (c) 2024, NVIDIA CORPORATION. All rights reserved.
-# Copyright 2023-2024 SGLang Team
-# Copyright 2025 ModelBest Inc. and/or its affiliates
+# Copyright 2023-2026 SGLang Team
+# Copyright 2025-2026 ModelBest Inc. and/or its affiliates
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.

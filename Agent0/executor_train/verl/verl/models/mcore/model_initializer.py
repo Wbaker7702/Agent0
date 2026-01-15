@@ -1,4 +1,4 @@
-# Copyright 2025 Bytedance Ltd. and/or its affiliates
+# Copyright 2025-2026 Bytedance Ltd. and/or its affiliates
 # Copyright (c) 2025, NVIDIA CORPORATION. All rights reserved.
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 #
