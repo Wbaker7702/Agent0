@@ -120,3 +120,7 @@ If you find this work helpful, please consider citing our paper:
   journal={arXiv preprint arXiv:2511.16043},
   year={2025}
 }
+```
+
+## 🏢 Enterprise Readiness
+For security integration, compliance guidance, linting, and reproducible build recommendations, see [ENTERPRISE_GUIDE.md](./ENTERPRISE_GUIDE.md).
