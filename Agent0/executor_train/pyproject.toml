@@ -6,7 +6,7 @@ readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
     "fire>=0.7.0",
-    "psutils>=3.3.9",
+    "psutil>=7.0.0",
     "timeout-decorator>=0.5.0",
     "pyext",
     "qwen_vl_utils",
