@@ -15,6 +15,7 @@ from .base import BaseTool, register_tool
 from .utils.deepsearch_utils import (
     extract_relevant_info_serper,
     extract_text_from_url,
+    extract_text_from_url_async,
     extract_snippet_with_context,
 )
 from .utils.web_agent_utils import (
@@ -363,14 +364,15 @@ class GoogleSearchEngine:
             None, extract_relevant_info_serper, data
         )
 
-        # Process each URL concurrently
-        processing_tasks = []
-        for info in extracted_info:
-            task = self._process_single_url(info, max_doc_len)
-            processing_tasks.append(task)
+        # Process each URL concurrently using a shared session
+        async with aiohttp.ClientSession() as session:
+            processing_tasks = []
+            for info in extracted_info:
+                task = self._process_single_url(info, max_doc_len, session)
+                processing_tasks.append(task)
 
-        # Wait for all URL processing to complete
-        processed_info = await asyncio.gather(*processing_tasks, return_exceptions=True)
+            # Wait for all URL processing to complete
+            processed_info = await asyncio.gather(*processing_tasks, return_exceptions=True)
 
         # Filter out exceptions and format results
         valid_info = []
@@ -403,13 +405,12 @@ class GoogleSearchEngine:
                 else "No relevant information found."
             )
 
-    async def _process_single_url(self, info: Dict, max_doc_len: int) -> Dict:
+    async def _process_single_url(self, info: Dict, max_doc_len: int, session: aiohttp.ClientSession) -> Dict:
         """Process a single URL to extract context."""
         try:
-            # Run URL extraction in thread pool
-            loop = asyncio.get_event_loop()
-            full_text = await loop.run_in_executor(
-                None, lambda: extract_text_from_url(info["url"], use_jina=False)
+            # Use async URL extraction
+            full_text = await extract_text_from_url_async(
+                info["url"], session, use_jina=False
             )
 
             if full_text and not full_text.startswith("Error"):
