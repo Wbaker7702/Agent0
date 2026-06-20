@@ -139,6 +139,7 @@ class SearchR1QAEMRewardManager:
         format_score=0.0,
         score=1.0,
         run_id=None,
+        reward_fn_key="data_source",
         **kwargs,
     ) -> None:
         if tokenizer is None:
@@ -152,6 +153,7 @@ class SearchR1QAEMRewardManager:
         self.compute_score = compute_score or _default_compute_score
         self.format_score = format_score
         self.score = score
+        self.reward_fn_key = reward_fn_key
         self.step = None
 
     def __call__(self, data: DataProto, return_dict=False):
@@ -258,7 +260,7 @@ class SearchR1QAEMRewardManager:
 
             # Print examples for debugging
             data_source = data_item.non_tensor_batch.get(
-                "data_source", "unknown")
+                self.reward_fn_key, "unknown")
             if data_source not in already_print_data_sources:
                 already_print_data_sources[data_source] = 0
 
