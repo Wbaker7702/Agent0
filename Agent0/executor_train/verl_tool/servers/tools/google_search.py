@@ -409,6 +409,7 @@ class GoogleSearchEngine:
         """Process a single URL to extract context."""
         try:
             # Use async URL extraction
+            # Use async version of extract_text_from_url for better performance
             full_text = await extract_text_from_url_async(
                 info["url"], session, use_jina=False
             )
