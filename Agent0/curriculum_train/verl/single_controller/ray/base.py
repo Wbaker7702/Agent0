@@ -560,7 +560,20 @@ def _unwrap_ray_remote(cls):
 def create_colocated_worker_cls(class_dict: dict[str, RayClassWithInitArgs], class_name: str = "WorkerDict"):
     """
     This function should return a class instance that delegates the calls to every
-    cls in cls_dict
+    cls in cls_dict.
+
+    `class_name` must be a valid Python identifier; if an invalid value is provided,
+    a safe default will be used instead.
+
+    assert cls_dict.keys() == init_args_dict.keys()
+
+    if not isinstance(class_name, str):
+        raise TypeError(f"class_name must be a str, got {type(class_name).__name__}")
+    if not class_name.isidentifier():
+        # Fall back to a safe default to avoid invalid __name__/__qualname__ values.
+        class_name = "WorkerDict"
+
+    class _WorkerDict(worker_cls):
     """
     cls_dict = {}
     init_args_dict = {}
