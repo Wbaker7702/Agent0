@@ -330,6 +330,12 @@ class ActorRolloutRefWorker(MegatronWorker, DistProfilerExtension):
             return ref_module, self.hf_config
 
         if self._is_actor:
+            with open_dict(optim_config):
+                optim_config['params_dtype'] = self.dtype
+                optim_config['bf16'] = (self.dtype == torch.bfloat16)
+                optim_config['fp16'] = (self.dtype == torch.float16)
+                optim_config['use_distributed_optimizer'] = self.config.actor.megatron.use_distributed_optimizer
+            optim_config_megatron = init_megatron_optim_config(optim_config)
             megatron_config = self.config.actor.get('megatron', None)
             optim_config_megatron = init_megatron_optim_config(optim_config, megatron_config)
             actor_optimizer = get_megatron_optimizer(
@@ -1066,6 +1072,12 @@ class CriticWorker(MegatronWorker, DistProfilerExtension):
         if self.rank == 0:
             print_model_size(critic_module[0])
 
+        with open_dict(optim_config):
+            optim_config['params_dtype'] = self.dtype
+            optim_config['bf16'] = (self.dtype == torch.bfloat16)
+            optim_config['fp16'] = (self.dtype == torch.float16)
+            optim_config['use_distributed_optimizer'] = self.config.megatron.use_distributed_optimizer
+        optim_config_megatron = init_megatron_optim_config(optim_config)
         megatron_config = self.config.get('megatron', None)
         optim_config_megatron = init_megatron_optim_config(optim_config, megatron_config)
         critic_optimizer = get_megatron_optimizer(
