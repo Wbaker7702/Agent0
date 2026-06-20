@@ -71,8 +71,9 @@ def encode_image(img: Image.Image) -> str:
 
 def decode_image(img_str):
     img_data = base64.b64decode(img_str)
-    img = Image.open(io.BytesIO(img_data))
-    return img
+    with io.BytesIO(img_data) as bio:
+        with Image.open(bio) as img:
+            return img.copy()
 
 
 def decode_image_url(img_url: str) -> Image.Image:
