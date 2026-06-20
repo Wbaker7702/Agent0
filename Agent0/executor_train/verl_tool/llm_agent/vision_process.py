@@ -118,7 +118,7 @@ def fetch_image(
         image_obj = image
     elif image.startswith("http://") or image.startswith("https://"):
         # fix memory leak issue while using BytesIO
-        with _requests_session.get(image, stream=True) as response:
+        with _requests_session.get(image, stream=True, timeout=(10, 30)) as response:
             response.raise_for_status()
             with BytesIO(response.content) as bio:
                 image_obj = copy.deepcopy(Image.open(bio))
