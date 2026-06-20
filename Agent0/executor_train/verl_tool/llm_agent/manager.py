@@ -1047,8 +1047,7 @@ class AgentActorManager:
                 rollings.batch,
                 keys=[
                     "input_ids",
-                    "attention_mask",
-                    "position_ids"])  # TODO: delete
+                    "attention_mask"])
             active_idxs = torch.nonzero(active_mask, as_tuple=True)[0]
             rollings_active = DataProto.from_dict(
                 {k: v[active_mask] for k, v in rollings.batch.items()},
