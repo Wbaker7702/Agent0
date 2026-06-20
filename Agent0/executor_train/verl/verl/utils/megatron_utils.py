@@ -240,7 +240,11 @@ def convert_config(
     return transformer_config
 
 
-def init_megatron_optim_config(optim_config: dict) -> OptimizerConfig:
+def init_megatron_optim_config(optim_config: dict, megatron_config: dict = None) -> OptimizerConfig:
+    use_distributed_optimizer = True
+    if megatron_config is not None:
+        use_distributed_optimizer = megatron_config.get("use_distributed_optimizer", True)
+
     config = OptimizerConfig(
         optimizer=optim_config.get("optimizer", "adam"),
         lr=optim_config.get("lr"),
@@ -255,6 +259,9 @@ def init_megatron_optim_config(optim_config: dict) -> OptimizerConfig:
         fp16=optim_config.get("fp16", False),
         params_dtype=optim_config.get("params_dtype", torch.bfloat16),
         use_distributed_optimizer=optim_config.get("use_distributed_optimizer", True),
+        bf16=True,
+        params_dtype=torch.bfloat16,
+        use_distributed_optimizer=use_distributed_optimizer,
     )
     return config
 

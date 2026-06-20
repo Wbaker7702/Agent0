@@ -18,9 +18,12 @@ from transformers import (
     AutoModelForCausalLM,
     AutoModelForTokenClassification,
     GemmaConfig,
+    Gemma2Config,
     LlamaConfig,
     MistralConfig,
+    Phi3Config,
     Qwen2Config,
+    Starcoder2Config,
 )
 
 from verl.utils.model import compute_position_id_with_mask, create_random_mask
@@ -33,6 +36,9 @@ test_configs = [
     MistralConfig(num_hidden_layers=1),
     GemmaConfig(num_hidden_layers=1),
     Qwen2Config(num_hidden_layers=1),
+    Phi3Config(num_hidden_layers=1),
+    Gemma2Config(num_hidden_layers=1),
+    Starcoder2Config(num_hidden_layers=1),
 ]
 
 

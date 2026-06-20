@@ -96,7 +96,7 @@ class TaskRunner:
         )
 
         # Version validation for vllm.
-        if config.actor_rollout_ref.rollout.name in ["vllm"]:
+        if config.actor_rollout_ref.rollout.name == "vllm":
             from verl.utils.vllm_utils import is_version_ge
 
             if config.actor_rollout_ref.model.get("lora_rank", 0) > 0:
@@ -106,8 +106,8 @@ class TaskRunner:
                     )
 
         # Define worker classes based on the actor strategy.
-        if config.actor_rollout_ref.actor.strategy in ["fsdp", "fsdp2"]:
-            assert config.critic.strategy in ["fsdp", "fsdp2"]
+        if config.actor_rollout_ref.actor.strategy in {"fsdp", "fsdp2"}:
+            assert config.critic.strategy in {"fsdp", "fsdp2"}
             from verl.single_controller.ray import RayWorkerGroup
             from verl.workers.fsdp_workers import (
                 CriticWorker,
@@ -174,7 +174,7 @@ class TaskRunner:
         # finally, we combine all the rewards together
         # The reward type depends on the tag of the data
         if config.reward_model.enable:
-            if config.reward_model.strategy in ["fsdp", "fsdp2"]:
+            if config.reward_model.strategy in {"fsdp", "fsdp2"}:
                 from verl.workers.fsdp_workers import RewardModelWorker
             elif config.reward_model.strategy == "megatron":
                 from verl.workers.megatron_workers import RewardModelWorker

@@ -336,6 +336,8 @@ class ActorRolloutRefWorker(MegatronWorker, DistProfilerExtension):
                 optim_config['fp16'] = (self.dtype == torch.float16)
                 optim_config['use_distributed_optimizer'] = self.config.actor.megatron.use_distributed_optimizer
             optim_config_megatron = init_megatron_optim_config(optim_config)
+            megatron_config = self.config.actor.get('megatron', None)
+            optim_config_megatron = init_megatron_optim_config(optim_config, megatron_config)
             actor_optimizer = get_megatron_optimizer(
                 model=actor_module, config=optim_config_megatron
             )
@@ -1076,6 +1078,8 @@ class CriticWorker(MegatronWorker, DistProfilerExtension):
             optim_config['fp16'] = (self.dtype == torch.float16)
             optim_config['use_distributed_optimizer'] = self.config.megatron.use_distributed_optimizer
         optim_config_megatron = init_megatron_optim_config(optim_config)
+        megatron_config = self.config.get('megatron', None)
+        optim_config_megatron = init_megatron_optim_config(optim_config, megatron_config)
         critic_optimizer = get_megatron_optimizer(
             model=critic_module, config=optim_config_megatron
         )
@@ -1375,7 +1379,6 @@ class RewardModelWorker(MegatronWorker, DistProfilerExtension):
                         is_value_model=True,
                     )
 
-        # TODO: add more optimizer args into config
         get_torch_device().empty_cache()
         return reward_model, self.hf_config
 
