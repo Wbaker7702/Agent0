@@ -557,7 +557,7 @@ def _unwrap_ray_remote(cls):
     return cls
 
 
-def create_colocated_worker_cls(class_dict: dict[str, RayClassWithInitArgs]):
+def create_colocated_worker_cls(class_dict: dict[str, RayClassWithInitArgs], class_name: str = "WorkerDict"):
     """
     This function should return a class instance that delegates the calls to every
     cls in cls_dict
@@ -577,8 +577,7 @@ def create_colocated_worker_cls(class_dict: dict[str, RayClassWithInitArgs]):
 
     assert cls_dict.keys() == init_args_dict.keys()
 
-    # TODO: create a class with customizable name
-    class WorkerDict(worker_cls):
+    class _WorkerDict(worker_cls):
         def __init__(self):
             super().__init__()
             self.worker_dict = {}
@@ -590,6 +589,10 @@ def create_colocated_worker_cls(class_dict: dict[str, RayClassWithInitArgs]):
                         *init_args_dict[key].get("args", ()),
                         **init_args_dict[key].get("kwargs", {}),
                     )
+
+    _WorkerDict.__name__ = class_name
+    _WorkerDict.__qualname__ = class_name
+    WorkerDict = _WorkerDict
 
     # now monkey-patch the methods from inner class to WorkerDict
     for key, user_defined_cls in cls_dict.items():
