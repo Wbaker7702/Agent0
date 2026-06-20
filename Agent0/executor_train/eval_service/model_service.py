@@ -610,13 +610,17 @@ class ModelService:
             self.session = None
 
         # Terminate all VLLM processes
-        for process in self.vllm_processes:
+        async def _terminate_process(process):
             if process:
                 process.terminate()
                 try:
-                    process.wait(timeout=5)
+                    # Use to_thread to avoid blocking the event loop
+                    await asyncio.to_thread(process.wait, timeout=5)
                 except subprocess.TimeoutExpired:
                     process.kill()
+
+        if self.vllm_processes:
+            await asyncio.gather(*[_terminate_process(p) for p in self.vllm_processes])
 
         self.vllm_processes = []
         self.clients = []
