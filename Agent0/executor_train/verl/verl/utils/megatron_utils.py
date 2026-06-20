@@ -247,9 +247,14 @@ def init_megatron_optim_config(optim_config: dict) -> OptimizerConfig:
         min_lr=optim_config.get("min_lr", None),
         clip_grad=optim_config.get("clip_grad", 1.0),
         weight_decay=optim_config.get("weight_decay", 0.01),
-        bf16=True,
-        params_dtype=torch.bfloat16,
-        use_distributed_optimizer=True,
+        adam_beta1=optim_config.get("adam_beta1", 0.9),
+        adam_beta2=optim_config.get("adam_beta2", 0.95),
+        adam_eps=optim_config.get("adam_eps", 1e-8),
+        sgd_momentum=optim_config.get("sgd_momentum", 0.9),
+        bf16=optim_config.get("bf16", True),
+        fp16=optim_config.get("fp16", False),
+        params_dtype=optim_config.get("params_dtype", torch.bfloat16),
+        use_distributed_optimizer=optim_config.get("use_distributed_optimizer", True),
     )
     return config
 

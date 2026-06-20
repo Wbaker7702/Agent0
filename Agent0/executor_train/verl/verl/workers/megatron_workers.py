@@ -329,8 +329,12 @@ class ActorRolloutRefWorker(MegatronWorker, DistProfilerExtension):
             log_gpu_memory_usage("After ref module init", logger=logger)
             return ref_module, self.hf_config
 
-        # TODO: add more optimizer args into config
         if self._is_actor:
+            with open_dict(optim_config):
+                optim_config['params_dtype'] = self.dtype
+                optim_config['bf16'] = (self.dtype == torch.bfloat16)
+                optim_config['fp16'] = (self.dtype == torch.float16)
+                optim_config['use_distributed_optimizer'] = self.config.actor.megatron.use_distributed_optimizer
             optim_config_megatron = init_megatron_optim_config(optim_config)
             actor_optimizer = get_megatron_optimizer(
                 model=actor_module, config=optim_config_megatron
@@ -1066,7 +1070,11 @@ class CriticWorker(MegatronWorker, DistProfilerExtension):
         if self.rank == 0:
             print_model_size(critic_module[0])
 
-        # TODO: add more optimizer args into config
+        with open_dict(optim_config):
+            optim_config['params_dtype'] = self.dtype
+            optim_config['bf16'] = (self.dtype == torch.bfloat16)
+            optim_config['fp16'] = (self.dtype == torch.float16)
+            optim_config['use_distributed_optimizer'] = self.config.megatron.use_distributed_optimizer
         optim_config_megatron = init_megatron_optim_config(optim_config)
         critic_optimizer = get_megatron_optimizer(
             model=critic_module, config=optim_config_megatron
