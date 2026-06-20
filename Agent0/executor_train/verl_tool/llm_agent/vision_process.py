@@ -118,7 +118,8 @@ def fetch_image(
         with requests.get(image, stream=True) as response:
             response.raise_for_status()
             with BytesIO(response.content) as bio:
-                image_obj = copy.deepcopy(Image.open(bio))
+                with Image.open(bio) as img:
+                    image_obj = img.copy()
     elif image.startswith("file://"):
         image_obj = Image.open(image[7:])
     elif image.startswith("data:image"):
@@ -127,7 +128,8 @@ def fetch_image(
             data = base64.b64decode(base64_data)
             # fix memory leak issue while using BytesIO
             with BytesIO(data) as bio:
-                image_obj = copy.deepcopy(Image.open(bio))
+                with Image.open(bio) as img:
+                    image_obj = img.copy()
     else:
         image_obj = Image.open(image)
     if image_obj is None:

@@ -4,6 +4,12 @@ rollout_n: ${actor_rollout_ref.rollout.n}
 # fsdp or fsdp2 strategy used for critic model training
 strategy: ???
 
+# megatron configs
+megatron:
+
+  # Whether to use distributed optimizer
+  use_distributed_optimizer: True
+
 # optimizer configs
 optim:
 
@@ -21,6 +27,17 @@ optim:
 
   # AdamW amsgrad
   amsgrad: false
+  # Adam beta1
+  adam_beta1: 0.9
+
+  # Adam beta2
+  adam_beta2: 0.95
+
+  # Adam epsilon
+  adam_eps: 1e-8
+
+  # SGD momentum
+  sgd_momentum: 0.9
 
 # model config for the critic
 model:

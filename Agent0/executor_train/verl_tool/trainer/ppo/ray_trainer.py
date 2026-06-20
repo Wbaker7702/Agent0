@@ -160,7 +160,7 @@ class AgentRayPPOTrainer(RayPPOTrainer):
 
         if self.config.algorithm.adv_estimator == AdvantageEstimator.GAE:
             self.use_critic = True
-        elif self.config.algorithm.adv_estimator in [
+        elif self.config.algorithm.adv_estimator in {
             AdvantageEstimator.GRPO,
             AdvantageEstimator.GRPO_PASSK,
             AdvantageEstimator.REINFORCE_PLUS_PLUS,
@@ -172,7 +172,7 @@ class AgentRayPPOTrainer(RayPPOTrainer):
             MyAdvantageEstimator.TDGRPO,
             MyAdvantageEstimator.GAPO,
             MyAdvantageEstimator.EGRPO,
-        ]:
+        }:
             self.use_critic = False
         else:
             raise NotImplementedError
@@ -371,10 +371,7 @@ class AgentRayPPOTrainer(RayPPOTrainer):
                 for metric_name, metric_val in metric2val.items():
                     if (
                         (var_name == core_var)
-                        and any(
-                            metric_name.startswith(pfx)
-                            for pfx in ["mean", "maj", "best"]
-                        )
+                        and metric_name.startswith(("mean", "maj", "best"))
                         and (f"@{n_max}" in metric_name)
                     ):
                         metric_sec = "val-core"

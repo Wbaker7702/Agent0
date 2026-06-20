@@ -334,7 +334,7 @@ class AgentActorManager:
             valid_action (List[bool]): List of valid action flags for each observation.
             finishs (List[bool]): List of finish flags for each observation.
             tool_interact_info (List[dict]): List of tool interaction information for each observation, also include multi modal keys like 'image' and 'video'.
-            rollings (DataProto): Current rolling state containing input_ids, position_ids, attention_mask, and non_tensor_batch.
+            rollings (DataProto): Current rolling state containing input_ids, attention_mask, and non_tensor_batch.
         Returns:
             next_obs_ids (torch.Tensor): Tokenized next observations.
             rollings (DataProto): Updated rolling state with new observations.
@@ -684,14 +684,10 @@ class AgentActorManager:
 
             final_attention_mask = self.tensor_fn.create_attention_mask(
                 final_input_ids)
-            final_position_ids = self.tensor_fn.create_position_ids(
-                final_attention_mask
-            )
 
             new_rollings = DataProto.from_dict(
                 {
                     "input_ids": final_input_ids,
-                    "position_ids": final_position_ids,
                     "attention_mask": final_attention_mask,
                 }
             )
@@ -701,15 +697,12 @@ class AgentActorManager:
             new_input_ids, _ = self.tensor_fn.convert_pad_structure(
                 new_input_ids, pad_to_left=True
             )
-            # Create attention mask and position ids
+            # Create attention mask
             new_attention_mask = self.tensor_fn.create_attention_mask(
                 new_input_ids)
-            new_position_ids = self.tensor_fn.create_position_ids(
-                new_attention_mask)
             new_rollings = DataProto.from_dict(
                 {
                     "input_ids": new_input_ids,
-                    "position_ids": new_position_ids,
                     "attention_mask": new_attention_mask,
                 }
             )
@@ -1047,8 +1040,7 @@ class AgentActorManager:
                 rollings.batch,
                 keys=[
                     "input_ids",
-                    "attention_mask",
-                    "position_ids"])  # TODO: delete
+                    "attention_mask"])
             active_idxs = torch.nonzero(active_mask, as_tuple=True)[0]
             rollings_active = DataProto.from_dict(
                 {k: v[active_mask] for k, v in rollings.batch.items()},
