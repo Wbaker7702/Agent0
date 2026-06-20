@@ -271,6 +271,8 @@ class PRIMERewardModelWorker(Worker):
             lr=config.model.optim.lr,
             betas=config.model.optim.get("betas", (0.9, 0.999)),
             weight_decay=config.model.optim.get("weight_decay", 1e-2),
+            eps=config.model.optim.get("eps", 1e-8),
+            amsgrad=config.model.optim.get("amsgrad", False),
         )
 
         total_steps = config.model.optim.get("total_training_steps", 0)

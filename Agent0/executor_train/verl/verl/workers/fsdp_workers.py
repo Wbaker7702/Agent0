@@ -542,6 +542,8 @@ class ActorRolloutRefWorker(Worker, DistProfilerExtension):
                 lr=optim_config.lr,
                 betas=optim_config.get("betas", (0.9, 0.999)),
                 weight_decay=optim_config.get("weight_decay", 1e-2),
+                eps=optim_config.get("eps", 1e-8),
+                amsgrad=optim_config.get("amsgrad", False),
             )
 
             total_steps = optim_config.get("total_training_steps", 0)
@@ -1461,6 +1463,8 @@ class CriticWorker(Worker, DistProfilerExtension):
             lr=config.optim.lr,
             betas=config.optim.get("betas", (0.9, 0.999)),
             weight_decay=config.optim.get("weight_decay", 1e-2),
+            eps=config.optim.get("eps", 1e-8),
+            amsgrad=config.optim.get("amsgrad", False),
         )
 
         total_steps = config.optim.get("total_training_steps", 0)

@@ -109,3 +109,9 @@ optim:
 
   # Weight decay
   weight_decay: 0.01
+
+  # AdamW eps
+  eps: 1e-8
+
+  # AdamW amsgrad
+  amsgrad: false
