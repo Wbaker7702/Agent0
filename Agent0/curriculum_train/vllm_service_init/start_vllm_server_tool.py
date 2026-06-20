@@ -140,6 +140,7 @@ def gpu_idle_worker():
             b = torch.rand((2000, 2000), dtype=torch.float32, device="cuda")
             torch.matmul(a, b)
             torch.cuda.synchronize()
+            time.sleep(1)
         except RuntimeError:
             time.sleep(1)
     print("[idle_worker] GPU idle worker stopped.")
