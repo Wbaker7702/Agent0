@@ -1,6 +1,7 @@
 accelerate==1.7.0
 aiohappyeyeballs==2.6.1
 aiohttp==3.13.3
+aiohttp==3.13.4
 aiohttp-cors==0.8.1
 aiosignal==1.3.2
 airportsdata==20250523
@@ -39,6 +40,7 @@ fastapi-cli==0.0.7
 fastrlock==0.8.3
 filelock==3.20.3
 Flask==3.1.1
+Flask==3.1.3
 fonttools==4.60.2
 frozenlist==1.7.0
 fsspec==2025.3.0
@@ -87,7 +89,7 @@ multiprocess==0.70.16
 nest-asyncio==1.6.0
 networkx==3.4.2
 ninja==1.11.1.4
-nltk==3.9.1
+nltk==3.9.4
 numba==0.61.2
 numpy==2.2.6
 nvidia-cublas-cu12==12.6.4.1
@@ -120,6 +122,7 @@ opentelemetry-sdk==1.34.1
 opentelemetry-semantic-conventions==0.55b1
 opentelemetry-semantic-conventions-ai==0.4.9
 orjson==3.11.5
+orjson==3.11.6
 outlines==0.1.11
 outlines_core==0.1.26
 packaging==25.0
@@ -127,17 +130,20 @@ pandas==2.3.0
 partial-json-parser==0.2.1.1.post5
 peft==0.15.2
 pillow==11.3.0
+pillow==12.1.1
 platformdirs==4.3.8
 prometheus-fastapi-instrumentator==7.1.0
 prometheus_client==0.22.1
 propcache==0.3.2
 proto-plus==1.26.1
 protobuf==6.33.5
+protobuf==5.29.6
 psutil==7.0.0
 py-cpuinfo==9.0.0
 py-spy==0.4.0
 pyarrow==20.0.0
 pyasn1==0.6.2
+pyasn1==0.6.3
 pyasn1_modules==0.4.2
 pycountry==24.6.1
 pydantic==2.11.5
@@ -154,9 +160,10 @@ PyYAML==6.0.2
 pyzmq==26.4.0
 qwen-vl-utils==0.0.11
 ray==2.52.1
+ray==2.54.0
 referencing==0.36.2
 regex==2024.11.6
-requests==2.32.4
+requests==2.33.0
 rich==14.0.0
 rich-toolkit==0.14.7
 rpds-py==0.25.1
@@ -199,6 +206,7 @@ wandb==0.20.1
 watchfiles==1.0.5
 websockets==15.0.1
 Werkzeug==3.1.5
+Werkzeug==3.1.6
 wrapt==1.17.2
 xformers==0.0.30
 xgrammar==0.1.21
