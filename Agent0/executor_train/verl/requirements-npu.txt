@@ -11,7 +11,7 @@ pyarrow>=24.0.0
 pybind11
 pylatexenc
 tensordict>=0.8.0,<=0.9.0
-transformers==5.0.0rc3
+transformers==5.12.1
 ray==2.55.0
 ray==2.54.0
 wandb
