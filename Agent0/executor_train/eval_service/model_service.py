@@ -254,11 +254,11 @@ class ModelService:
         vllm_args = [
             f"--{k.replace('_', '-')}"
             for k in self.model_config.__dict__.keys()
-            if k not in ["model", "api_key", "num_models", "host", "port"]
+            if k not in {"model", "api_key", "num_models", "host", "port"}
         ]
         vllm_args = []
         for k, v in self.model_config.__dict__.items():
-            if k not in ["model", "api_key", "num_models", "host", "port"]:
+            if k not in {"model", "api_key", "num_models", "host", "port"}:
                 vllm_args.append(f"--{k.replace('_', '-')}")
                 if not isinstance(v, bool):
                     vllm_args.append(str(v))
