@@ -175,12 +175,11 @@ class Worker(WorkerHelper):
         This function should only be called inside by WorkerGroup
         """
         assert isinstance(meta, WorkerMeta)
-        self.__dict__.update(meta.to_dict())  # this is hacky
-        # print(f"__dict__: {self.__dict__}")
+        for key, value in meta.to_dict().items():
+            setattr(self, key, value)
         for key in WorkerMeta.keys:
-            val = self.__dict__.get(f"_{key.lower()}", None)
+            val = getattr(self, f"_{key.lower()}", None)
             if val is not None:
-                # print(f"set {key} to {val}")
                 os.environ[key] = str(val)
 
         os.environ["REDIS_STORE_SERVER_HOST"] = (
