@@ -95,6 +95,12 @@ checkpoint:
   # .xxx refers to the local variable xxx from the same level of hierarchy similar to python pkg
   load_contents: ${.save_contents}
 
+# megatron configs
+megatron:
+
+  # Whether to use distributed optimizer
+  use_distributed_optimizer: True
+
 # optimizer configs
 optim:
 
@@ -109,3 +115,15 @@ optim:
 
   # Weight decay
   weight_decay: 0.01
+
+  # Adam beta1
+  adam_beta1: 0.9
+
+  # Adam beta2
+  adam_beta2: 0.95
+
+  # Adam epsilon
+  adam_eps: 1e-8
+
+  # SGD momentum
+  sgd_momentum: 0.9
