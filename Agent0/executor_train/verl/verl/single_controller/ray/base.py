@@ -887,7 +887,7 @@ def _determine_fsdp_megatron_base_class(mros: list):
 
 
 # deprecated, switching to FusedWorker
-def create_colocated_worker_cls(class_dict: dict[str, RayClassWithInitArgs]):
+def create_colocated_worker_cls(class_dict: dict[str, RayClassWithInitArgs], name: str = 'WorkerDict'):
     """
     This function should return a class instance that delegates the calls to every
     cls in cls_dict
@@ -908,7 +908,6 @@ def create_colocated_worker_cls(class_dict: dict[str, RayClassWithInitArgs]):
 
     assert cls_dict.keys() == init_args_dict.keys()
 
-    # TODO: create a class with customizable name
     class WorkerDict(worker_cls):
         def __init__(self):
             super().__init__()
@@ -923,6 +922,9 @@ def create_colocated_worker_cls(class_dict: dict[str, RayClassWithInitArgs]):
                         *init_args_dict[key].get("args", ()),
                         **init_args_dict[key].get("kwargs", {}),
                     )
+
+    WorkerDict.__name__ = name
+    WorkerDict.__qualname__ = name
 
     # now monkey-patch the methods from inner class to WorkerDict
     for key, user_defined_cls in cls_dict.items():
