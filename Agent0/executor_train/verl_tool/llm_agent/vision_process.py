@@ -23,6 +23,9 @@ from torchvision.transforms import InterpolationMode
 
 logger = logging.getLogger(__name__)
 
+# Reusable session for connection pooling across image fetches
+_requests_session = requests.Session()
+
 IMAGE_FACTOR = 28
 MIN_PIXELS = 4 * 28 * 28
 MAX_PIXELS = 5120 * 28 * 28
@@ -115,7 +118,7 @@ def fetch_image(
         image_obj = image
     elif image.startswith("http://") or image.startswith("https://"):
         # fix memory leak issue while using BytesIO
-        with requests.get(image, stream=True) as response:
+        with _requests_session.get(image, stream=True) as response:
             response.raise_for_status()
             with BytesIO(response.content) as bio:
                 image_obj = copy.deepcopy(Image.open(bio))
