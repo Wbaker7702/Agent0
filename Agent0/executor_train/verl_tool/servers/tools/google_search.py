@@ -14,6 +14,7 @@ from collections import OrderedDict
 from .base import BaseTool, register_tool
 from .utils.deepsearch_utils import (
     extract_relevant_info_serper,
+    extract_text_from_url,
     extract_text_from_url_async,
     extract_snippet_with_context,
 )
@@ -407,6 +408,7 @@ class GoogleSearchEngine:
     async def _process_single_url(self, info: Dict, max_doc_len: int, session: aiohttp.ClientSession) -> Dict:
         """Process a single URL to extract context."""
         try:
+            # Use async URL extraction
             # Use async version of extract_text_from_url for better performance
             full_text = await extract_text_from_url_async(
                 info["url"], session, use_jina=False
