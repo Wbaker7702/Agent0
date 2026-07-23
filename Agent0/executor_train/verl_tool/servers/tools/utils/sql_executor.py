@@ -179,7 +179,7 @@ class DatabaseManager:
                 conn.close()
 
         with concurrent.futures.ThreadPoolExecutor() as executor:
-            list(executor.map(cleanup_connection, self._connection_pool.values()))
+            executor.map(cleanup_connection, self._connection_pool.values())
 
         self._connection_pool = {}
 
