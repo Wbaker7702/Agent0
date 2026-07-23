@@ -4,6 +4,7 @@ import random
 import sqlite3
 import time
 import itertools
+import concurrent.futures
 import sys
 from collections import defaultdict
 from contextlib import contextmanager
@@ -166,8 +167,8 @@ class DatabaseManager:
             return f"Error executing SQL: {e}", None
 
     def close_all_connections(self):
-        """Closes all active connections in the pool and cleans up WAL files."""
-        for db_path, conn in self._connection_pool.items():
+        """Closes all active connections in the pool and cleans up WAL files concurrently."""
+        def cleanup_connection(conn):
             try:
                 # Force WAL checkpoint and cleanup
                 conn.execute("PRAGMA wal_checkpoint(TRUNCATE);")
@@ -176,6 +177,10 @@ class DatabaseManager:
                 pass  # Ignore cleanup errors
             finally:
                 conn.close()
+
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            list(executor.map(cleanup_connection, self._connection_pool.values()))
+
         self._connection_pool = {}
 
 
