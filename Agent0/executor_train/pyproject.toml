@@ -10,7 +10,7 @@ dependencies = [
     "timeout-decorator>=0.5.0",
     "pyext",
     "qwen_vl_utils",
-    "transformers<5.4.0",
+    "transformers<5.6.0",
     "tensorboard",
     "func_timeout",
     "aiofiles",
@@ -21,7 +21,7 @@ packages = ["verl_tool"]  # Explicitly specify only the verl_tool package
 
 [project.optional-dependencies]
 vllm = [
-    "vllm<0.25.0",
+    "vllm<0.26.0",
 ]
 tool_browser = [
     "mini_webarena @ git+https://github.com/cogito233/mini_webarena.git",
