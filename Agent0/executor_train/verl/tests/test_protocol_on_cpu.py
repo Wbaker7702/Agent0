@@ -58,13 +58,18 @@ def test_tensor_dict_constructor():
 
     assert data.batch.batch_size == torch.Size([100])
 
-    with pytest.raises(AssertionError):
-        data = DataProto.from_dict(
-            tensors={
-                "obs": obs,
-                "act": act},
-            num_batch_dims=2)
+    # num_batch_dims > 1 should be allowed as long as the shapes match up to num_batch_dims
+    # Here obs is [100, 10] and act is [100, 10, 3].
+    # So their shapes match up to 2 dimensions ([100, 10]).
+    data = DataProto.from_dict(
+        tensors={
+            "obs": obs,
+            "act": act},
+        num_batch_dims=2)
+    assert data.batch.batch_size == torch.Size([100, 10])
 
+    # Should raise error for 3 dimensions because obs only has 2 dimensions
+    # and their shapes won't match up to 3 dimensions.
     with pytest.raises(AssertionError):
         data = DataProto.from_dict(
             tensors={

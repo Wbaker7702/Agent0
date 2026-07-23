@@ -147,7 +147,7 @@ def fold_batch_dim(data: "DataProto", new_batch_size: int):
 
     for key, value in non_tensor.items():
         non_tensor[key] = np.reshape(
-            value, newshape=(new_batch_size, -1, *value.shape[1:])
+            value, (new_batch_size, -1, *value.shape[len(data.batch.batch_size):])
         )
 
     return DataProto(
@@ -272,21 +272,12 @@ class DataProto:
         """Check the consistency of the DataProto. Mainly for batch and non_tensor_batch
         We expose this function as a public one so that user can call themselves directly
         """
-        if self.batch is not None:
-            assert len(
-                self.batch.batch_size) == 1, "only support num_batch_dims=1"
-
         if self.batch is not None and len(self.non_tensor_batch) != 0:
-            # TODO: we can actually lift this restriction if needed
-            assert (
-                len(self.batch.batch_size) == 1
-            ), "only support num_batch_dims=1 when non_tensor_batch is not empty."
-
-            batch_size = self.batch.batch_size[0]
+            batch_size = self.batch.batch_size
             for key, value in self.non_tensor_batch.items():
                 assert (
-                    len(value) == batch_size), f"key {key} length {
-                    len(value)} is not equal to bsz {batch_size}."
+                    tuple(value.shape[:len(batch_size)]) == tuple(batch_size)), f"key {key} shape {
+                    value.shape} does not match batch size {batch_size}."
 
     @classmethod
     def from_single_dict(
@@ -321,10 +312,6 @@ class DataProto:
         """
         assert len(tensors) > 0, "tensors must not be empty"
         assert num_batch_dims > 0, "num_batch_dims must be greater than zero"
-        if non_tensors is not None:
-            assert (
-                num_batch_dims == 1
-            ), "only support num_batch_dims=1 when non_tensors is not None."
 
         meta_info = meta_info or {}
         non_tensors = non_tensors or {}
