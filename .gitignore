@@ -91,3 +91,5 @@ htmlcov/
 .tox/
 .mypy_cache/
 .pyre/
+test_dbs/
+test.db
