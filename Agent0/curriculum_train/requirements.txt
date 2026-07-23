@@ -46,7 +46,7 @@ frozenlist==1.7.0
 fsspec==2025.3.0
 gguf==0.17.0
 gitdb==4.0.12
-GitPython==3.1.44
+GitPython==3.1.52
 google-api-core==2.25.0
 google-auth==2.40.3
 googleapis-common-protos==1.70.0
@@ -89,7 +89,7 @@ multiprocess==0.70.16
 nest-asyncio==1.6.0
 networkx==3.4.2
 ninja==1.11.1.4
-nltk==3.9.4
+nltk==3.10.0
 numba==0.61.2
 numpy==2.2.6
 nvidia-cublas-cu12==12.6.4.1
@@ -130,6 +130,7 @@ pandas==2.3.0
 partial-json-parser==0.2.1.1.post5
 peft==0.15.2
 pillow==12.2.0
+pillow==12.3.0
 pillow==12.1.1
 platformdirs==4.3.8
 prometheus-fastapi-instrumentator==7.1.0
@@ -144,6 +145,8 @@ py-spy==0.4.0
 pyarrow==23.0.1
 pyasn1==0.6.3
 pyasn1==0.6.3
+pyasn1==0.6.4
+pyasn1==0.6.4
 pyasn1_modules==0.4.2
 pycountry==24.6.1
 pydantic==2.11.5
@@ -186,12 +189,13 @@ tensordict==0.8.3
 threadpoolctl==3.6.0
 tiktoken==0.9.0
 tokenizers==0.21.1
-torch==2.12.1
+torch==2.13.0
 torchaudio==2.7.0
 torchdata==0.11.0
 torchvision==0.22.0
 tqdm==4.67.1
 transformers==5.12.1
+transformers==5.5.0
 triton==3.3.0
 typer==0.16.0
 typing-inspection==0.4.1
@@ -201,7 +205,7 @@ urllib3==2.7.0
 uvicorn==0.34.3
 uvloop==0.21.0
 virtualenv==20.36.1
-vllm==0.23.0
+vllm==0.25.1
 wandb==0.20.1
 watchfiles==1.0.5
 websockets==15.0.1

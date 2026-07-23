@@ -170,8 +170,9 @@ def fold_batch_dim(data: "DataProto", new_batch_size):
     tensor.auto_batch_size_(batch_dims=1)
 
     for key, val in non_tensor.items():
-        non_tensor[key] = np.reshape(val, newshape=(
-            new_batch_size, -1, *val.shape[1:]))
+        non_tensor[key] = np.reshape(
+            val, (new_batch_size, -1, *val.shape[len(data.batch.batch_size):])
+        )
 
     return type(data)(
         batch=tensor, non_tensor_batch=non_tensor, meta_info=data.meta_info
@@ -193,7 +194,7 @@ def unfold_batch_dim(data: "DataProto", batch_dims=2):
 
     for key, val in non_tensor.items():
         non_tensor_new[key] = np.reshape(
-            val, newshape=(batch_size, *val.shape[batch_dims:])
+                val, (batch_size, *val.shape[batch_dims:])
         )
 
     return type(data)(
@@ -349,10 +350,6 @@ class DataProto:
         """Check the consistency of the DataProto. Mainly for batch and non_tensor_batch
         We expose this function as a public one so that user can call themselves directly
         """
-        if self.batch is not None:
-            assert len(
-                self.batch.batch_size) == 1, "only support num_batch_dims=1"
-
         if self.non_tensor_batch is not None:
             for key, val in self.non_tensor_batch.items():
                 assert isinstance(val, np.ndarray)
@@ -362,20 +359,15 @@ class DataProto:
             and self.non_tensor_batch is not None
             and len(self.non_tensor_batch) != 0
         ):
-            # TODO: we can actually lift this restriction if needed
-            assert (
-                len(self.batch.batch_size) == 1
-            ), "only support num_batch_dims=1 when non_tensor_batch is not empty."
-
-            batch_size = self.batch.batch_size[0]
+            batch_size = self.batch.batch_size
             for key, val in self.non_tensor_batch.items():
                 assert isinstance(val, np.ndarray), (
                     f"data in the non_tensor_batch must be a numpy.array with dtype=object, but for "
                     f"{key=}, got {type(val)=}"
                 )
                 assert (
-                    val.shape[0] == batch_size), f"key {key} length {
-                    len(val)} is not equal to batch size {batch_size}"
+                    tuple(val.shape[:len(batch_size)]) == tuple(batch_size)), f"key {key} shape {
+                    val.shape} does not match batch size {batch_size}"
 
     @classmethod
     def from_single_dict(
@@ -418,10 +410,6 @@ class DataProto:
         """
 
         assert num_batch_dims > 0, "num_batch_dims must be greater than zero"
-        if non_tensors is not None:
-            assert (
-                num_batch_dims == 1
-            ), "only support num_batch_dims=1 when non_tensors is not None."
 
         if tensors is None:
             tensors = {}
