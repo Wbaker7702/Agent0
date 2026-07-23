@@ -147,7 +147,7 @@ def fold_batch_dim(data: "DataProto", new_batch_size: int):
 
     for key, value in non_tensor.items():
         non_tensor[key] = np.reshape(
-            value, (new_batch_size, -1, *value.shape[1:])
+            value, (new_batch_size, -1, *value.shape[len(data.batch.batch_size):])
         )
 
     return DataProto(
