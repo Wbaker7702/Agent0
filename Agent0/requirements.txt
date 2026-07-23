@@ -153,7 +153,7 @@ pandocfilters==1.5.1
 partial-json-parser==0.2.1.1.post5
 peft==0.15.2
 pickleshare==0.7.5
-pillow==12.2.0
+pillow==12.3.0
 pillow==12.3.0
 pillow==12.1.1
 pipreqs==0.5.0
