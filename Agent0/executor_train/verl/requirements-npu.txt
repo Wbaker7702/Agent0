@@ -13,7 +13,7 @@ pylatexenc
 tensordict>=0.8.0,<=0.9.0
 transformers==5.12.1
 transformers==5.5.0
-ray==2.55.0
+ray==2.56.0
 ray==2.54.0
 wandb
 mathruler
