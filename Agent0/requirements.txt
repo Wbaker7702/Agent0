@@ -1,5 +1,5 @@
 absl-py==2.3.0
-accelerate==1.7.0
+accelerate==1.15.0
 aiohappyeyeballs==2.6.1
 aiohttp==3.14.3
 aiohttp==3.13.4
@@ -8,7 +8,7 @@ aiosignal==1.3.2
 airportsdata==20250523
 annotated-types==0.7.0
 antlr4-python3-runtime==4.9.3
-anyio==4.9.0
+anyio==4.14.2
 astor==0.8.1
 async-timeout==5.0.1
 attrs==25.3.0
@@ -57,7 +57,7 @@ frozenlist==1.7.0
 fsspec==2025.3.0
 gguf==0.17.0
 gitdb==4.0.12
-GitPython==3.1.58
+GitPython==3.1.59
 google-api-core==2.25.0
 google-auth==2.40.3
 googleapis-common-protos==1.70.0
@@ -98,7 +98,7 @@ mathruler==0.1.0
 matplotlib==3.10.3
 mdurl==0.1.2
 mistral_common==1.8.5
-mistune==3.3.0
+mistune==3.3.3
 mpmath==1.3.0
 msgpack==1.2.1
 msgspec==0.19.0
@@ -109,7 +109,7 @@ nbconvert==7.17.1
 nbformat==5.10.4
 networkx==3.4.2
 ninja==1.11.1.4
-nltk==3.10.0
+nltk==3.10.3
 numba==0.61.2
 numpy==1.26.4
 nvidia-cublas-cu12==12.8.4.1
@@ -188,7 +188,7 @@ pytz==2025.2
 PyYAML==6.0.2
 pyzmq==26.4.0
 qwen-vl-utils==0.0.14
-ray==2.56.0
+ray==2.58.0
 ray==2.54.0
 referencing==0.36.2
 regex==2024.11.6
@@ -210,7 +210,7 @@ smart-open==7.1.0
 smmap==5.0.2
 sniffio==1.3.1
 soundfile==0.13.1
-soupsieve==2.8.4
+soupsieve==2.9
 soxr==1.0.0
 starlette==1.3.1
 stopit==1.1.2
@@ -229,7 +229,7 @@ torchaudio==2.8.0
 torchdata==0.11.0
 torchvision==0.23.0
 tqdm==4.67.1
-transformers==5.12.1
+transformers==5.17.0
 transformers==5.5.0
 triton==3.4.0
 typer==0.16.0
@@ -240,7 +240,7 @@ urllib3==2.7.0
 uvicorn==0.34.3
 uvloop==0.21.0
 virtualenv==20.36.1
-vllm==0.26.0
+vllm==0.28.0
 wandb==0.20.1
 watchfiles==1.0.5
 webencodings==0.5.1
