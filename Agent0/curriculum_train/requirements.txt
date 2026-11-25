@@ -1,7 +1,7 @@
 accelerate==1.15.0
 aiohappyeyeballs==2.6.1
-aiohttp==3.14.3
-aiohttp==3.13.4
+aiohttp==3.14.4
+aiohttp==3.14.4
 aiohttp-cors==0.8.1
 aiosignal==1.3.2
 airportsdata==20250523
@@ -31,7 +31,7 @@ dill==0.3.8
 diskcache==5.6.3
 distlib==0.3.9
 distro==1.9.0
-dnspython==2.7.0
+dnspython==2.9.2
 einops==0.8.1
 email_validator==2.2.0
 exceptiongroup==1.3.0
@@ -46,7 +46,7 @@ frozenlist==1.7.0
 fsspec==2025.3.0
 gguf==0.17.0
 gitdb==4.0.12
-GitPython==3.1.59
+GitPython==3.2.1
 google-api-core==2.25.0
 google-auth==2.40.3
 googleapis-common-protos==1.70.0
@@ -89,7 +89,7 @@ multiprocess==0.70.16
 nest-asyncio==1.6.0
 networkx==3.4.2
 ninja==1.11.1.4
-nltk==3.10.3
+nltk==3.10.4
 numba==0.61.2
 numpy==2.2.6
 nvidia-cublas-cu12==12.6.4.1
@@ -112,7 +112,7 @@ openai==1.86.0
 opencensus==0.11.4
 opencensus-context==0.1.3
 opencv-python-headless==4.11.0.86
-opentelemetry-api==1.34.1
+opentelemetry-api==1.45.2
 opentelemetry-exporter-otlp==1.34.1
 opentelemetry-exporter-otlp-proto-common==1.34.1
 opentelemetry-exporter-otlp-proto-grpc==1.34.1
@@ -129,9 +129,9 @@ packaging==25.0
 pandas==2.3.0
 partial-json-parser==0.2.1.1.post5
 peft==0.15.2
-pillow==12.3.0
-pillow==12.3.0
-pillow==12.1.1
+pillow==13.0.0
+pillow==13.0.0
+pillow==13.0.0
 platformdirs==4.3.8
 prometheus-fastapi-instrumentator==7.1.0
 prometheus_client==0.22.1
@@ -143,10 +143,10 @@ psutil==7.0.0
 py-cpuinfo==9.0.0
 py-spy==0.4.0
 pyarrow==23.0.1
-pyasn1==0.6.4
-pyasn1==0.6.4
-pyasn1==0.6.4
-pyasn1==0.6.4
+pyasn1==0.6.5
+pyasn1==0.6.5
+pyasn1==0.6.5
+pyasn1==0.6.5
 pyasn1_modules==0.4.2
 pycountry==24.6.1
 pydantic==2.11.5
