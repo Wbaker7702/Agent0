@@ -15,7 +15,7 @@ Setup Instructions:
     python your_server_file_name.py --port 5000 --model_path Qwen/Qwen3-4B-Base
 """
 
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, abort
 import vllm
 import argparse
 import json
@@ -366,13 +366,27 @@ def consolidate_and_grade(question, golden_answer, assistant_messages):
 app = Flask(__name__)
 
 
+def resolve_input_path(raw_name):
+    storage_root = os.path.realpath(os.getenv("STORAGE_PATH") or os.getcwd())
+    candidate = os.path.realpath(os.path.abspath(raw_name))
+
+    try:
+        is_within_root = os.path.commonpath([storage_root, candidate]) == storage_root
+    except ValueError:
+        is_within_root = False
+
+    if not is_within_root or os.path.splitext(candidate)[1] != ".json":
+        abort(400, "Invalid input file")
+
+    return candidate
+
+
 @app.route("/hello", methods=["GET"])
 def hello():
+    name = resolve_input_path(request.args.get("name", ""))
+
     pause_event.set()
     torch.cuda.synchronize()
-
-    name = request.args.get("name", "None")
-
     with open(name, "r") as f:
         data = json.load(f)
     os.remove(name)
@@ -421,7 +435,7 @@ def hello():
                 }
             )
 
-    out_path = name.replace(".json", "_results.json")
+    out_path = os.path.splitext(name)[0] + "_results.json"
     with open(out_path, "w") as f:
         json.dump(results_all, f, indent=4)
 
