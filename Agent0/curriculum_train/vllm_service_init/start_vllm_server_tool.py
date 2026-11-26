@@ -368,14 +368,33 @@ app = Flask(__name__)
 
 @app.route("/hello", methods=["GET"])
 def hello():
+    name = request.args.get("name")
+    temp_results_dir = os.path.realpath(
+        os.path.join(os.getenv("STORAGE_PATH") or os.sep, "temp_results")
+    )
+    if not name or not name.endswith(".json"):
+        return jsonify({"error": "Invalid input file path"}), 400
+
+    input_path = os.path.realpath(name)
+    out_path = os.path.realpath(
+        input_path[:-len(".json")] + "_results.json"
+    )
+    try:
+        paths_are_contained = all(
+            os.path.commonpath((temp_results_dir, path)) == temp_results_dir
+            for path in (input_path, out_path)
+        )
+    except ValueError:
+        paths_are_contained = False
+    if not paths_are_contained:
+        return jsonify({"error": "Invalid input file path"}), 400
+
     pause_event.set()
     torch.cuda.synchronize()
 
-    name = request.args.get("name", "None")
-
-    with open(name, "r") as f:
+    with open(input_path, "r") as f:
         data = json.load(f)
-    os.remove(name)
+    os.remove(input_path)
 
     questions = [item.get("question", "") for item in data]
     answers = [item.get("answer", "") for item in data]
@@ -421,13 +440,12 @@ def hello():
                 }
             )
 
-    out_path = name.replace(".json", "_results.json")
     with open(out_path, "w") as f:
         json.dump(results_all, f, indent=4)
 
     pause_event.clear()
     return jsonify(
-        {"message": f"Processed {name}, results saved to {out_path}."})
+        {"message": f"Processed {input_path}, results saved to {out_path}."})
 
 
 # ------------------------- Main Application Entrypoint --------------------------- #
