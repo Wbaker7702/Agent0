@@ -15,7 +15,7 @@ Setup Instructions:
     python your_server_file_name.py --port 5000 --model_path Qwen/Qwen3-4B-Base
 """
 
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, abort
 import vllm
 import argparse
 import json
@@ -366,12 +366,38 @@ def consolidate_and_grade(question, golden_answer, assistant_messages):
 app = Flask(__name__)
 
 
+def safe_temp_json_path(name):
+    temp_root = os.path.realpath(
+        os.path.join(os.getenv("STORAGE_PATH", ""), "temp_results")
+    )
+    requested = os.path.realpath(name)
+    try:
+        contained = os.path.commonpath([temp_root, requested]) == temp_root
+    except ValueError:
+        contained = False
+    if not contained:
+        abort(400, description="Invalid temporary JSON path")
+
+    safe_name = os.path.basename(requested)
+    if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]*\.json", safe_name):
+        abort(400, description="Invalid temporary JSON path")
+
+    candidate = os.path.realpath(os.path.join(temp_root, safe_name))
+    try:
+        contained = os.path.commonpath([temp_root, candidate]) == temp_root
+    except ValueError:
+        contained = False
+    if not contained or os.path.splitext(candidate)[1] != ".json":
+        abort(400, description="Invalid temporary JSON path")
+    return candidate
+
+
 @app.route("/hello", methods=["GET"])
 def hello():
     pause_event.set()
     torch.cuda.synchronize()
 
-    name = request.args.get("name", "None")
+    name = safe_temp_json_path(request.args.get("name", ""))
 
     with open(name, "r") as f:
         data = json.load(f)
