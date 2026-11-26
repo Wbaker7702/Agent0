@@ -30,6 +30,7 @@ import requests
 import re
 from concurrent.futures import ThreadPoolExecutor
 from tqdm import tqdm
+from werkzeug.utils import secure_filename
 
 # ---------------------------- Code Execution Tool --------------------------- #
 
@@ -367,9 +368,13 @@ app = Flask(__name__)
 
 
 def resolve_input_path(raw_name):
-    storage_root = os.path.realpath(os.getenv("STORAGE_PATH") or os.getcwd())
-    candidate = os.path.realpath(os.path.abspath(raw_name))
+    filename = secure_filename(raw_name)
+    if not filename or filename != os.path.basename(raw_name):
+        abort(400, "Invalid input file")
 
+    storage_root = os.path.realpath(
+        os.path.join(os.getenv("STORAGE_PATH") or os.getcwd(), "temp_results"))
+    candidate = os.path.realpath(os.path.join(storage_root, filename))
     try:
         is_within_root = os.path.commonpath([storage_root, candidate]) == storage_root
     except ValueError:
