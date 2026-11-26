@@ -372,6 +372,7 @@ def hello():
     temp_results_dir = os.path.realpath(
         os.path.join(os.getenv("STORAGE_PATH") or os.sep, "temp_results")
     )
+    temp_results_prefix = temp_results_dir + os.sep
     if not name or not name.endswith(".json"):
         return jsonify({"error": "Invalid input file path"}), 400
 
@@ -379,14 +380,9 @@ def hello():
     out_path = os.path.realpath(
         input_path[:-len(".json")] + "_results.json"
     )
-    try:
-        paths_are_contained = all(
-            os.path.commonpath((temp_results_dir, path)) == temp_results_dir
-            for path in (input_path, out_path)
-        )
-    except ValueError:
-        paths_are_contained = False
-    if not paths_are_contained:
+    if not input_path.startswith(temp_results_prefix) or not out_path.startswith(
+        temp_results_prefix
+    ):
         return jsonify({"error": "Invalid input file path"}), 400
 
     pause_event.set()
