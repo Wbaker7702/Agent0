@@ -370,19 +370,27 @@ def safe_temp_json_path(name):
     temp_root = os.path.realpath(
         os.path.join(os.getenv("STORAGE_PATH", ""), "temp_results")
     )
-    requested = os.path.realpath(name)
+    requested = os.path.basename(name)
+    allowed_chars = set(
+        "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_.-"
+    )
+    if (
+        not requested.endswith(".json")
+        or not requested
+        or any(char not in allowed_chars for char in requested)
+    ):
+        abort(400, description="Invalid temporary JSON path")
+
     try:
-        contained = os.path.commonpath([temp_root, requested]) == temp_root
-    except ValueError:
-        contained = False
-    if not contained:
-        abort(400, description="Invalid temporary JSON path")
+        entries = os.listdir(temp_root)
+    except OSError:
+        abort(404, description="Temporary JSON file not found")
 
-    safe_name = os.path.basename(requested)
-    if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]*\.json", safe_name):
-        abort(400, description="Invalid temporary JSON path")
+    matched = next((entry for entry in entries if entry == requested), None)
+    if matched is None:
+        abort(404, description="Temporary JSON file not found")
 
-    candidate = os.path.realpath(os.path.join(temp_root, safe_name))
+    candidate = os.path.realpath(os.path.join(temp_root, matched))
     try:
         contained = os.path.commonpath([temp_root, candidate]) == temp_root
     except ValueError:
