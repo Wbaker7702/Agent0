@@ -53,7 +53,7 @@ class WorkerHelper:
 
     def _get_free_port(self) -> int:
         with socket.socket() as sock:
-            sock.bind(("", 0))
+            sock.bind(("127.0.0.1", 0))
             return sock.getsockname()[1]
 
     def get_availale_master_addr_port(self) -> Tuple[str, str]:
